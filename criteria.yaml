@@ -6,7 +6,8 @@
 #  How a role is scored (0–100, higher ranks first in the digest):
 #    sector   = weight × 15            (0–45)   ← what the company does
 #    experience (key: fit) = strong 35 · maybe ("partial" on cards) 20 · stretch 5 ← match to your background
-#    culture signals = +10 good signals, −10 per red flag (max −20)
+#    culture signals = +10 good signals, −10 per red flag (max −20); a hard red flag means never added
+#    startup  = −20 if the company is early-stage (see company_stage)
 #    comp     = +10 if base top ≥ stretch_target
 #    dream    = +15 if the role is like one of dream_roles (see below)
 #  Roles under `scoring.min_score_to_add` are not added (hard excludes never are).
@@ -59,7 +60,16 @@ culture:
   want: [calm pace, ~40-hour weeks, async / remote-first, generous PTO, 12+ weeks parental leave]
   good_signals: [unlimited PTO with a minimum, parental leave, "sustainable pace", 4-day week, B Corp, mission-driven]
   red_flags: [fast-paced, hustle, scrappy, "wear many hats", "work hard play hard", 50+ hours, high-intensity, on-call, in-office]
-  red_flag_effect: score_only          # never auto-skip; just rank lower and call it out
+  red_flag_effect: skip_hard           # hard_red_flags = never add; other red_flags = −10 each (score_only = never skip)
+  hard_red_flags: [fast-paced, hustle, high-intensity, "work hard play hard", 50+ hours, on-call, in-office]
+  must_read_posting: true              # open the posting before scoring; a title alone can't show red flags
+
+# ── Company stage ────────────────────────────────────────────
+company_stage:
+  startup_penalty: -20                 # added to the score; the role still shows if it clears min_score_to_add
+  startup_means: "under ~200 employees, or seed / Series A / Series B"
+  established: "public, Series C or later, or 200+ employees, or a large nonprofit"
+  unknown: established                 # if you can't tell, don't penalize
 
 # ── What the company does (0 ignore · 1 allowed · 2 good · 3 priority) ──
 sectors:
