@@ -295,6 +295,10 @@
     const p = { status: u.to, statusAt: u.date, statusEmail: { subject: u.subject, date: u.date, signal: u.signal } };
     if (/^https:\/\//.test(u.viewUrl || "")) p.statusEmail.url = u.viewUrl;
     if (u.to === "applied" && !job.appliedAt) p.appliedAt = u.date;
+    // Keep the move in statusHistory like the page does, so the funnel remembers every step.
+    const pipe = ["saved", "applying", "applied", "screen", "interviewing", "offer"];
+    const had = Array.isArray(job.statusHistory) ? job.statusHistory : pipe.includes(job.status) ? [{ status: job.status, at: job.statusAt || "" }] : [];
+    p.statusHistory = [...had, { status: u.to, at: u.date }];
     return p;
   }
 

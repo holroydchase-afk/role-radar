@@ -160,7 +160,10 @@ test("status query names the pipeline companies; patch uses the email's date", (
   assert.match(q, /newer_than:1y/);
   assert.equal(G.statusQuery([]), "");
   const u = { to: "applied", date: "2026-03-06", subject: "Thanks for applying", signal: "applied", viewUrl: "https://example.com/t/d" };
-  assert.deepEqual(G.statusPatch(u, {}), { status: "applied", statusAt: "2026-03-06", appliedAt: "2026-03-06", statusEmail: { subject: "Thanks for applying", date: "2026-03-06", signal: "applied", url: "https://example.com/t/d" } });
+  assert.deepEqual(G.statusPatch(u, {}), { status: "applied", statusAt: "2026-03-06", appliedAt: "2026-03-06", statusEmail: { subject: "Thanks for applying", date: "2026-03-06", signal: "applied", url: "https://example.com/t/d" }, statusHistory: [{ status: "applied", at: "2026-03-06" }] });
+  // A move from Screen keeps Screen in the history, so the funnel still counts it after a rejection.
+  assert.deepEqual(G.statusPatch({ ...u, to: "rejected" }, { status: "screen", statusAt: "2026-03-01" }).statusHistory,
+    [{ status: "screen", at: "2026-03-01" }, { status: "rejected", at: "2026-03-06" }]);
   assert.equal(G.statusPatch({ ...u, to: "rejected", viewUrl: "javascript:x" }, {}).appliedAt, undefined);
   assert.equal(G.statusPatch({ ...u, to: "rejected", viewUrl: "javascript:x" }, {}).statusEmail.url, undefined);
 });

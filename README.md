@@ -118,6 +118,7 @@ The demo runs the real page against an in-memory database ([`demo/mock-claude.js
 | `src/scoring.js` | Scoring and matching rules, shared by the page and the tests |
 | `src/posting.js` | Finds a role's public job-board API and reads its description for the preview panel |
 | `src/alerts.js` | The `alerts:` rules: what pings, how loud, quiet hours |
+| `src/progress.js` | The progress numbers: daily bar, funnel, response rate, and the daily email's report |
 | `src/gmail-import.js` | Reads Gmail search results into recruiter suggestions and pipeline status updates |
 | `src/recruiter-store.js` | The one place recruiters are read and written; owner-only |
 | `app/capabilities.json` | What the live page may use: its database (with the owner-only recruiter rule) and read-only Gmail |

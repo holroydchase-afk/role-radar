@@ -120,6 +120,26 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .ruled{display:grid;gap:14px}
 .ruled .sum{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:6px}
 .ruled .sum p{margin:0}
+.by-rule{margin-top:14px}.by-rule summary{font-weight:600;cursor:pointer}
+/* Progress tab: the daily bar first, then the week, funnel and what is due. Two columns from 640px. */
+.prog{display:grid;gap:12px}
+@media(min-width:640px){.prog{grid-template-columns:1fr 1fr}}
+.prog .big{margin:0;font-size:1.05rem}.prog .big b{font:500 1.9rem var(--f-display);margin-right:4px}
+.prog .line{margin:0}.prog .ok{font:600 .78rem var(--f-body);color:var(--good);background:var(--good-soft);border-radius:999px;padding:2px 8px;vertical-align:middle}
+.prog .ccard{align-content:start}
+.ccard.pg-today{border-color:var(--accent);background:var(--accent-soft)}
+.ccard.pg-today.met{border-color:var(--good);background:var(--good-soft)}
+.meter{height:10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);overflow:hidden}.meter i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.pg-today.met .meter i{background:var(--good)}
+.days{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.days li{display:grid;gap:2px;justify-items:center}.days .col{height:48px;width:100%;max-width:28px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.days .col i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:0}
+.days b{font:500 .85rem var(--f-mono);min-height:1.3em}.days small{font-size:.72rem;color:var(--muted)}.days .future small{opacity:.6}
+.bars{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bars li{display:grid;grid-template-columns:minmax(84px,38%) 1fr 2.2em 2.6em;gap:8px;align-items:center;min-width:0}
+.bars .lbl{font-size:.86rem;overflow-wrap:anywhere}.bars .track{height:12px;background:var(--bg);border-radius:4px;overflow:hidden}.bars .track i{display:block;height:100%;background:var(--accent);opacity:.75;border-radius:4px}
+.bars b{font:500 .85rem var(--f-mono);text-align:right}.bars small{font-size:.75rem;color:var(--muted);text-align:right}
+.prog .row{padding:8px 0}.prog .row:last-child{border-bottom:0}.prog .row h4{margin:0;font-size:.92rem}.prog .row small{color:var(--muted)}
 .ruled h3{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 0}
 .ruled .row h4{font-family:var(--f-display);font-weight:500;font-size:1rem;margin:0;line-height:1.3}
 .ruled .row h4 a{color:inherit}
@@ -239,13 +259,14 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 <script src="gmail-import.js"></script>
 <script src="posting.js"></script>
 <script src="alerts.js"></script>
+<script src="progress.js"></script>
 <script src="recruiter-store.js"></script>
 <script>
 // The public demo (chaseholroyd.com/role-radar/) is radar only: scan, score, pipeline. Resume intake, intake
 // settings and the Recruiters tab show only with ?full. The demo build sets __RR_PUBLIC__; the live app never does.
 const TOOLS=!window.__RR_PUBLIC__;
 const TABS=[
-  {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},
+  {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},{id:"progress",label:"Progress"},
   {id:"all",label:"All roles"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
 const STATUSES=[["new","New"],["viewed","Viewed"],["saved","Saved"],["applying","Applying"],["applied","Applied"],["screen","Screen"],["interviewing","Interviewing"],["offer","Offer"],["skipped","Skipped"],["rejected","Rejected"],["closed","Closed"]];
 const STATUS_LABEL=Object.fromEntries(STATUSES);
@@ -253,7 +274,7 @@ const INBOX=["new","viewed"], PIPE=["saved","applying","applied","screen","inter
 // Per-person settings live in the database (meta/config) so this page can be reused by anyone.
 // These defaults apply only until a config document exists.
 const DEF_CONFIG={owner:"",lanes:["Pricing & payments","Checkout","Ops & processing","AI platform","Geospatial / clean energy","Other"],
-  skipReasons:["Comp too low","Not remote","Location","Wrong level","Wrong domain","Culture","Posting closed","Other"],followUpBusinessDays:5,staleAppliedDays:14,staleSavedDays:7,
+  dailyBar:3,skipReasons:["Comp too low","Not remote","Location","Wrong level","Wrong domain","Culture","Posting closed","Other"],followUpBusinessDays:5,staleAppliedDays:14,staleSavedDays:7,
   intakeCommand:"/job-intake",intakeWhere:"a new chat in your job-search project",
   intakeInstructions:"Ask only what you need. Then build the tailored resume and link it on this role in Role Radar (status \"applying\")."};
 let config={...DEF_CONFIG};
@@ -279,6 +300,8 @@ const initials=n=>String(n||"").replace(/\([^)]*\)/g,"").trim().split(/\s+/).fil
 let criteria=null, critDraft=null, critErr="", specData=null;
 const SC=window.RoleRadarScoring||null, AL=window.RoleRadarAlerts||null;
 const PV=window.RoleRadarPosting||null;
+// Progress numbers come from progress.js, the same module the daily family email reads.
+const PG=window.RoleRadarProgress||null;
 // Preview panel: which role is open, and descriptions loaded this visit (never saved).
 let preview=null, previewFrom=null; const postings=new Map();
 let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
@@ -302,6 +325,8 @@ const toastHold=()=>clearTimeout(toast._t), toastLetGo=()=>{clearTimeout(toast._
 const st=j=>j.status||"new";
 // Ruled out = skipped by the owner, here or in an intake chat (source "intake"). Counted as progress next to applications.
 const ruledAt=j=>j.skippedAt||j.statusAt||"";
+// Skips a scan or criteria cleanup made (skippedBy "rule") are listed apart and never counted as the owner's progress.
+const byRule=j=>String(j.skippedBy||"").toLowerCase()==="rule";
 // Sort key for ruled-out dates: date-only values count as local noon, like dayOf, so they sort among full timestamps.
 const ruledTime=j=>{const s=ruledAt(j); if(!s) return -Infinity; const d=new Date(String(s).length===10?s+"T12:00:00":s); return isNaN(d)?-Infinity:d.getTime();};
 const dayOf=s=>{if(!s)return"";const d=new Date(String(s).length===10?s+"T12:00:00":s);return isNaN(d)?"":d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -311,7 +336,7 @@ function progressOf(list){
   const t=today(), w=weekStart(), p={today:{applied:0,ruled:0},week:{applied:0,ruled:0}};
   list.forEach(j=>{
     const a=dayOf(j.appliedAt); if(a&&a>=w&&a<=t){p.week.applied++; if(a===t)p.today.applied++;}
-    if(st(j)==="skipped"){const r=dayOf(ruledAt(j)); if(r&&r>=w&&r<=t){p.week.ruled++; if(r===t)p.today.ruled++;}}
+    if(st(j)==="skipped"&&!byRule(j)){const r=dayOf(ruledAt(j)); if(r&&r>=w&&r<=t){p.week.ruled++; if(r===t)p.today.ruled++;}}
   });
   return p;
 }
@@ -344,12 +369,12 @@ function inTab(j,t){
   const s=st(j);
   if(t==="inbox") return INBOX.includes(s);
   if(t==="pipeline") return PIPE.includes(s);
-  if(t==="ruled") return s==="skipped";
+  if(t==="ruled") return s==="skipped"&&!byRule(j);
   if(t==="action") return !!actionReason(j);
   return true;
 }
 function counts(){
-  const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
+  const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",progress:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
   jobs.forEach(j=>{["inbox","pipeline","action","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
   return c;
 }
@@ -445,6 +470,7 @@ function jobCard(j){
         <select id="st-${id}" data-setstatus="${id}">${STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("")}</select></label>
       ${INBOX.includes(s)?`<button class="btn" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
       ${s==="applying"?`<button class="btn" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
+      ${s==="applied"&&j.followUpDue&&j.followUpDue<=today()?`<button class="btn" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
       ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
       <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
       ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn" type="button" data-sample="${id}">Sample posting</button>`:""}
@@ -895,8 +921,9 @@ function renderProgress(){
 }
 // Ruled out: every role the owner eliminated, newest first, grouped by day, with the reason.
 function renderRuled(){
-  const list=jobs.filter(j=>st(j)==="skipped").sort((a,b)=>(ruledTime(b)-ruledTime(a))||0);
-  if(!list.length) return `<div class="empty"><strong>Nothing ruled out yet</strong><span>Skip a role and pick a reason, and it's listed and counted here.${TOOLS?" Roles screened out in an intake chat land here too.":""}</span></div>`;
+  const all=jobs.filter(j=>st(j)==="skipped").sort((a,b)=>(ruledTime(b)-ruledTime(a))||0);
+  const list=all.filter(j=>!byRule(j)), rules=all.filter(byRule);
+  if(!all.length) return `<div class="empty"><strong>Nothing ruled out yet</strong><span>Skip a role and pick a reason, and it's listed and counted here.${TOOLS?" Roles screened out in an intake chat land here too.":""}</span></div>`;
   const p=progressOf(jobs), reasons={};
   list.forEach(j=>{const r=j.skipReason||"No reason given"; reasons[r]=(reasons[r]||0)+1;});
   const top=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
@@ -909,6 +936,39 @@ function renderRuled(){
     <div class="sum"><p>This week you applied to <b>${p.week.applied}</b> and ruled out <b>${p.week.ruled}</b>. Every role ruled out is one less to wonder about.</p>
       <p class="hint">${list.length} ruled out in all · ${top.map(([r,n])=>`${esc(r)} ${n}`).join(" · ")}</p></div>
     ${groups.map(g=>`<section aria-label="${esc(dayLabel(g.d))}"><h3>${esc(dayLabel(g.d))} · ${g.items.length} ruled out</h3>${g.items.map(row).join("")}</section>`).join("")}
+    ${rules.length?`<details class="by-rule"><summary>Removed by screening rules · ${rules.length}</summary><p class="hint">A scan or a criteria change took these out. They don't count as roles you ruled out.</p>${rules.map(row).join("")}</details>`:""}
+  </div>`;
+}
+
+// Progress: today against the daily bar, the week, the funnel, response rate, follow-ups due and sector mix.
+// Every number comes from progress.js, the same rules the daily family email uses.
+function renderProgressTab(){
+  if(!PG) return `<div class="empty"><strong>Progress didn't load</strong><span>Reload the page to try again.</span></div>`;
+  const d=PG.dashboard(jobs,{bar:Number(config.dailyBar)||3}), t=d.today;
+  const pct=Math.min(100,Math.round(t.total/t.bar*100)), maxDay=Math.max(1,...d.week.days.map(x=>x.applied));
+  const wd=k=>new Date(k+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
+  const top=d.funnel[0].count, maxMix=Math.max(1,...d.sectorMix.map(x=>x.count));
+  const STAGE={applied:"Applied",screen:"Screen",interviewing:"Interviewing",offer:"Offer"};
+  const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+  return `<div class="prog">
+    <section class="ccard pg-today${t.met?" met":""}" aria-labelledby="pg-today"><h2 id="pg-today">Today</h2>
+      <p class="big"><b>${t.total}</b> of ${t.bar}${t.met?` <span class="ok">bar met</span>`:""}</p>
+      <div class="meter" role="meter" aria-label="Applications and follow-ups today" aria-valuemin="0" aria-valuemax="${t.bar}" aria-valuenow="${t.total}"><i style="width:${pct}%"></i></div>
+      <p class="hint">${plural(t.applied,"application")} and ${plural(t.followUps,"follow-up")} sent today</p></section>
+    <section class="ccard" aria-labelledby="pg-week"><h2 id="pg-week">This week</h2>
+      <p class="line">Applied <b>${d.week.applied}</b>, ruled out <b>${d.week.ruledOut}</b> · <button type="button" class="linkbtn" data-tab="ruled">See ruled out</button></p>
+      ${d.week.removedByRules?`<p class="hint">Plus ${d.week.removedByRules} removed by screening rules, not counted.</p>`:""}
+      <ol class="days" aria-label="Applications each day this week">${d.week.days.map(x=>`<li class="${x.future?"future":""}"><span class="col"><i style="height:${x.future?0:Math.round(x.applied/maxDay*100)}%"></i></span><b>${x.future?"":x.applied}</b><small>${esc(wd(x.day))}</small></li>`).join("")}</ol></section>
+    <section class="ccard" aria-labelledby="pg-funnel"><h2 id="pg-funnel">Funnel</h2>
+      ${top?`<ul class="bars">${d.funnel.map((x,i)=>`<li><span class="lbl">${STAGE[x.stage]}</span><span class="track"><i style="width:${Math.round(x.count/top*100)}%"></i></span><b>${x.count}</b>${i&&d.funnel[i-1].count?`<small>${Math.round(x.count/d.funnel[i-1].count*100)}%</small>`:"<small></small>"}</li>`).join("")}</ul>
+      <p class="hint">Roles that reached each step, all time. Percent = carried on from the step before.</p>`:`<p class="hint">No applications yet. Mark a role Applied and it shows up here.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-resp"><h2 id="pg-resp">Response rate</h2>
+      ${d.response.pct===null?`<p class="hint">Not enough yet. It counts roles applied ${d.response.afterDays} or more days ago.</p>`:`<p class="big"><b>${d.response.pct}%</b> heard back</p>
+      <p class="hint">${d.response.heard} of ${d.response.eligible} roles applied ${d.response.afterDays}+ days ago reached Screen or later.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-fu"><h2 id="pg-fu">Follow-ups due</h2>
+      ${d.followUpsDue.length?d.followUpsDue.map(x=>`<div class="row"><div class="info"><h4>${esc(x.company)}</h4><small>${esc(x.title)} · due ${fmtDate(x.due)}</small></div><button class="btn" type="button" data-fupsent="${esc(x.id)}">Follow-up sent</button></div>`).join(""):`<p class="hint">Nothing due. A follow-up is set ${esc(config.followUpBusinessDays)} business days after you apply.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-mix"><h2 id="pg-mix">Sector mix this month</h2>
+      ${d.sectorMix.length?`<ul class="bars">${d.sectorMix.map(x=>`<li><span class="lbl">${esc(x.sector)}</span><span class="track"><i style="width:${Math.round(x.count/maxMix*100)}%"></i></span><b>${x.count}</b></li>`).join("")}</ul>`:`<p class="hint">No applications this month yet.</p>`}</section>
   </div>`;
 }
 
@@ -921,6 +981,7 @@ function render(){
   if(tab==="criteria"){v.innerHTML=renderCriteria();return;}
   if(tab==="people"){v.innerHTML=renderPeople();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
+  if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
   const r=renderJobs(); v.innerHTML=r.html;
   const c=$("#fcount"); if(c) c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:"";
 }
@@ -931,7 +992,11 @@ function patchFor(j,next){
   const now=new Date().toISOString(), p={status:next,statusAt:now};
   if(next==="viewed"&&!j.viewedAt) p.viewedAt=now;
   if(next!=="new"&&next!=="viewed"&&!j.viewedAt) p.viewedAt=now;
-  if(next==="skipped") p.skippedAt=now;
+  // A skip made on this page is the owner's own call; scans and criteria cleanups write skippedBy "rule".
+  if(next==="skipped"){ p.skippedAt=now; p.skippedBy="owner"; }
+  // Every pipeline move is kept, so the funnel still counts a Screen after a later Rejected.
+  // The first move starts the history with the step the role was already on.
+  if(!INBOX.includes(next)){ const had=Array.isArray(j.statusHistory)?j.statusHistory:(PIPE.includes(st(j))?[{status:st(j),at:j.statusAt||""}]:[]); p.statusHistory=[...had,{status:next,at:now}]; }
   if(next==="applied"){ if(!j.appliedAt) p.appliedAt=now; if(!j.followUpDue) p.followUpDue=addBusinessDays(j.appliedAt||now,config.followUpBusinessDays); }
   return p;
 }
@@ -944,6 +1009,14 @@ async function setStatus(j,next,extra,opts){
   catch(err){toast("Couldn't save that change. Try again in a moment.");return;}
   if(!(opts&&opts.undo)){ toast("Marked "+(STATUS_LABEL[next]||next).toLowerCase()); return; }
   toast("Moved to "+(STATUS_LABEL[next]||next),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Back in "+(STATUS_LABEL[prev.status]||prev.status)); render(); focusCard(j._id);}catch(_){toast("Couldn't undo that.");}}});
+}
+// A follow-up counts toward the daily bar; the next one is due a few business days later.
+async function followUpSent(j){
+  if(!db) return;
+  const now=new Date().toISOString(), prev={followUpsSent:Array.isArray(j.followUpsSent)?j.followUpsSent:[],followUpDue:j.followUpDue||""};
+  const patch={followUpsSent:[...prev.followUpsSent,now],followUpDue:addBusinessDays(now,config.followUpBusinessDays)};
+  try{await db.doc("jobs/"+j._id).update(patch);}catch(_){toast("Couldn't save that. Try again in a moment.");return;}
+  toast("Follow-up counted. Next one "+fmtDate(patch.followUpDue),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Undone"); render();}catch(_){toast("Couldn't undo that.");}}});
 }
 // After a card leaves the list, put focus on the card that took its place so keyboard users don't land at the top.
 function focusCard(id){ requestAnimationFrame(()=>{ const sel=document.getElementById("st-"+id); const c=sel&&sel.closest("article.job"); const h=c&&c.querySelector("h2 a, h2"); if(h){ if(!h.matches("a")) h.tabIndex=-1; h.focus(); } }); }
@@ -1065,10 +1138,12 @@ document.addEventListener("click",async e=>{
   const t=e.target.closest("[data-tab]");
   if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} render(); return;}
   const rc=e.target.closest("[data-reconsider]");
-  if(rc){ const j=jobs.find(x=>x._id===rc.dataset.reconsider); if(j) await setStatus(j,"viewed",{skipReason:"",skipNote:"",skippedAt:""},{undo:true}); render(); return; }
+  if(rc){ const j=jobs.find(x=>x._id===rc.dataset.reconsider); if(j) await setStatus(j,"viewed",{skipReason:"",skipNote:"",skippedAt:"",skippedBy:""},{undo:true}); render(); return; }
   if(e.target.closest("[data-skipcancel]")){ skipOpen=null; render(); return; }
   const sw=e.target.closest("[data-skipwhy]");
   if(sw){ const j=jobs.find(x=>x._id===sw.dataset.job); skipOpen=null; const i=[...document.querySelectorAll("#view article.job")].indexOf(sw.closest("article.job")); const note=(sw.closest("form")?.elements.skipNote?.value||"").trim(); if(j) await setStatus(j,"skipped",{skipReason:sw.dataset.skipwhy,skipNote:note},{undo:true}); render(); focusCardAfter(Math.max(0,i)); return; }
+  const fs=e.target.closest("[data-fupsent]");
+  if(fs){ const j=jobs.find(x=>x._id===fs.dataset.fupsent); if(j) await followUpSent(j); render(); return; }
   const qk=e.target.closest("[data-quick]");
   if(qk){
     const j=jobs.find(x=>x._id===qk.dataset.job); if(!j) return;
@@ -1125,7 +1200,7 @@ document.addEventListener("submit",async e=>{
   if(e.target.id==="addJob"){
     const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim(); if(!co||!ti) return;
     const id="manual-"+docKey(co,ti), now=new Date().toISOString(), status=$("#aj-st").value;
-    const doc={company:co,title:ti,url:$("#aj-url").value.trim(),lane:$("#aj-ln").value,source:"manual",firstSeen:now,status,statusAt:now,viewedAt:now};
+    const doc={company:co,title:ti,url:$("#aj-url").value.trim(),lane:$("#aj-ln").value,source:"manual",firstSeen:now,status,statusAt:now,viewedAt:now,statusHistory:[{status,at:now}]};
     if(status==="applied"){doc.appliedAt=now; doc.followUpDue=addBusinessDays(now,config.followUpBusinessDays);}
     try{await db.doc("jobs/"+id).set(doc); toast("Added to the pipeline"); e.target.reset(); document.activeElement?.blur?.(); render();}catch(err){toast("Couldn't add that role.");}
     return;
