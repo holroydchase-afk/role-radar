@@ -7,7 +7,9 @@
  *         + comp (+10 if the range reaches stretch_target_usd)
  *         − values (15 if the business is on values_penalty)
  *         + dream (dream_roles.bonus, default 15, for a role like one of the dream_roles anchors)
+ *         + stage (company_stage.startup_penalty, e.g. −20, when job.companyStage is "startup")
  *   clamped to 0–100.
+ * With culture.red_flag_effect: skip_hard, a culture.hard_red_flags phrase fails matchJob (never added).
  *
  * Two badges sit beside the score and never change it (criteria.yaml values_fit and culture_fit):
  *   Values  = great · good · neutral · no, from the sector weight, hard excludes and values_penalty
@@ -122,6 +124,11 @@
     const loc = lc(job.location);
     const near = arr(work.hybrid_ok_near).some((p) => has(loc, String(p).split(",")[0]));
     if (/hybrid|on-?site|in[- ]office/.test(loc) && !near) reasons.push("not remote: " + job.location);
+    const c = spec.culture || {};
+    if (lc(c.red_flag_effect) === "skip_hard") {
+      const hard = arr(c.hard_red_flags).find((f) => cultureOf(job, spec).red.some((r) => lc(r).trim() === lc(f).trim()) || (!job.cultureSignals && has(job.postingText || "", f)));
+      if (hard) reasons.push("hard red flag: " + hard);
+    }
     const range = parseComp(job.comp);
     if (range && comp.base_floor_usd) {
       const sector = sectorFor(job, spec);
@@ -149,8 +156,9 @@
       comp: range && target && range.max >= target ? COMP_BONUS : 0,
       values: values ? VALUES_PENALTY : 0,
       dream: dream ? Number(spec.dream_roles.bonus ?? DREAM_BONUS) || 0 : 0,
+      stage: lc(job.companyStage) === "startup" ? Number(spec.company_stage && spec.company_stage.startup_penalty) || 0 : 0,
     };
-    const raw = parts.sector + parts.fit + parts.culture + parts.comp + parts.values + parts.dream;
+    const raw = parts.sector + parts.fit + parts.culture + parts.comp + parts.values + parts.dream + parts.stage;
     return { score: clamp(raw), raw, parts, sector, culture, valuesHit: values, dream };
   }
 
@@ -213,7 +221,7 @@
   function explain(result) {
     const p = result.parts, out = [];
     const add = (n, label) => { if (n) out.push((out.length ? (n < 0 ? "− " : "+ ") : n < 0 ? "−" : "") + Math.abs(n) + " " + label); };
-    add(p.sector, "sector"); add(p.fit, "experience"); add(p.culture, "culture signals"); add(p.comp, "comp"); add(p.values, "values"); add(p.dream, "dream role");
+    add(p.sector, "sector"); add(p.fit, "experience"); add(p.culture, "culture signals"); add(p.comp, "comp"); add(p.values, "values"); add(p.dream, "dream role"); add(p.stage, "startup");
     return out.join(" ") || "0";
   }
 
