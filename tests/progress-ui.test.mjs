@@ -60,7 +60,7 @@ test("skips made by a screening rule are listed apart and not counted as ruled o
   const { page, errors } = await openDemo();
   const before = await page.locator("#progress").innerText();
   await page.evaluate(async () => (await window.claude.use("db")).doc("jobs/greenhouse-1005").update({ status: "skipped", statusAt: new Date().toISOString(), skippedAt: new Date().toISOString(), skippedBy: "rule", skipReason: "Hard exclude" }));
-  await page.waitForFunction(() => document.querySelector("#tab-ruled .n")?.textContent === "3");
+  await page.waitForFunction(() => document.querySelector("#tab-ruled .n")?.textContent === "4");
   assert.equal(await page.locator("#progress").innerText(), before, "header count is unchanged");
   await page.click("#tab-ruled");
   assert.match(await page.locator(".by-rule summary").innerText(), /Removed by screening rules · 1/);
@@ -74,6 +74,9 @@ test("skipping a role on the page records it as the owner's call", async () => {
   const { page, errors } = await openDemo();
   await page.evaluate(() => { const a = document.querySelector("[data-quick=skipped]"); a.click(); });
   await page.locator("[data-skipwhy]").first().click();
+  await page.locator("[data-skipform] textarea[name=skipNote]").fill("Not the right fit");
+  await page.click("[data-skipform] button[type=submit]");
+  await page.waitForSelector("[data-skipform]", { state: "detached" });
   await page.click("#tab-ruled");
   const by = await page.evaluate(() => new Promise(async (ok) => {
     const db = await window.claude.use("db");

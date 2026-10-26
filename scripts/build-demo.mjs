@@ -18,7 +18,7 @@ export function buildDemo({ seed: seedOverride, publicDemo = false } = {}) {
   const marker = '<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/';
   if (!page.includes(marker)) throw new Error("Could not find the js-yaml script tag to inject before.");
   let out = page;
-  for (const name of ["scoring.js", "gmail-import.js", "posting.js", "alerts.js", "progress.js", "recruiter-store.js"]) {
+  for (const name of ["scoring.js", "gmail-import.js", "posting.js", "alerts.js", "progress.js", "recruiter-store.js", "skip-feedback.js"]) {
     const tag = `<script src="${name}"></script>`;
     if (!out.includes(tag)) throw new Error(`Could not find the ${name} script tag.`);
     out = out.replace(tag, () => `<script>${read("src/" + name)}</script>`);

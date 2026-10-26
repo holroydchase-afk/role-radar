@@ -120,6 +120,18 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .ruled{display:grid;gap:14px}
 .ruled .sum{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:6px}
 .ruled .sum p{margin:0}
+.skipwhy textarea{flex:1 1 100%;min-height:52px;font:inherit;font-size:.88rem}
+.skipwhy .chipset{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
+.skipwhy [aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.skipwhy .go{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.skipwhy .err{flex:1 1 100%}
+.fb{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:10px}
+.fb h2{font-family:var(--f-display);font-weight:500;font-size:1.05rem;margin:0}
+.fb ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.fb li{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.fb li b{font-weight:600}
+.fb .acts{display:flex;gap:8px;flex-wrap:wrap}
+.fromskips{font:500 .88rem var(--f-body);background:var(--accent-soft);color:var(--ink);border-radius:7px;padding:8px 10px;margin:0}
 .by-rule{margin-top:14px}.by-rule summary{font-weight:600;cursor:pointer}
 /* Progress tab: the daily bar first, then the week, funnel and what is due. Two columns from 640px. */
 .prog{display:grid;gap:12px}
@@ -261,6 +273,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 <script src="alerts.js"></script>
 <script src="progress.js"></script>
 <script src="recruiter-store.js"></script>
+<script src="skip-feedback.js"></script>
 <script>
 // The public demo (chaseholroyd.com/role-radar/) is radar only: scan, score, pipeline. Resume intake, intake
 // settings and the Recruiters tab show only with ?full. The demo build sets __RR_PUBLIC__; the live app never does.
@@ -302,6 +315,9 @@ const SC=window.RoleRadarScoring||null, AL=window.RoleRadarAlerts||null;
 const PV=window.RoleRadarPosting||null;
 // Progress numbers come from progress.js, the same module the daily family email reads.
 const PG=window.RoleRadarProgress||null;
+// Skip feedback: the owner's skips (reason + comment) turned into suggested criteria changes. Never applied without a Save.
+const SF=window.RoleRadarSkipFeedback||null;
+let skipFb=null, critFrom=null;
 // Preview panel: which role is open, and descriptions loaded this visit (never saved).
 let preview=null, previewFrom=null; const postings=new Map();
 let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
@@ -437,8 +453,14 @@ function jobCard(j){
   const cf=conflictOf(j);
   const cfChip=cf?`<span class="chip conflict" title="Overlaps a product you're building">Conflict</span>`:"";
   const why=tab==="action"?actionReason(j):null;
-  // A form, so a redraw from the database doesn't wipe a note being typed (see softRender).
-  const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}">Why skip?${SKIP_REASONS.map(r=>`<button class="btn" type="button" data-skipwhy="${esc(r)}" data-job="${id}">${esc(r)}</button>`).join("")}<button class="linkbtn" type="button" data-skipcancel="1">Cancel</button><input name="skipNote" maxlength="200" aria-label="Note, optional" placeholder="Note, optional (e.g. Belfast only, closed Oct 6)"></form>`:"";
+  // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
+  // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
+  const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
+      <span>Why skip? Pick one, then say what made it a no. Your words teach the next scan.</span>
+      <div class="chipset" role="group" aria-label="Reason">${SKIP_REASONS.map(r=>`<button class="btn" type="button" aria-pressed="false" data-skipwhy="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+      <textarea name="skipNote" maxlength="300" aria-label="What made it a no" placeholder="What made it a no? e.g. Belfast office only, always-on culture, title is really a Director"></textarea>
+      <p class="err" data-skiperr role="alert" hidden></p>
+      <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
   return `<article class="job${preview===j._id?" sel":""}">
     <div class="top"><div style="min-width:0">
       <div class="co">${esc(j.company)}</div>
@@ -860,6 +882,7 @@ function renderCriteria(){
   return `<div class="crit">${critSummary(shown)}
     <form class="ccard" id="critForm"><h2>criteria.yaml</h2>
       <p class="sub" style="margin:0">The scan reads this before every run. Change a weight, add a company to <span class="mono">hard_exclude</span>, or move the comp floor, then save.${when?` Last saved ${esc(when)}.`:""}</p>
+      ${critFrom&&critDraft!==null?`<p class="fromskips" id="fromSkips" role="status">From your skips: <b>${esc(critFrom.text)}</b>. ${esc(critFrom.why)} Nothing changes until you save.</p>`:""}
       ${critErr||p.err?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr||p.err)}</p>`:""}
       ${!window.jsyaml?`<p class="err">The YAML reader didn't load, so the summary and preview are off. You can still edit and save.</p>`:""}
       <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
@@ -919,6 +942,40 @@ function renderProgress(){
   const p=progressOf(jobs); el.hidden=false;
   el.innerHTML=`Today: ${progressText(p.today)} · This week: ${progressText(p.week)}`;
 }
+// What the owner's last 30 days of skips say, as criteria changes to accept or set aside. Accepting only fills the
+// Criteria editor; the owner reviews and saves. Notes for the scan go to meta/skipFeedback, which the scan reads.
+function skipAnalysis(){ return SF&&specData?SF.analyze(jobs,specData,{dismissed:(skipFb&&skipFb.dismissed)||[]}):null; }
+function feedbackCard(){
+  const a=skipAnalysis(); if(!a) return "";
+  const ev=s=>s.evidence.slice(0,3).map(x=>`${esc(x.company)} · ${esc(x.title)}${x.note?` <i>"${esc(x.note)}"</i>`:""}`).join("<br>")+(s.evidence.length>3?`<br>and ${s.evidence.length-3} more`:"");
+  const item=(s,scan)=>`<li><b>${esc(s.text)}</b><span class="hint">${esc(s.why)}</span><span class="hint">${ev(s)}</span>
+    <div class="acts">${scan?`<span class="hint">The next scan reads this.</span>`:`<button class="btn" type="button" data-fbaccept="${esc(s.id)}">Add to criteria</button>`}<button class="linkbtn" type="button" data-fbdismiss="${esc(s.id)}">Not now</button></div></li>`;
+  const n=a.suggestions.length+a.scanNotes.length;
+  return `<section class="fb" aria-labelledby="fb-h"><h2 id="fb-h">What your skips are teaching the scan</h2>
+    ${n?`<p class="hint" style="margin:0">From ${a.skips} ${a.skips===1?"skip":"skips"} in the last ${a.days} days. Adding a change opens it on the Criteria tab; nothing changes until you save.</p>
+      <ul>${a.suggestions.map(s=>item(s,false)).join("")}${a.scanNotes.map(s=>item(s,true)).join("")}</ul>`
+      :`<p class="hint" style="margin:0">${a.skips?`Nothing repeats yet in your last ${a.skips} ${a.skips===1?"skip":"skips"}.`:"No skips in the last 30 days."} When the same company, title word, culture phrase or pay gap comes up twice, a suggested criteria change shows here.</p>`}
+  </section>`;
+}
+// Keeps meta/skipFeedback current for the scan: open suggestions, notes for the scan, and what was set aside or accepted.
+async function syncSkipFeedback(extra){
+  if(!db||!SF||!specData) return;
+  const fb={dismissed:[],accepted:[],...(skipFb||{}),...(extra||{})};
+  const a=SF.analyze(jobs,specData,{dismissed:fb.dismissed});
+  const brief=s=>({id:s.id,kind:s.kind,text:s.text,why:s.why,...(s.change?{change:s.change}:{})});
+  skipFb={...fb,open:a.suggestions.map(brief),scanNotes:a.scanNotes.map(brief),updatedAt:new Date().toISOString()};
+  try{ await db.doc("meta/skipFeedback").set(skipFb); }catch(_){}
+}
+function acceptSuggestion(id){
+  const a=skipAnalysis(), sg=a&&a.suggestions.find(x=>x.id===id); if(!sg) return;
+  const base=critDraft??(criteria&&criteria.spec)??"";
+  const next=SF.applyToYaml(base,sg.change,window.jsyaml&&window.jsyaml.load);
+  if(next===null){ toast("Couldn't place that change in criteria.yaml. Add it on the Criteria tab by hand."); return; }
+  critDraft=next; critErr=""; critFrom=sg; tab="criteria"; try{localStorage.setItem("rr-tab",tab)}catch(_){} render();
+  toast("Added to the editor. Review it, then Save criteria.");
+  requestAnimationFrame(()=>document.getElementById("fromSkips")?.scrollIntoView({block:"center"}));
+}
+
 // Ruled out: every role the owner eliminated, newest first, grouped by day, with the reason.
 function renderRuled(){
   const all=jobs.filter(j=>st(j)==="skipped").sort((a,b)=>(ruledTime(b)-ruledTime(a))||0);
@@ -933,6 +990,7 @@ function renderRuled(){
     return `<div class="row"><div class="info"><h4>${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(j.title)}</a>`:esc(j.title)}</h4><small>${esc(j.company)}${why?` · ${esc(why)}`:""}${TOOLS&&j.source==="intake"?" · screened in intake":""}</small></div>
       <button class="btn" type="button" data-reconsider="${id}">Reconsider</button></div>`;};
   return `<div class="ruled">
+    ${feedbackCard()}
     <div class="sum"><p>This week you applied to <b>${p.week.applied}</b> and ruled out <b>${p.week.ruled}</b>. Every role ruled out is one less to wonder about.</p>
       <p class="hint">${list.length} ruled out in all · ${top.map(([r,n])=>`${esc(r)} ${n}`).join(" · ")}</p></div>
     ${groups.map(g=>`<section aria-label="${esc(dayLabel(g.d))}"><h3>${esc(dayLabel(g.d))} · ${g.items.length} ruled out</h3>${g.items.map(row).join("")}</section>`).join("")}
@@ -1132,22 +1190,27 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="recPrivacy"){ recPrivate=!recPrivate; editRec=null; try{localStorage.setItem("rr-rec-private",recPrivate?"1":"0")}catch(_){} render(); return; }
   const re=e.target.closest("[data-recedit]");
   if(re){ editRec=editRec===re.dataset.recedit?null:re.dataset.recedit; render(); return; }
-  if(e.target.id==="critReset"){ critDraft=null; critErr=""; render(); return; }
+  if(e.target.id==="critReset"){ critDraft=null; critErr=""; critFrom=null; render(); return; }
   if(e.target.id==="ftoggle"){ filtersOpen=!filtersOpen; render(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); return; }
   const t=e.target.closest("[data-tab]");
   if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} render(); return;}
+  const fa=e.target.closest("[data-fbaccept]");
+  if(fa){ acceptSuggestion(fa.dataset.fbaccept); return; }
+  const fd=e.target.closest("[data-fbdismiss]");
+  if(fd){ await syncSkipFeedback({dismissed:[...new Set([...((skipFb&&skipFb.dismissed)||[]),fd.dataset.fbdismiss])]}); render(); toast("Set aside. It won't come back."); return; }
   const rc=e.target.closest("[data-reconsider]");
   if(rc){ const j=jobs.find(x=>x._id===rc.dataset.reconsider); if(j) await setStatus(j,"viewed",{skipReason:"",skipNote:"",skippedAt:"",skippedBy:""},{undo:true}); render(); return; }
   if(e.target.closest("[data-skipcancel]")){ skipOpen=null; render(); return; }
   const sw=e.target.closest("[data-skipwhy]");
+  if(sw){ sw.closest("form").querySelectorAll("[data-skipwhy]").forEach(b=>b.setAttribute("aria-pressed",String(b===sw))); const er=sw.closest("form").querySelector("[data-skiperr]"); if(er) er.hidden=true; return; }
   if(sw){ const j=jobs.find(x=>x._id===sw.dataset.job); skipOpen=null; const i=[...document.querySelectorAll("#view article.job")].indexOf(sw.closest("article.job")); const note=(sw.closest("form")?.elements.skipNote?.value||"").trim(); if(j) await setStatus(j,"skipped",{skipReason:sw.dataset.skipwhy,skipNote:note},{undo:true}); render(); focusCardAfter(Math.max(0,i)); return; }
   const fs=e.target.closest("[data-fupsent]");
   if(fs){ const j=jobs.find(x=>x._id===fs.dataset.fupsent); if(j) await followUpSent(j); render(); return; }
   const qk=e.target.closest("[data-quick]");
   if(qk){
     const j=jobs.find(x=>x._id===qk.dataset.job); if(!j) return;
-    if(qk.dataset.quick==="skipped"){ skipOpen=j._id; render(); return; }
+    if(qk.dataset.quick==="skipped"){ skipOpen=j._id; render(); requestAnimationFrame(()=>document.querySelector("[data-skipform] [data-skipwhy]")?.focus()); return; }
     const i=[...document.querySelectorAll("#view article.job")].indexOf(qk.closest("article.job"));
     await setStatus(j,qk.dataset.quick,null,{undo:true}); render(); focusCardAfter(Math.max(0,i)); return;
   }
@@ -1166,7 +1229,7 @@ document.addEventListener("toggle",e=>{
 document.addEventListener("change",async e=>{
   const s=e.target.closest("[data-setstatus]");
   if(s){ const j=jobs.find(x=>x._id===s.dataset.setstatus); if(!j) return;
-    if(s.value==="skipped"&&!j.skipReason){ skipOpen=j._id; render(); return; }
+    if(s.value==="skipped"){ skipOpen=j._id; render(); return; }
     const i=[...document.querySelectorAll("#view article.job")].indexOf(s.closest("article.job")), id=j._id;
     await setStatus(j,s.value,null,{undo:true}); render();
     // Still listed (All roles): stay on its menu. Moved off this tab: go to the card that took its place.
@@ -1177,6 +1240,15 @@ document.addEventListener("change",async e=>{
 document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
 document.addEventListener("submit",async e=>{
   e.preventDefault(); if(!db) return;
+  const sk=e.target.closest("form[data-skipform]");
+  if(sk){
+    const j=jobs.find(x=>x._id===sk.dataset.skipform); if(!j) return;
+    const reason=sk.querySelector('[data-skipwhy][aria-pressed="true"]')?.dataset.skipwhy||"", note=sk.elements.skipNote.value.trim(), er=sk.querySelector("[data-skiperr]");
+    const miss=!reason?"Pick a reason first.":!note?"Add a few words on what made it a no. They tune the next scan.":"";
+    if(miss){ er.textContent=miss; er.hidden=false; (reason?sk.elements.skipNote:sk.querySelector("[data-skipwhy]")).focus(); return; }
+    const i=[...document.querySelectorAll("#view article.job")].indexOf(sk.closest("article.job"));
+    skipOpen=null; await setStatus(j,"skipped",{skipReason:reason,skipNote:note},{undo:true}); render(); focusCardAfter(Math.max(0,i)); syncSkipFeedback(); return;
+  }
   const ed=e.target.closest("form[data-edit]");
   if(ed){
     const j=jobs.find(x=>x._id===ed.dataset.edit); if(!j) return;
@@ -1228,7 +1300,7 @@ document.addEventListener("submit",async e=>{
     if(parsed.err){ showErr(parsed.err,`${parsed.line?`Line ${parsed.line} has`:"There's"} a YAML error. Nothing was saved.`); return; }
     const gone=droppedParts(parsed.data,parseSpec((criteria&&criteria.spec)||"").data);
     if(gone.length){ const m=`This would remove: ${gone.join(", ")}. Nothing was saved.`; showErr(m+" Put those sections back, or choose Discard changes.",m); return; }
-    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
+    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); if(critFrom){ const id=critFrom.id; critFrom=null; syncSkipFeedback({accepted:[...new Set([...((skipFb&&skipFb.accepted)||[]),id])]}); } toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
     catch(err){toast("Couldn't save the criteria.");}
   }
 });
@@ -1258,6 +1330,7 @@ render();
   db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},()=>{});
   if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people") softRender(); else renderTabs();});
   db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},()=>{});
+  db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},()=>{});
   db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},()=>{});
 })();
 </script>
