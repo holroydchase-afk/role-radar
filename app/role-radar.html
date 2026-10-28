@@ -232,6 +232,23 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
 .dig .sub2{grid-column:2;color:var(--muted);font-size:.8rem}
+/* This morning's digest: a compact card at the top of New; each entry jumps to its role card. */
+#digestCard{gap:0;padding:4px 16px;margin-bottom:12px}
+#digestCard>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none}
+#digestCard>summary::-webkit-details-marker{display:none}
+#digestCard>summary::before{content:"\25B8";font-size:.8em;color:var(--muted)}#digestCard[open]>summary::before{content:"\25BE"}
+#digestCard>summary h2{flex:1;min-width:0}
+#digestCard>summary .hint{white-space:nowrap}
+#digestCard .dig{gap:2px;padding:2px 0 10px}#digestCard .dig li{display:block}
+#digestCard .dig a{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:10px;align-items:center;min-height:36px;padding:2px 6px;margin-inline:-6px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:.9rem}
+#digestCard .dig a .score{text-align:center}
+#digestCard .dig a .t{overflow-wrap:anywhere}#digestCard .dig a b{font-weight:600}
+#digestCard .dig a:hover .t{color:var(--accent);text-decoration:underline}
+#digestCard .dig a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#digestCard>.hint{margin:0 0 10px}
+@media (max-width:600px), (pointer:coarse){#digestCard .dig a{min-height:44px}#digestCard>summary{padding-block:0}}
+@media (min-width:900px){#digestCard .dig{display:block;columns:2;column-gap:20px;padding-bottom:8px}#digestCard .dig li{break-inside:avoid}#digestCard .dig a{min-height:30px;padding-block:1px}#digestCard .dig a .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#digestCard>summary{min-height:40px}}
+.job{scroll-margin-top:72px}.job:focus{outline:none}.job.target{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .arules{display:grid;gap:6px;margin:0;padding:0;list-style:none}.arules li{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:10px;align-items:baseline}
 .lvl{font:600 .8rem var(--f-body);text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .privbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.privbar .hint{margin:0;max-width:65ch}
@@ -352,10 +369,19 @@ let jobsState="loading", dbChecked=false;
 let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view={...DEF_VIEW,...v};}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
+// Deep links: ?tab=<id> opens a tab (it beats the remembered one), #role-<id> jumps to a role card.
+// A tab this viewer can't see (Recruiters on the public build) or an unknown id never opens; the URL drops it.
+function setUrlTab(t,hash=""){ try{ const u=new URL(location.href); if(t) u.searchParams.set("tab",t); else u.searchParams.delete("tab"); u.hash=hash; history.replaceState(history.state,"",u.href); }catch(_){} }
+let urlTab=null, deepRole=null;
+try{ const q=new URLSearchParams(location.search).get("tab");
+  if(q!==null){ if(q==="people"&&TOOLS){ urlTab=q; savedTab=q; } else if(TABS.some(x=>x.id===q&&x.id!=="people")){ urlTab=q; tab=q; savedTab=null; } else setUrlTab(null,location.hash); }
+  const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)) deepRole=h; }catch(_){}
 
 const $=s=>document.querySelector(s);
 // Only http(s) links from scan or email data become clickable.
 const safeUrl=u=>/^https?:\/\//i.test(String(u||"").trim())?String(u).trim():"";
+// A role card's anchor: id="role-<_id>", limited to safe id characters, so #role-<id> links can find it.
+const roleAnchor=id=>"role-"+String(id??"").replace(/[^A-Za-z0-9_-]/g,"_");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate=s=>{if(!s)return"";const d=new Date(String(s).length===10?s+"T12:00:00":s);return isNaN(d)?esc(s):d.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -504,7 +530,7 @@ function jobCard(j){
       <textarea name="skipNote" maxlength="300" aria-label="What made it a no" placeholder="What made it a no? e.g. Belfast office only, always-on culture, title is really a Director"></textarea>
       <p class="err" data-skiperr role="alert" hidden></p>
       <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
-  return `<article class="job${preview===j._id?" sel":""}">
+  return `<article class="job${preview===j._id?" sel":""}" id="${roleAnchor(j._id)}" tabindex="-1">
     <div class="top"><div class="head">
       <div class="co">${esc(j.company)}</div>
       <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(title)}</a>`:esc(title)}</h2>
@@ -635,10 +661,22 @@ function addRoleForm(){
       <label for="aj-st">Status<select id="aj-st">${STATUSES.filter(([v])=>["saved","applying","applied"].includes(v)).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
     </div><button class="primary" type="submit">Add role</button></form></details>`;
 }
+// "This morning's digest" at the top of New: what the weekday scan would send, ranked as the Criteria preview ranks it.
+// Open on wide screens, a one-line summary on phones; the viewer's own toggle is kept across redraws.
+let digestOpen=null;
+function digestCard(){
+  if(!SC||!specData) return "";
+  const d=digestOf(specData); if(!d) return "";
+  const open=digestOpen??(typeof matchMedia==="function"&&matchMedia("(min-width:900px)").matches);
+  const n=d.items.length;
+  const body=n?`<ol class="dig">${d.items.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}" title="${esc(x.job.company)} · ${esc(x.job.title)}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
+    :`<p class="hint">Nothing in New clears the minimum score yet.</p>`;
+  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${n} ${n===1?"role":"roles"}</span></summary>${body}</details>`;
+}
 function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
   const list=sortList(applyView(base));
-  const head=filterBar()+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
+  const head=(tab==="inbox"?digestCard():"")+filterBar()+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
   let body;
   if(!list.length){
     const msg=base.length?["No roles match these filters","Clear a filter to see more."]:{inbox:["Nothing new right now","The morning scan adds matching roles here. Open one and it's marked viewed; save or skip it to clear it out."],
@@ -996,11 +1034,12 @@ function alertsPreview(spec){
     :`<p class="hint">Nothing on this page would alert right now.</p>`;
   return rules+how+now;
 }
+// The digest ranking (scoring.js buildDigest over the roles in New): shared by the Criteria preview and the New tab card.
+function digestOf(spec){ const pool=jobs.filter(j=>INBOX.includes(st(j))); return pool.length?SC.buildDigest(pool,spec):null; }
 function digestPreview(spec){
   if(!SC||!spec) return `<p class="hint">Preview needs a valid spec.</p>`;
-  const pool=jobs.filter(j=>INBOX.includes(st(j)));
-  if(!pool.length) return `<p class="hint">No new roles to rank yet.</p>`;
-  const d=SC.buildDigest(pool,spec);
+  const d=digestOf(spec);
+  if(!d) return `<p class="hint">No new roles to rank yet.</p>`;
   const labels=Object.fromEntries((Array.isArray(spec.sectors)?spec.sectors:[]).map(s=>[s.id,s.label||s.id]));
   const extra=Object.entries(d.extras).map(([k,n])=>k==="_overflow"?`+${n} more past the digest limit`:`+${n} more ${esc(labels[k]||k)} (capped)`);
   return (d.items.length?`<ol class="dig">${d.items.map(x=>`<li><span class="score${x.result.score>=70?" hi":""}">${x.result.score}</span><span>${esc(x.job.company)} · ${esc(x.job.title)}</span><span class="sub2">${esc(x.result.sector.label||"Other")} · ${esc(SC.explain(x.result))}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing in New clears the minimum score.</p>`)
@@ -1042,7 +1081,7 @@ function acceptSuggestion(id){
   const base=critDraft??(criteria&&criteria.spec)??"";
   const next=SF.applyToYaml(base,sg.change,window.jsyaml&&window.jsyaml.load);
   if(next===null){ toast("Couldn't place that change in criteria.yaml. Add it on the Criteria tab by hand."); return; }
-  critDraft=next; critErr=""; critFrom=sg; tab="criteria"; try{localStorage.setItem("rr-tab",tab)}catch(_){} render();
+  critDraft=next; critErr=""; critFrom=sg; tab="criteria"; try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render();
   toast("Added to the editor. Review it, then Save criteria.");
   requestAnimationFrame(()=>document.getElementById("fromSkips")?.scrollIntoView({block:"center"}));
 }
@@ -1119,7 +1158,10 @@ function render(){
   if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
   if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
+  // Reused cards keep their focus across a redraw (a #role- link or digest jump stays put when data arrives).
+  const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
   const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
+  if(keep&&keep.isConnected&&document.activeElement!==keep) keep.focus({preventScroll:true});
   const c=$("#fcount"); if(c) c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:"";
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
@@ -1232,7 +1274,25 @@ async function copyText(s){
   try{ await navigator.clipboard.writeText(s); return true; }catch(_){}
   try{ const ta=$("#applyText"); ta.focus(); ta.select(); return document.execCommand("copy"); }catch(_){ return false; }
 }
+// Focuses and scrolls to a role card by its anchor. If the current tab (or its filters) hides the role, switches
+// to All roles, clearing filters only when they hide it there too. Unknown anchors are ignored.
+function focusRole(anchor){
+  if(!jobs.some(x=>roleAnchor(x._id)===anchor)) return false;
+  const find=()=>{const el=document.getElementById(anchor); return el&&el.matches("#view article.job")?el:null;};
+  let el=find();
+  if(!el){ tab="all"; view.status=""; saveView(); setUrlTab(tab,anchor); render(); el=find(); }
+  if(!el){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); el=find(); }
+  if(!el) return false;
+  el.classList.add("target"); el.addEventListener("blur",()=>el.classList.remove("target"),{once:true});
+  el.focus({preventScroll:true});
+  el.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+  return true;
+}
+document.addEventListener("toggle",e=>{ if(e.target&&e.target.id==="digestCard") digestOpen=e.target.open; },true);
+addEventListener("hashchange",()=>{ try{ const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)&&jobsState==="ready") focusRole(h); }catch(_){} });
 document.addEventListener("click",async e=>{
+  const dl=e.target.closest&&e.target.closest("#digestCard a[data-role]");
+  if(dl){ e.preventDefault(); focusRole(dl.dataset.role); return; }
   if(e.target.closest("#pvClose")){ closePreview(); return; }
   const pv=e.target.closest("[data-preview]");
   // A plain click on the title previews; Cmd/Ctrl/Shift/middle click still opens the posting in a new tab.
@@ -1275,7 +1335,7 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="ftoggle"){ filtersOpen=!filtersOpen; render(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); return; }
   const t=e.target.closest("[data-tab]");
-  if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} render(); return;}
+  if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); return;}
   const fa=e.target.closest("[data-fbaccept]");
   if(fa){ acceptSuggestion(fa.dataset.fbaccept); return; }
   const fd=e.target.closest("[data-fbdismiss]");
@@ -1415,10 +1475,11 @@ render();
   recStore=RS?RS.create({db,user,publicView:!TOOLS}):null;
   if(recStore) await recStore.init();
   if(savedTab&&showPeople()) tab=savedTab;
+  if(urlTab==="people"&&tab!=="people") setUrlTab(null,location.hash);
   render();
   // A failed read logs only which collection failed, never the error (it can carry data or links).
   const readFailed=name=>()=>console.warn("Role Radar: couldn't read "+name);
-  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender();},()=>{readFailed("jobs")(); jobsState="error"; render();});
+  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender(); if(deepRole){ const r=deepRole; deepRole=null; setTimeout(()=>focusRole(r),0); }},()=>{readFailed("jobs")(); jobsState="error"; render();});
   db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},readFailed("companies"));
   db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},readFailed("meta/filters"));
   db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},readFailed("meta/config"));
