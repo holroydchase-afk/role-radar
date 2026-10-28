@@ -182,3 +182,20 @@ test("dashboard on no data has a null response rate, not NaN", () => {
   assert.deepEqual(d.followUpsDue, []);
   assert.deepEqual(d.sectorMix, []);
 });
+
+test("scanStale: overdue once a whole weekday passes without a run, weekends skipped (RR-M3.2)", () => {
+  // Mon 07:50 ET scan: fresh Mon and Tue, stale Wed.
+  assert.equal(P.scanStale("2026-10-26T11:50:00Z", "2026-10-27T13:00:00Z"), false);
+  assert.equal(P.scanStale("2026-10-26T11:50:00Z", "2026-10-28T13:00:00Z"), true);
+  // Fri scan: fresh through Monday, stale Tuesday.
+  assert.equal(P.scanStale("2026-10-23T11:50:00Z", "2026-10-25T13:00:00Z"), false);
+  assert.equal(P.scanStale("2026-10-23T11:50:00Z", "2026-10-26T13:00:00Z"), false);
+  assert.equal(P.scanStale("2026-10-23T11:50:00Z", "2026-10-27T13:00:00Z"), true);
+  // Same day, and days in New York time (Tue 23:30 ET is already Wed in UTC).
+  assert.equal(P.scanStale("2026-10-28T11:50:00Z", "2026-10-28T13:00:00Z"), false);
+  assert.equal(P.businessDaysSince("2026-10-28T03:30:00Z", "2026-10-28T13:00:00Z"), 1);
+  // Unreadable or missing: never stale; a future run counts as fresh.
+  assert.equal(P.scanStale("", "2026-10-28T13:00:00Z"), false);
+  assert.equal(P.scanStale("not a date", "2026-10-28T13:00:00Z"), false);
+  assert.equal(P.scanStale("2026-10-30T11:50:00Z", "2026-10-28T13:00:00Z"), false);
+});

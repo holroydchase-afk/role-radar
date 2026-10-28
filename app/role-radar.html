@@ -54,6 +54,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .gmlist{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}.gmlist label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.gmlist input{margin-top:4px}.gmlist .hint{display:block}.gmhave{font-style:normal;font-size:.8rem;color:var(--muted)}.gmfoot{display:flex;gap:10px;flex-wrap:wrap}details.gmail>summary,details.gmail-status>summary{font-weight:600}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:22px 18px;color:var(--muted);display:grid;gap:6px}
 .empty strong{color:var(--ink);font-family:var(--f-display);font-weight:500;font-size:1.05rem}
+.empty .btn{justify-self:start}
+.sub.stale{color:var(--warn)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}
 .row .nm{font-weight:600}
 .row .info{min-width:0}
@@ -249,6 +251,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
     <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p>
     <p class="sub progress" id="progress" role="status" hidden></p>
     <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p>
+    <p class="sub stale" id="scanStale" role="status" hidden></p>
   </header>
 
   <main class="main">
@@ -320,6 +323,8 @@ const SF=window.RoleRadarSkipFeedback||null;
 let skipFb=null, critFrom=null;
 // Preview panel: which role is open, and descriptions loaded this visit (never saved).
 let preview=null, previewFrom=null; const postings=new Map();
+// jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
+let jobsState="loading", dbChecked=false;
 let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view={...DEF_VIEW,...v};}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
@@ -392,6 +397,7 @@ function inTab(j,t){
 function counts(){
   const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",progress:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
   jobs.forEach(j=>{["inbox","pipeline","action","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
+  if(jobsState!=="ready") JOB_TABS.forEach(t=>{if(t!=="progress") c[t]="";});
   return c;
 }
 function renderTabs(){
@@ -402,6 +408,8 @@ function renderTabs(){
 // "greenhouse:orbitline" -> "Greenhouse"
 const boardName=v=>{const a=String(v||"").split(":")[0].toLowerCase(); return (PV&&PV.ATS_LABEL[a])||{workday:"Workday",ashby:"Ashby"}[a]||a||"?";};
 function renderScan(){
+  const sw=$("#scanStale"), stale=!!(scan&&scan.lastRun&&PG&&PG.scanStale&&PG.scanStale(scan.lastRun,Date.now()));
+  sw.textContent=stale?`Scan hasn't run since ${fmtDate(scan.lastRun)}. New roles may be missing; check the scheduled scan.`:""; sw.hidden=!stale;
   if(!scan){ $("#scanLine").textContent="Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning. No scan has run yet."; return;}
   const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
   $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards · ${esc(scan.newMatches??0)} new matches${scan.note?` · ${esc(scan.note)}`:""}`;
@@ -872,11 +880,20 @@ async function gsApply(){
   toast(ok===picks.length?`Updated ${ok} ${ok===1?"role":"roles"}`:`Updated ${ok} of ${picks.length}. Try the rest again.`);
   render();
 }
+// The repo's example criteria.yaml, embedded below the script for a first-time user (tests keep it in sync).
+const exampleCriteria=()=>($("#exampleCriteria")?.textContent||"").replace(/^\n/,"");
 function renderCriteria(){
   const text=critDraft??(criteria&&criteria.spec)??"";
-  const p=parseSpec(text);
+  const p=text?parseSpec(text):{data:null,err:""};
   const when=criteria&&criteria.updatedAt?new Date(criteria.updatedAt).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  if(!text) return `<div class="empty"><strong>No criteria yet</strong><span>Once a criteria spec is saved, the morning scan reads it before every run.</span></div>`;
+  // No criteria saved yet: an empty editor, with the example one tap away (it fills the editor; nothing saves until Save).
+  if(!(criteria&&criteria.spec)&&!text) return `<div class="crit"><form class="ccard" id="critForm"><h2>criteria.yaml</h2>
+      <p class="sub" style="margin:0">No criteria yet. The morning scan reads this before every run. Write your own, or start from the example and change it to fit your search, then save.</p>
+      ${critErr?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr)}</p>`:""}
+      <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
+      <textarea id="critText" class="code" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="version: 2"${critErr?` aria-invalid="true" aria-describedby="critErr"`:""}></textarea>
+      <div class="ctl"><button class="primary" type="submit">Save criteria</button>${exampleCriteria()?`<button class="btn" type="button" id="critExample">Start from the example</button>`:""}${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
+    </form></div>`;
   // While a draft is broken or was blocked, the summary keeps showing what is saved, so nothing looks wiped.
   const shown=critErr||p.err?parseSpec((criteria&&criteria.spec)||"").data:p.data;
   return `<div class="crit">${critSummary(shown)}
@@ -938,7 +955,7 @@ function digestPreview(spec){
 
 function renderProgress(){
   const el=$("#progress"); if(!el) return;
-  if(!db){el.hidden=true;return;}
+  if(!db||jobsState!=="ready"){el.hidden=true;return;}
   const p=progressOf(jobs); el.hidden=false;
   el.innerHTML=`Today: ${progressText(p.today)} · This week: ${progressText(p.week)}`;
 }
@@ -1030,14 +1047,22 @@ function renderProgressTab(){
   </div>`;
 }
 
+// Tabs built from the jobs collection: they wait for its first read instead of looking empty.
+const JOB_TABS=["inbox","pipeline","action","ruled","progress","all"];
+function loadState(){
+  if(jobsState==="error") return `<div class="empty" role="alert"><strong>Couldn't load your roles</strong><span>Nothing was lost. The tracker couldn't read your data just now. Reload to try again.</span><button class="btn" type="button" id="reloadPage">Reload</button></div>`;
+  return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
+}
 function render(){
   renderTabs(); renderScan(); renderProgress();
   const v=$("#view");
+  if(!db&&!dbChecked){ v.innerHTML=loadState(); return; }
   if(!db){ v.innerHTML=`<div class="empty"><strong>Sign in to see your roles</strong><span>This tracker reads its data from your Claude account, so it needs a signed-in view.</span></div>`; return;}
   if(tab==="watch"){v.innerHTML=renderWatch();return;}
   if(tab==="filters"){v.innerHTML=renderFilters();return;}
   if(tab==="criteria"){v.innerHTML=renderCriteria();return;}
   if(tab==="people"){v.innerHTML=renderPeople();return;}
+  if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
   if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
   const r=renderJobs(); v.innerHTML=r.html;
@@ -1191,6 +1216,8 @@ document.addEventListener("click",async e=>{
   const re=e.target.closest("[data-recedit]");
   if(re){ editRec=editRec===re.dataset.recedit?null:re.dataset.recedit; render(); return; }
   if(e.target.id==="critReset"){ critDraft=null; critErr=""; critFrom=null; render(); return; }
+  if(e.target.id==="critExample"){ critDraft=exampleCriteria(); critErr=""; render(); $("#critText")?.focus({preventScroll:true}); toast("Example loaded. Change it to fit your search, then Save criteria."); return; }
+  if(e.target.id==="reloadPage"){ location.reload(); return; }
   if(e.target.id==="ftoggle"){ filtersOpen=!filtersOpen; render(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); return; }
   const t=e.target.closest("[data-tab]");
@@ -1272,6 +1299,9 @@ document.addEventListener("submit",async e=>{
   if(e.target.id==="addJob"){
     const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim(); if(!co||!ti) return;
     const id="manual-"+docKey(co,ti), now=new Date().toISOString(), status=$("#aj-st").value;
+    // Already tracked (added by hand or found by the scan): never overwrite its status or history.
+    const have=jobs.find(j=>j._id===id||(slugOf(j.company)===slugOf(co)&&slugOf(j.title)===slugOf(ti)));
+    if(have){ toast(`Already tracking ${have.company} · ${have.title} (${STATUS_LABEL[st(have)]||st(have)}). Nothing changed.`); return; }
     const doc={company:co,title:ti,url:$("#aj-url").value.trim(),lane:$("#aj-ln").value,source:"manual",firstSeen:now,status,statusAt:now,viewedAt:now,statusHistory:[{status,at:now}]};
     if(status==="applied"){doc.appliedAt=now; doc.followUpDue=addBusinessDays(now,config.followUpBusinessDays);}
     try{await db.doc("jobs/"+id).set(doc); toast("Added to the pipeline"); e.target.reset(); document.activeElement?.blur?.(); render();}catch(err){toast("Couldn't add that role.");}
@@ -1280,7 +1310,10 @@ document.addEventListener("submit",async e=>{
   if(e.target.id==="addCo"){
     const ats=$("#coAts").value, slug=$("#coSlug").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
     if(!slug) return;
-    try{await db.doc("companies/"+ats+"-"+slug).set({name:$("#coName").value.trim(),ats,slug,industry:$("#coInd").value.trim(),status:"unverified",via:"you"}); toast("Added. The next scan will check it."); e.target.reset(); document.activeElement?.blur?.(); render();}
+    const name=$("#coName").value.trim(), have=companies.find(c=>c._id===ats+"-"+slug||String(c.name||"").trim().toLowerCase()===name.toLowerCase());
+    // Never overwrite a tracked company: that would reset its board health, or quietly bring back a vetoed one.
+    if(have){ toast(have.status==="vetoed"?`${have.name} is already on your Never show list. Use Restore there to watch it again.`:`${have.name} is already on your watchlist.`); return; }
+    try{await db.doc("companies/"+ats+"-"+slug).set({name,ats,slug,industry:$("#coInd").value.trim(),status:"unverified",via:"you"}); toast("Added. The next scan will check it."); e.target.reset(); document.activeElement?.blur?.(); render();}
     catch(err){toast("Couldn't add that company.");}
   }
   if(e.target.id==="cfgForm"){
@@ -1318,20 +1351,245 @@ render();
 (async()=>{
   Promise.resolve(window.claude?.use?.("mcp")).then(m=>{mcp=m||null; mcpState=m?"ready":"none";},()=>{mcpState="none";}).then(()=>{ if(tab==="people"||tab==="pipeline") render(); });
   try{ db=await window.claude?.use?.("db"); }catch(e){ db=null; }
+  dbChecked=true;
   if(!db){ render(); return; }
   let user=null; try{ user=await window.claude?.use?.("user"); }catch(_){ user=null; }
   recStore=RS?RS.create({db,user,publicView:!TOOLS}):null;
   if(recStore) await recStore.init();
   if(savedTab&&showPeople()) tab=savedTab;
   render();
-  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); softRender();},()=>{});
-  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},()=>{});
-  db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},()=>{});
-  db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},()=>{});
+  // A failed read logs only which collection failed, never the error (it can carry data or links).
+  const readFailed=name=>()=>console.warn("Role Radar: couldn't read "+name);
+  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender();},()=>{readFailed("jobs")(); jobsState="error"; render();});
+  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},readFailed("companies"));
+  db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},readFailed("meta/filters"));
+  db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},readFailed("meta/config"));
   if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people") softRender(); else renderTabs();});
-  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},()=>{});
-  db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},()=>{});
-  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},()=>{});
+  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},readFailed("meta/criteria"));
+  db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},readFailed("meta/skipFeedback"));
+  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},readFailed("meta/scan"));
 })();
+</script>
+<script type="text/plain" id="exampleCriteria">
+# ─────────────────────────────────────────────────────────────
+#  Role Radar · search criteria (EXAMPLE: a demo candidate, not real settings)
+#  The weekday 7:45 ET scan reads this before every run.
+#  Edit it on the Criteria tab in Role Radar. Comments are fine.
+#
+#  How a role is scored (0–100, higher ranks first in the digest):
+#    sector   = weight × 15            (0–45)   ← what the company does
+#    experience (key: fit) = strong 35 · maybe ("partial" on cards) 20 · stretch 5 ← match to your background
+#    culture signals = +10 good signals, −10 per red flag (max −20); a hard red flag means never added
+#    startup  = −20 if the company is early-stage (see company_stage)
+#    comp     = +10 if base top ≥ stretch_target
+#    dream    = +15 if the role is like one of dream_roles (see below)
+#  Roles under `scoring.min_score_to_add` are not added (hard excludes never are).
+# ─────────────────────────────────────────────────────────────
+
+version: 2
+owner: Demo Candidate
+updated: 2026-10-21
+demo: true
+
+# ── The job itself ───────────────────────────────────────────
+role:
+  track: individual_contributor        # no people management
+  levels: [senior, staff, principal, lead]
+  title_include:
+    - Senior Product Manager
+    - Sr. Product Manager
+    - Sr Product Manager
+    - Staff Product Manager
+    - Principal Product Manager
+    - Lead Product Manager
+    - Product Manager            # plain titles only if the posting reads senior (6+ yrs)
+  title_exclude:
+    - Director
+    - VP
+    - Head of
+    - Group Product Manager
+    - Associate
+    - Intern
+    - Marketing
+    - Program Manager
+    - Engineer
+    - Designer
+
+# ── Where and how ────────────────────────────────────────────
+work:
+  remote: fully_remote_us              # remote-first or "Remote, US" with no hub requirement
+  home_state: CO                       # reject state lists that leave out CO
+  planned_move: { state: UT, when: next year }   # optional: flag roles closed to your next state
+  hybrid_ok_near: [Denver, CO]        # the only place hybrid is fine
+  reject: [hybrid, in_office, relocation, non_us_only, travel_over_25pct]
+
+comp:
+  base_floor_usd: 150000               # skip if the stated base range tops out below this
+  priority_sector_floor_usd: 140000    # weight-3 sectors may dip to here (flag it in the note)
+  stretch_target_usd: 185000           # +10 score when the range reaches this
+  missing_comp: keep                   # judge from company and level
+
+culture:
+  want: [calm pace, ~40-hour weeks, async / remote-first, generous PTO, 12+ weeks parental leave]
+  good_signals: [unlimited PTO with a minimum, parental leave, "sustainable pace", 4-day week, B Corp, mission-driven]
+  red_flags: [fast-paced, hustle, scrappy, "wear many hats", "work hard play hard", 50+ hours, high-intensity, on-call, in-office]
+  red_flag_effect: skip_hard           # hard_red_flags = never add; other red_flags = −10 each (score_only = never skip)
+  hard_red_flags: [fast-paced, hustle, high-intensity, "work hard play hard", 50+ hours, on-call, in-office]
+  must_read_posting: true              # open the posting before scoring; a title alone can't show red flags
+
+# ── Company stage ────────────────────────────────────────────
+company_stage:
+  startup_penalty: -20                 # added to the score; the role still shows if it clears min_score_to_add
+  startup_means: "under ~200 employees, or seed / Series A / Series B"
+  established: "public, Series C or later, or 200+ employees, or a large nonprofit"
+  unknown: established                 # if you can't tell, don't penalize
+
+# ── What the company does (0 ignore · 1 allowed · 2 good · 3 priority) ──
+sectors:
+  - id: solar_energy
+    label: Solar, storage & distributed energy
+    weight: 3
+    keywords: [solar, PV, storage, battery, VPP, DER, grid, utility, interconnection, community solar, EV charging, electrification, heat pump]
+    examples: [Enphase, Sunrun, SolarEdge, Generac, EnergyHub, Span]
+
+  - id: climate_tech
+    label: Climate & sustainability software
+    weight: 3
+    keywords: [climate, carbon, emissions, decarbonization, sustainability, ESG, climate risk, circular economy, wildfire, water]
+    examples: [Watershed, Persefoni, Pachama, WattTime]
+
+  - id: climate_nonprofit
+    label: Climate science & mission nonprofits (if comp clears)
+    weight: 3
+    keywords: [nonprofit, foundation, climate science, conservation, environmental]
+    examples: [RMI, Environmental Defense Fund, The Nature Conservancy]
+
+  - id: space_geo
+    label: Space & geospatial
+    weight: 2
+    keywords: [satellite, earth observation, geospatial, remote sensing, GIS, mapping, drone, aerial imagery]
+    examples: [Maxar, Esri, Mapbox, Spire]
+
+  - id: outdoor_brands
+    label: Adventure & outdoor brands
+    weight: 2
+    keywords: [outdoor, adventure, conservation, travel, national parks]
+    examples: [Patagonia, National Geographic, REI, AllTrails, Strava, Outside]
+
+  - id: green_finance
+    label: Climate & solar finance
+    weight: 2
+    keywords: [solar lending, green finance, climate fintech, energy finance, PACE]
+    examples: [Generate Capital, Mosaic]
+
+  - id: big_corp
+    label: Large stable companies
+    weight: 1
+    examples: [large insurers, national retailers, utilities]
+
+  - id: fintech
+    label: General fintech & payments
+    weight: 1                          # still allowed, just lower in the list
+    examples: [Stripe, Plaid, Square]
+
+  - id: ai_tooling
+    label: AI tooling & automation
+    weight: 1
+    examples: [Zapier, Glean]
+
+  - id: home_services
+    label: Home services & insurance
+    weight: 1
+    examples: [Thumbtack, Jobber]
+
+default_sector_weight: 1               # companies that fit none of the above
+
+# ── Never show these ─────────────────────────────────────────
+hard_exclude:
+  companies: []                       # add company names you never want to see
+  business_models:
+    - short-term consumer lending
+    - payday or cash-advance apps
+    - earned wage access
+    - credit-score marketplaces
+
+# Example values penalties. Delete a line to allow it.
+values_penalty:                        # −15 score, still shown if otherwise strong
+  - fossil fuel extraction
+  - weapons or defense prime contractors
+  - gambling or sports betting
+  - crypto trading or speculation
+
+# ── Fit ratings: two badges on every role (Values · Culture) ───
+#  Values: great · good · neutral · no.  Culture: great · good · maybe · no, or "unrated" until checked.
+#  They explain the role; they don't change the 0–100 score above.
+values_fit:                            # does the company's business match what you care about?
+  by_weight: { 3: great, 2: good, 1: neutral, 0: no }   # from the sector weight
+  # anything on hard_exclude or values_penalty is always "no"
+
+culture_fit:                           # would you actually like working there?
+  bands: { great: 6, good: 3, maybe: -3 }   # total points at or above → that rating; below maybe → no
+  checks:                              # the scan fills posting checks; intake adds research checks
+    - { id: calm_pace,           points:  2, short: "calm pace",                  means: "posting or reviews say sustainable pace, ~40-hour weeks, or anti-hustle" }
+    - { id: fast_paced,          points: -2, short: "fast-paced",                 means: "posting says fast-paced, hustle, scrappy, wear many hats, 50+ hours" }
+    - { id: remote_us,           points:  1, short: "remote anywhere in the US",  means: "remote with no hub and home_state is eligible" }
+    - { id: pay_same_everywhere, points:  1, short: "same pay in your state",     means: "one national band, or home_state is in the pay tiers" }
+    - { id: pay_tier_gap,        points: -1, short: "your state not in pay tiers", means: "posting lists pay tiers that leave out home_state" }
+    - { id: planned_move_gap,    points: -1, short: "not open in your next state", means: "state list leaves out work.planned_move.state" }
+    - { id: family_benefits,     points:  1, short: "strong family benefits",     means: "12+ weeks parental leave, or unlimited PTO with a minimum" }
+    - { id: good_reviews,        points:  1, short: "good reviews",               means: "Glassdoor work-life 4.0+ or similar" }
+    - { id: poor_reviews,        points: -1, short: "weak work-life reviews",     means: "Glassdoor work-life under 3.5, or burnout themes" }
+    - { id: recent_layoffs,      points: -2, short: "recent layoffs",             means: "layoffs in the last 12 months" }
+    - { id: crunch_risk,         points: -1, short: "launch crunch risk",         means: "new team, greenfield launch, or reviews mention crunches" }
+
+# ── Dream roles: calibration anchors ─────────────────────────
+#  Roles like these score at the top. A role counts as "like" an anchor when it is at
+#  one of these companies, or its title has a role_keywords word in one of in_sectors.
+dream_roles:
+  bonus: 15                            # added to the 0–100 score (shown as "dream role")
+  like:                                # EXAMPLE anchors for the demo candidate
+    - { company: HelioHome, title: "Senior Product Manager, Home Electrification", why: "consumer energy product at a mission company" }
+    - { company: Gridlark, title: "Staff Product Manager, Virtual Power Plants", why: "grid flexibility", check: "only if the VPP is live, not a pilot" }
+  role_keywords: [processing, payments, billing, lending, financing, underwriting]
+  in_sectors: [solar_energy, climate_tech, green_finance]
+
+# ── Digest shape ─────────────────────────────────────────────
+scoring:
+  min_score_to_add: 45
+  digest_max_items: 8
+  per_sector_cap: { fintech: 2, ai_tooling: 2, home_services: 1 }  # extras still saved, just not listed
+
+# ── Alerts: what pings your phone ────────────────────────────
+#  level: loud = every channel below, right away · quiet = one line in the summary · off
+#  when:  recruiter_email · status_change (to: [...]) · new_role (min_score) · follow_up_due
+#  The first rule that matches wins, so put the specific ones first.
+alerts:
+  channels: [push, thread]             # push = phone notification · thread = message with links · email = backup email
+  quiet_hours: { start: "22:00", end: "07:00", tz: America/Denver, loud_breaks_through: false }
+  rules:
+    - { id: recruiter, when: recruiter_email, level: loud, remind_after_hours: [4, 18] }
+    - { id: interview, when: status_change, to: [screen, interviewing, offer], level: loud }
+    - { id: rejection, when: status_change, to: [rejected], level: quiet }
+    - { id: dream_match, when: new_role, min_score: 85, level: loud }
+    - { id: good_match, when: new_role, min_score: 60, level: quiet }
+    - { id: follow_up, when: follow_up_due, level: quiet }
+
+# ── Where to look ────────────────────────────────────────────
+search:
+  ziprecruiter_queries:                # remote, full-time, senior, salary ≥ floor, posted in the last day
+    - senior product manager solar
+    - senior product manager energy
+    - senior product manager climate
+    - senior product manager sustainability
+    - senior product manager geospatial
+    - staff product manager
+    - senior product manager payments
+  himalayas_queries:
+    - senior product manager
+    - staff product manager
+    - product manager climate
+    - product manager energy
+  climate_boards: [climatebase]        # climatebase.org remote PM search, Mon/Wed/Fri
+  discovery_bias: [solar_energy, climate_tech, climate_nonprofit, space_geo, outdoor_brands]
 </script>
 

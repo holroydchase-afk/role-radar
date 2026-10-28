@@ -34,7 +34,12 @@
   add("recruiters", seed.recruiters);
   add("meta", seed.meta);
 
-  const as = new URLSearchParams(location.search).get("as") || "owner";
+  const qs = new URLSearchParams(location.search);
+  const as = qs.get("as") || "owner";
+  // Test hooks for load states: ?fail=jobs makes collection("jobs") reads fail; ?hold=jobs holds its first
+  // snapshot until window.__RR_RELEASE__("jobs"). Comma-separate several names.
+  const names = (k) => new Set(qs.getAll(k).flatMap((v) => v.split(",")).map((v) => v.trim()).filter(Boolean));
+  const failing = names("fail"), held = names("hold");
   const ownerOnly = (path) => as === "viewer" && /^recruiters(\/|$)/.test(path);
   const reads = (window.__RR_DB_READS__ = []);
   const denied = () => Object.assign(new Error("Below the minimum level for this path"), { code: "invalid_argument" });
@@ -66,8 +71,14 @@
     collection(name) {
       reads.push(name);
       return {
-        onSnapshot(cb) { return watch(() => cb(collectionSnap(name))); },
-        async get() { return collectionSnap(name); },
+        onSnapshot(cb, onError) {
+          if (failing.has(name)) {
+            queueMicrotask(() => onError && onError(new Error("Demo: read failed for " + name)));
+            return () => {};
+          }
+          return watch(() => { if (!held.has(name)) cb(collectionSnap(name)); });
+        },
+        async get() { if (failing.has(name)) throw new Error("Demo: read failed for " + name); return collectionSnap(name); },
       };
     },
     doc(path) {
@@ -138,6 +149,8 @@
       throw { code: "not_in_manifest", server, message: "Tool not allowed" };
     },
   };
+
+  window.__RR_RELEASE__ = (name) => { held.delete(name); notify(); };
 
   window.claude = window.claude || {};
   // Who is viewing: the owner by default; the page asks isOwner() to decide whether to show recruiters.

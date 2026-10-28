@@ -83,6 +83,24 @@
     return { from: zoned(y, m, d, hour, tz), to };
   }
 
+  /** Weekdays (Mon-Fri) after the day of `last` up to and including the day of `now`, in tz; null when unreadable. */
+  function businessDaysSince(last, now, tz = "America/New_York") {
+    const from = dayKey(last, tz), to = dayKey(now, tz);
+    if (!from || !to) return null;
+    let n = 0;
+    for (let k = addDays(from, 1), i = 0; k <= to && i < 400; k = addDays(k, 1), i++) {
+      const wd = new Date(k + "T12:00:00Z").getUTCDay();
+      if (wd !== 0 && wd !== 6) n++;
+    }
+    return n;
+  }
+  /** The weekday scan is overdue once a whole weekday has gone by without it: 2+ business days since the last run.
+   *  Friday's run is still fresh all Monday; Monday's is stale on Wednesday. */
+  function scanStale(lastRun, now, tz = "America/New_York") {
+    const n = businessDaysSince(lastRun, now, tz);
+    return n !== null && n >= 2;
+  }
+
   const inRange = (v, from, to, tz) => { const t = toMs(v, tz); return !isNaN(t) && t >= from && t < to; };
   const sentAt = (j) => j.appliedAt || "";
   const startedAt = (j) => (st(j) === "applying" ? j.statusAt || "" : "");
@@ -194,5 +212,5 @@
     };
   }
 
-  return { STAGES, RESPONSE_AFTER_DAYS, skippedBy, toMs, dayKey, dayStart, weekStart, emailWindow, reached, periodReport, snapshot, benchmarks, topNew, dashboard };
+  return { STAGES, RESPONSE_AFTER_DAYS, skippedBy, toMs, dayKey, businessDaysSince, scanStale, dayStart, weekStart, emailWindow, reached, periodReport, snapshot, benchmarks, topNew, dashboard };
 });
