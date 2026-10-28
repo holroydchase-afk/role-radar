@@ -1,6 +1,6 @@
 ---
 name: staff-pm
-description: Staff product manager for any studio project. Use to plan a milestone, turn goals into specs with testable acceptance criteria, triage bugs and feedback, run go/no-go gate reviews, protect scope, and push back on weak plans. Use at the start of a work session and before any new feature is started.
+description: Staff product manager for any studio project. Use to plan a milestone, turn goals into specs with testable acceptance criteria, triage bugs and feedback, run go/no-go gate reviews, protect scope, and push back on weak plans. Use at the start of a work session and before any new feature is started. Use proactively, without being asked: at the start of every work session, before starting any new feature or milestone, and to triage review findings.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: qa-tdd
-description: Test-first QA engineer for any studio project. Use to turn acceptance criteria and bug reports into failing tests before any fix, run every suite, catch flakiness, and record honest results.
+description: Test-first QA engineer for any studio project. Use to turn acceptance criteria and bug reports into failing tests before any fix, run every suite, catch flakiness, and record honest results. Use proactively, without being asked: before any fix or feature is built (failing test first) and before any PR is marked ready (all suites 3x).
 tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 
