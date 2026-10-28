@@ -1035,7 +1035,14 @@ function alertsPreview(spec){
   return rules+how+now;
 }
 // The digest ranking (scoring.js buildDigest over the roles in New): shared by the Criteria preview and the New tab card.
-function digestOf(spec){ const pool=jobs.filter(j=>INBOX.includes(st(j))); return pool.length?SC.buildDigest(pool,spec):null; }
+// Memoized on the jobs array and the spec object: both are replaced (never mutated) on each snapshot or edit,
+// so a search keystroke or tab switch reuses the last ranking instead of re-scoring every new role.
+let digestMemo=null;
+function digestOf(spec){
+  if(digestMemo&&digestMemo.jobs===jobs&&digestMemo.spec===spec) return digestMemo.d;
+  const pool=jobs.filter(j=>INBOX.includes(st(j))), d=pool.length?SC.buildDigest(pool,spec):null;
+  digestMemo={jobs,spec,d}; return d;
+}
 function digestPreview(spec){
   if(!SC||!spec) return `<p class="hint">Preview needs a valid spec.</p>`;
   const d=digestOf(spec);
