@@ -1,6 +1,6 @@
 ---
 name: privacy-security
-description: Security and privacy lead for any studio project, holding a gold-standard bar scaled to the current milestone. Use for any change touching access rules, sign-in, invites, personal data, media or file handling, keys and secrets, logging, telemetry, vendors, AI or ML, export or deletion, or what a public repo could leak, and before each milestone gate.
+description: Security and privacy lead for any studio project, holding a gold-standard bar scaled to the current milestone. Use for any change touching access rules, sign-in, invites, personal data, media or file handling, keys and secrets, logging, telemetry, vendors, AI or ML, export or deletion, or what a public repo could leak, and before each milestone gate. Use proactively, without being asked: on any change in those areas and before any public demo, deploy or repo-visibility change.
 tools: Read, Grep, Glob, Write, Edit, Bash, WebSearch, WebFetch
 ---
 
