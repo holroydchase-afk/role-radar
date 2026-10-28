@@ -20,7 +20,8 @@
   --bg:#121816; --surface:#1a2220; --ink:#e4ebe7; --muted:#97a59e; --line:#2c3733;
   --accent:#7cb4dc; --accent-soft:#1e3343;
   --good:#7bcfa1; --good-soft:#18342a; --warn:#e2b55a; --warn-soft:#3a2f17; --bad:#ec8f83; --bad-soft:#3d221f; color-scheme:dark}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+a{color:var(--accent);text-underline-offset:.18em}
 .wrap{max-width:760px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
 header{display:grid;gap:6px}
 h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:-.01em;margin:0;text-wrap:balance}
@@ -28,28 +29,36 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 /* Dates and pay inside sentences read in the body font (tabular digits keep columns tidy). */
 .next .mono,.pv-head .meta .mono,.gmlist .mono{font-family:var(--f-body)}
-#tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:2}
-#tabs button{font:500 .88rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;gap:6px;align-items:center}
+#tabs{display:flex;gap:6px;flex-wrap:wrap;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:2}
+#tabs::-webkit-scrollbar{display:none}
+#tabs button{font:500 .9rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 14px;min-height:40px;cursor:pointer;display:flex;flex:none;gap:6px;align-items:center;white-space:nowrap;scroll-snap-align:start}
+#tabs button:hover{border-color:var(--accent)}
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
-.job .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.job .co{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.job .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.job .head{min-width:0}
+.job .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* One label style: sentence case, 0.8rem/600. Only the demo-data chip stays uppercase. */
+.job .co{font:600 .8rem var(--f-body);color:var(--muted)}
 .job h2{font-family:var(--f-display);font-weight:500;font-size:1.15rem;margin:2px 0 0;line-height:1.25;text-wrap:balance}
 .job h2 a{color:inherit;text-decoration:none}
 .job h2 a:hover{text-decoration:underline;text-decoration-color:var(--accent)}
 .meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.85rem}
 .note{margin:0;font-size:.92rem;max-width:65ch}
-.chip{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.chip{font:600 .8rem/1.3 var(--f-body);padding:3px 10px;border-radius:999px;white-space:nowrap}
 .fit-strong{background:var(--good-soft);color:var(--good)}
 .fit-maybe{background:var(--warn-soft);color:var(--warn)}
 .fit-stretch{background:var(--bad-soft);color:var(--bad)}
 .st{background:var(--accent-soft);color:var(--accent)}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
-.btn{font:500 .84rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:7px;padding:5px 10px;cursor:pointer}
+/* Buttons: one solid-accent primary per card or form (.cta / .primary), the rest outlined. 36px on desktop, 44px on touch. */
+.btn{font:500 .875rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:0 12px;min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
+.btn.cta{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn.cta:hover{filter:brightness(1.08)}
 .btn.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .gmlist{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}.gmlist label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.gmlist input{margin-top:4px}.gmlist .hint{display:block}.gmhave{font-style:normal;font-size:.8rem;color:var(--muted)}.gmfoot{display:flex;gap:10px;flex-wrap:wrap}details.gmail>summary,details.gmail-status>summary{font-weight:600}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:22px 18px;color:var(--muted);display:grid;gap:6px}
@@ -60,7 +69,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .row .nm{font-weight:600}
 .row .info{min-width:0}
 .row .info small{display:block;color:var(--muted)}
-.grp{font:600 .76rem var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:14px 0 0}
+.grp{font:600 .8rem var(--f-body);color:var(--muted);margin:14px 0 0}
 .health{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;margin:0 0 14px}
 .health.low{border-color:var(--warn);background:var(--warn-soft)}
 .health .sum{margin:0;font-size:.9rem}.health .sum b{font-family:var(--f-mono);font-weight:500}
@@ -74,13 +83,14 @@ form.add,form.filters{background:var(--surface);border:1px solid var(--line);bor
 label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
 input,select,textarea{font:400 .92rem var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0}
 textarea{min-height:64px;resize:vertical}
-.primary{font:600 .88rem var(--f-body);background:var(--ink);color:var(--bg);border:0;border-radius:7px;padding:8px 14px;cursor:pointer;justify-self:start}
+.primary{font:600 .875rem var(--f-body);background:var(--accent);color:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:0 16px;min-height:36px;cursor:pointer;justify-self:start}
+.primary:hover{filter:brightness(1.08)}
+.primary:disabled{opacity:.55;cursor:default;filter:none}
 .toast-act{background:none;border:0;color:inherit;font:inherit;font-weight:600;text-decoration:underline;padding:4px 6px;margin-left:6px;cursor:pointer}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem}
 .search{width:100%;box-sizing:border-box}
 .apply-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:2px}
-.apply{font:600 .88rem var(--f-body);background:var(--accent);color:var(--surface);border:0;border-radius:7px;padding:7px 16px;cursor:pointer}
-.apply:hover{filter:brightness(1.08)}
+.apply:not(.cta){color:var(--accent);border-color:var(--accent)}
 .resume{font:500 .86rem var(--f-body);color:var(--accent);text-decoration:none;min-width:0;overflow-wrap:anywhere}
 .resume:hover{text-decoration:underline}
 .hint{font-size:.8rem;color:var(--muted)}
@@ -95,11 +105,13 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .fbar .fields{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
 #ftoggle{display:none;align-items:center}
 /* On phones the tab bar wraps to 2-3 rows, so it scrolls away instead of covering a fifth of the screen. */
-@media (max-width:600px){#tabs{position:static}}
+@media (max-width:600px){#tabs{position:static;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
+/* Phones: a shorter header so the first role title lands on the first screen. */
+@media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}}
 @media (max-width:600px){#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}}
 .showcase-mode #ftoggle{display:inline-flex}.showcase-mode .fbar:not(.open) .fields{display:none}
 /* Touch: every control at least 44px tall. */
-@media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
+@media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.kv a{display:inline-flex;align-items:center;min-height:44px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
 .fbar .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
 .linkbtn{font:500 .82rem var(--f-body);background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
 .dates{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:.8rem;color:var(--muted)}
@@ -111,7 +123,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .why{font:600 .8rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;justify-self:start}
 .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.ctl select{padding:5px 8px;font-size:.84rem}
+.ctl select{padding:0 8px;min-height:36px;font-size:.875rem}
+@media (max-width:600px), (pointer:coarse){.ctl select,.primary{min-height:44px}}
 .skipwhy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
 .skipwhy input{flex:1 1 100%;font:inherit;font-size:.88rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:0}
 /* Progress line and the Ruled out tab: eliminated roles count as progress next to applications. */
@@ -154,7 +167,7 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .bars .lbl{font-size:.86rem;overflow-wrap:anywhere}.bars .track{height:12px;background:var(--bg);border-radius:4px;overflow:hidden}.bars .track i{display:block;height:100%;background:var(--accent);opacity:.75;border-radius:4px}
 .bars b{font:500 .85rem var(--f-mono);text-align:right}.bars small{font-size:.75rem;color:var(--muted);text-align:right}
 .prog .row{padding:8px 0}.prog .row:last-child{border-bottom:0}.prog .row h4{margin:0;font-size:.92rem}.prog .row small{color:var(--muted)}
-.ruled h3{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 0}
+.ruled h3{font:600 .8rem var(--f-body);color:var(--muted);margin:6px 0 0}
 .ruled .row h4{font-family:var(--f-display);font-weight:500;font-size:1rem;margin:0;line-height:1.3}
 .ruled .row h4 a{color:inherit}
 details.more{border-top:1px solid var(--line);padding-top:8px}
@@ -182,12 +195,14 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .code{font:400 .84rem/1.55 var(--f-mono);tab-size:2;min-height:420px;width:100%;box-sizing:border-box;background:var(--bg);white-space:pre;overflow:auto}
 .err{font:500 .88rem var(--f-body);color:var(--bad);background:var(--bad-soft);border-radius:7px;padding:6px 9px;margin:0;white-space:pre-wrap}
 .score{font:600 .74rem var(--f-mono);padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+/* On a role card the score is the headline number: a 48px tile at the top right. */
+.job .score{display:grid;place-items:center;box-sizing:border-box;min-width:48px;height:48px;padding:0 8px;border-radius:12px;font:700 1.5rem/1 var(--f-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .score.hi{background:var(--good-soft);color:var(--good)}
-.fitr{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline;font:500 .84rem var(--f-body)}
+.fitr{display:grid;grid-template-columns:10.5em minmax(0,1fr);gap:4px 10px;align-items:baseline;font:500 .84rem var(--f-body)}
 .fitr .k{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
-.fitr .k small{font:600 .7rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:4.6em}
+.fitr .k small{font:600 .8rem var(--f-body);color:var(--muted);min-width:4.4em}
 .fitr .r{color:var(--muted);min-width:0;overflow-wrap:anywhere}
-.rate{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+.rate{font:600 .8rem/1.3 var(--f-body);padding:1px 8px;border-radius:999px;border:1px solid transparent}
 .r-great{background:var(--good);color:var(--surface)}
 .r-good{background:var(--good-soft);color:var(--good)}
 .r-neutral{background:var(--accent-soft);color:var(--accent)}
@@ -209,7 +224,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
 .dig .sub2{grid-column:2;color:var(--muted);font-size:.8rem}
 .arules{display:grid;gap:6px;margin:0;padding:0;list-style:none}.arules li{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:10px;align-items:baseline}
-.lvl{font:600 .7rem var(--f-mono);text-transform:uppercase;letter-spacing:.04em;text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.lvl{font:600 .8rem var(--f-body);text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .privbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.privbar .hint{margin:0;max-width:65ch}
 .showcase[hidden]{display:none}.showcase{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.9rem}.showcase a{color:var(--accent);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;min-height:44px}.showcase a:hover{text-decoration:underline}
 .lede{margin:0;max-width:62ch;font-size:1rem}
@@ -220,7 +235,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 #preview[hidden]{display:none}
 .pv-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:16px 18px 10px;border-bottom:1px solid var(--line)}
 .pv-head h2{font-family:var(--f-display);font-weight:500;font-size:1.2rem;line-height:1.25;margin:2px 0 4px;text-wrap:balance}
-.pv-head .co{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pv-head .co{font:600 .8rem var(--f-body);color:var(--muted)}
 .pv-head .btn{flex:none}
 .pv-scroll{overflow-y:auto;overscroll-behavior:contain;padding:14px 18px 24px;display:grid;gap:12px;align-content:start;flex:1;min-height:0}
 .pv-body{font-size:.95rem;line-height:1.6;max-width:70ch;min-width:0;overflow-wrap:anywhere}
@@ -453,7 +468,8 @@ function jobCard(j){
   const id=esc(j._id), s=st(j), fit=(j.fit||"").toLowerCase(), resumeUrl=safeUrl(j.resumeUrl);
   // Demo roles are made up: their example.com links would be dead ends, so they become a "Sample posting" note.
   const sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url);
-  const fitChip=(typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"")+(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
+  const scoreTile=typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"";
+  const fitChip=(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
   const stChip=s!=="new"?`<span class="chip st st-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`:"";
   // The public demo shows one category per card (the sector); the lane is Chase's own grouping.
   const laneChip=j.lane&&!(window.__RR_SHOWCASE__&&j.sector)?`<span class="chip lane">${esc(j.lane)}</span>`:"";
@@ -461,6 +477,10 @@ function jobCard(j){
   const cf=conflictOf(j);
   const cfChip=cf?`<span class="chip conflict" title="Overlaps a product you're building">Conflict</span>`:"";
   const why=tab==="action"?actionReason(j):null;
+  // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
+  const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
+  const cta=INBOX.includes(s)?"save":s==="saved"&&TOOLS?"apply":s==="applying"?"applied":fupDue?"fup":"";
+  const btn=k=>`btn${cta===k?" cta":""}`;
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
@@ -470,10 +490,11 @@ function jobCard(j){
       <p class="err" data-skiperr role="alert" hidden></p>
       <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
   return `<article class="job${preview===j._id?" sel":""}">
-    <div class="top"><div style="min-width:0">
+    <div class="top"><div class="head">
       <div class="co">${esc(j.company)}</div>
       <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(j.title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(j.title)}</a>`:esc(j.title)}</h2>
-    </div><div class="actions">${fitChip}${cfChip}${stChip}</div></div>
+    </div>${scoreTile}</div>
+    ${fitChip||cfChip||stChip?`<div class="chips">${fitChip}${cfChip}${stChip}</div>`:""}
     ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}
     ${why?`<div class="why">${esc(why)}</div>`:""}
     <div class="meta">
@@ -492,15 +513,15 @@ function jobCard(j){
     ${j.emailNote?`<p class="note" style="color:var(--muted)">Inbox: ${esc(j.emailNote)}</p>`:""}
     ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="note" style="color:var(--muted)">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}
     <div class="apply-row">
-      ${TOOLS?`<button class="apply" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
+      ${TOOLS?`<button class="btn apply${cta==="apply"?" cta":""}" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
       ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:`<span class="hint">Copies an intake prompt for a new chat</span>`)}
     </div>
     <div class="ctl">
       <label class="sr" for="st-${id}" style="display:flex;gap:6px;align-items:center">Status
         <select id="st-${id}" data-setstatus="${id}">${STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("")}</select></label>
-      ${INBOX.includes(s)?`<button class="btn" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
-      ${s==="applying"?`<button class="btn" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
-      ${s==="applied"&&j.followUpDue&&j.followUpDue<=today()?`<button class="btn" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
+      ${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
+      ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
+      ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
       ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
       <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
       ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn" type="button" data-sample="${id}">Sample posting</button>`:""}
