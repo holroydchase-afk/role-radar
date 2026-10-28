@@ -55,12 +55,12 @@ IDs follow the studio standard (`docs/planning-ids.md` in the studio-agents repo
 Goal: the real product works on day one for a new user, CI gates every deploy, and the demo shows what the scan produces. One draft PR per task, stacked.
 
 - [x] **M3.1: Plan**: this section, posted to Chase.
-- [ ] **M3.2: Works for real**: an empty tracker can enter criteria (editor + "Start from the example"); a stale-scan warning; loading and error states that don't look like an empty tracker; adding a role or company twice no longer overwrites the first.
-- [ ] **M3.3: UI to 8/10**: ux-reviewer before and after at 390 and 1280 px; fix P0 and P1, park P2s.
-- [ ] **M3.4: Harden**: `ci.yml` runs the full test suite and the privacy check on every PR; Pages deploys only after CI passes; dependabot; README CI badge; privacy-security review.
-- [ ] **M3.5: Enhancements**: a "This morning's digest" card on New (what the scan sends, from the same scoring code); deep links (`?tab=`, `#role-`) to the proof screens.
-- [ ] **M3.6: Demo check**: build and load the public demo headless, then load chaseholroyd.com/role-radar/.
-- [ ] **M3.7: Reusable blocks**: CI, dependabot and the gated deploy here; shared privacy check and plain-JS repo template go to Product Studio as an INTAKE.
+- [x] **M3.2: Works for real**: an empty tracker can enter criteria (editor + "Start from the example"); a stale-scan warning; loading and error states that don't look like an empty tracker; adding a role or company twice no longer overwrites the first.
+- [x] **M3.3: UI to 8/10**: ux-reviewer before and after at 390 and 1280 px; fix P0 and P1, park P2s.
+- [x] **M3.4: Harden**: `ci.yml` runs the full test suite and the privacy check on every PR; Pages deploys only after CI passes; dependabot; README CI badge; privacy-security review.
+- [x] **M3.5: Enhancements**: a "This morning's digest" card on New (what the scan sends, from the same scoring code); deep links (`?tab=`, `#role-`) to the proof screens.
+- [x] **M3.6: Demo check**: build and load the public demo headless, then load chaseholroyd.com/role-radar/.
+- [x] **M3.7: Reusable blocks**: CI, dependabot and the gated deploy here; shared privacy check and plain-JS repo template go to Product Studio as an INTAKE.
 
 ## Later
 
