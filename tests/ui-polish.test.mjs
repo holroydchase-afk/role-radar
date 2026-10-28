@@ -134,3 +134,135 @@ test("RR-UX3-7 body text is 16px and chips, company names and fit keys aren't al
   assert.deepEqual([...new Set(caps)], [], "elements still set in uppercase");
   await page.close();
 });
+
+// ── RR-UX4: ux-reviewer AFTER pass (6.5/10). Private build unless noted; demo data only; red first. ──
+const openPrivate = (opts = {}) => openDemo({ html: buildDemo(), ...opts });
+const openEmpty = (opts = {}) => openDemo({ html: buildDemo({ seed: {} }), ready: "#tab-inbox", ...opts });
+const filterFieldsShown = (page) => page.locator("#fbar .fields").evaluate((el) => !!el.offsetParent && el.getBoundingClientRect().height > 0);
+
+test("RR-UX4-1 filters start collapsed behind 'Filters and sort' at every width, so Pipeline's first role shows on a laptop screen", async () => {
+  for (const vp of [LAPTOP, PHONE]) {
+    const { page } = await openPrivate(vp);
+    for (const id of ["inbox", "pipeline", "all"]) {
+      await page.click(`#tab-${id}`);
+      assert.equal(await filterFieldsShown(page), false, `filter fields hidden by default on ${id} at ${vp.width}`);
+      assert.ok(await page.locator("#ftoggle").isVisible(), `#ftoggle visible on ${id} at ${vp.width}`);
+      assert.equal(await page.locator("#ftoggle").getAttribute("aria-expanded"), "false");
+    }
+    await page.close();
+  }
+  const { page } = await openPrivate(LAPTOP);
+  await page.click("#tab-pipeline");
+  const t = await page.locator("#view .job h2").first().boundingBox();
+  assert.ok(t && t.y + t.height <= 800, `first Pipeline title ends at ${Math.round(t.y + t.height)}px (viewport 800)`);
+  await page.click("#ftoggle");
+  assert.equal(await page.locator("#ftoggle").getAttribute("aria-expanded"), "true");
+  assert.equal(await filterFieldsShown(page), true, "toggle still opens the filters");
+  await page.close();
+});
+
+test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targets with room before the first card", async () => {
+  const { page } = await openPrivate(LAPTOP);
+  await page.click("#tab-pipeline");
+  const m = await page.evaluate(() => {
+    const sums = [...document.querySelectorAll("#view > details > summary, #view details:not(.job details) > summary")]
+      .filter((s) => !s.closest(".job") && s.offsetParent).map((s) => ({ text: s.textContent.trim(), h: s.getBoundingClientRect().height }));
+    const dets = [...document.querySelectorAll("#view details")].filter((d) => !d.closest(".job") && d.offsetParent);
+    const last = dets[dets.length - 1], job = document.querySelector("#view .job");
+    return { sums, gap: last && job ? job.getBoundingClientRect().top - last.getBoundingClientRect().bottom : null };
+  });
+  assert.ok(m.sums.length >= 2, `found ${m.sums.length} section rows`);
+  for (const s of m.sums) assert.ok(s.h >= 44, `'${s.text}' row is ${Math.round(s.h)}px tall at 1280`);
+  assert.ok(m.gap !== null && m.gap >= 12, `gap from last section row to first card is ${m.gap === null ? "n/a" : Math.round(m.gap)}px`);
+  await page.close();
+});
+
+test("RR-UX4-3 on a phone each Values/Culture reason sits under its label and uses the card's width", async () => {
+  const { page } = await openPrivate(PHONE);
+  await page.click("#tab-all");
+  const rows = await page.locator(".job .fitr").evaluateAll((els) => els.flatMap((f) => {
+    const fw = f.getBoundingClientRect().width, ks = [...f.querySelectorAll(".k")];
+    return [...f.querySelectorAll(".r")].map((r, i) => {
+      const rb = r.getBoundingClientRect(), kb = ks[i]?.getBoundingClientRect();
+      return { below: kb ? rb.top >= kb.bottom - 1 : false, ratio: rb.width / fw };
+    });
+  }));
+  assert.ok(rows.length >= 4);
+  for (const r of rows) {
+    assert.ok(r.below, "reason starts below its label row");
+    assert.ok(r.ratio >= 0.85, `reason spans ${Math.round(r.ratio * 100)}% of the fit block`);
+  }
+  await page.close();
+});
+
+test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emphasized (accent) action", async () => {
+  const { page } = await openPrivate(LAPTOP);
+  const accent = await accentRgb(page);
+  for (const id of ["pipeline", "all", "action"]) {
+    await page.click(`#tab-${id}`);
+    const cards = await page.locator("#view .job").evaluateAll((els, accent) => els.map((c) => {
+      const btns = [...c.querySelectorAll("button, a.btn")].filter((b) => b.offsetParent && !b.closest("details"));
+      const filled = btns.filter((b) => b.matches(".btn.cta, .primary") || getComputedStyle(b).backgroundColor === accent);
+      const accented = btns.filter((b) => { const cs = getComputedStyle(b); return cs.backgroundColor === accent || cs.borderTopColor === accent; });
+      return { title: c.querySelector("h2")?.textContent.trim(), filled: filled.map((b) => b.textContent.trim()), accented: accented.map((b) => b.textContent.trim()) };
+    }), accent);
+    assert.ok(cards.length >= 1, `cards on ${id}`);
+    for (const c of cards) {
+      assert.ok(c.filled.length <= 1, `${id}: '${c.title}' has ${c.filled.length} filled primaries: ${c.filled.join(", ")}`);
+      assert.ok(c.accented.length <= 1, `${id}: '${c.title}' has competing accent actions: ${c.accented.join(", ")}`);
+    }
+  }
+  await page.close();
+});
+
+test("RR-UX4-5 on an empty criteria editor 'Start from the example' is the primary; once there's text, Save is", async () => {
+  const { page } = await openEmpty(LAPTOP);
+  const accent = await accentRgb(page);
+  await page.click("#tab-criteria");
+  await page.locator("#critText").waitFor({ state: "visible", timeout: 3000 });
+  const bg = (name) => page.getByRole("button", { name }).evaluate((b) => getComputedStyle(b).backgroundColor);
+  assert.equal(await bg(/start from the example/i), accent, "example is solid primary on an empty editor");
+  assert.notEqual(await bg(/save criteria/i), accent, "Save is not primary on an empty editor");
+  await page.locator("#critText").fill("weights:\n  sector: 1\n");
+  await page.locator("#critText").dispatchEvent("input");
+  assert.equal(await bg(/save criteria/i), accent, "Save becomes primary once there's text");
+  await page.close();
+});
+
+test("RR-UX4-6 first run with no criteria: New's empty state points to Criteria", async () => {
+  const { page } = await openEmpty(LAPTOP);
+  await page.click("#tab-inbox");
+  const text = await page.locator("#view").innerText();
+  assert.match(text, /set your criteria/i, "empty New mentions setting criteria");
+  const btn = page.locator("#view").getByRole("button", { name: /open criteria/i });
+  assert.equal(await btn.count(), 1, "'Open Criteria' button in the empty state");
+  await btn.click();
+  assert.equal(await page.locator("#tab-criteria").getAttribute("aria-selected"), "true");
+  await page.close();
+});
+
+test("RR-UX4-7 on a phone the score math is small and at most two lines", async () => {
+  const { page } = await openPublic(PHONE);
+  const m = await page.locator(".job .score-math, .job .why-score").evaluateAll((els) => els.map((e) => {
+    const cs = getComputedStyle(e), fs = parseFloat(cs.fontSize);
+    const lh = cs.lineHeight === "normal" ? fs * 1.2 : parseFloat(cs.lineHeight);
+    return { fs, h: e.getBoundingClientRect().height, lh };
+  }));
+  assert.ok(m.length >= 3, "score math on several New cards");
+  for (const x of m) {
+    assert.ok(x.fs <= 13.5, `score math ${x.fs}px`);
+    assert.ok(x.h <= 2.6 * x.lh, `score math ${Math.round(x.h)}px tall = ${(x.h / x.lh).toFixed(1)} lines`);
+  }
+  await page.close();
+});
+
+test("RR-UX4-8 a failed load looks like an error, not loading: solid border and a filled Reload", async () => {
+  const { page } = await openPrivate({ ...LAPTOP, query: "?fail=jobs", ready: "#tab-inbox" });
+  const accent = await accentRgb(page);
+  const card = page.locator("[role=alert]").filter({ hasText: /couldn.t load your roles/i }).first();
+  await card.waitFor({ state: "visible", timeout: 3000 });
+  assert.equal(await card.evaluate((e) => getComputedStyle(e).borderTopStyle), "solid", "error card border");
+  const reload = card.getByRole("button", { name: /reload/i });
+  assert.equal(await reload.evaluate((b) => getComputedStyle(b).backgroundColor), accent, "Reload is a filled primary");
+  await page.close();
+});

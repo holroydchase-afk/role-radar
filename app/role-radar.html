@@ -64,6 +64,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .empty{border:1px dashed var(--line);border-radius:10px;padding:22px 18px;color:var(--muted);display:grid;gap:6px}
 .empty strong{color:var(--ink);font-family:var(--f-display);font-weight:500;font-size:1.05rem}
 .empty .btn{justify-self:start}
+.empty.error{border:1px solid var(--bad);background:var(--bad-soft)}
 .sub.stale{color:var(--warn)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}
 .row .nm{font-weight:600}
@@ -90,7 +91,6 @@ textarea{min-height:64px;resize:vertical}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem}
 .search{width:100%;box-sizing:border-box}
 .apply-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:2px}
-.apply:not(.cta){color:var(--accent);border-color:var(--accent)}
 .resume{font:500 .86rem var(--f-body);color:var(--accent);text-decoration:none;min-width:0;overflow-wrap:anywhere}
 .resume:hover{text-decoration:underline}
 .hint{font-size:.8rem;color:var(--muted)}
@@ -108,8 +108,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 @media (max-width:600px){#tabs{position:static;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}}
-@media (max-width:600px){#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}}
-.showcase-mode #ftoggle{display:inline-flex}.showcase-mode .fbar:not(.open) .fields{display:none}
+/* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
+#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}
 /* Touch: every control at least 44px tall. */
 @media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.kv a{display:inline-flex;align-items:center;min-height:44px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
 .fbar .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
@@ -173,6 +173,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 details.more{border-top:1px solid var(--line);padding-top:8px}
 details.more summary{cursor:pointer;font:500 .84rem var(--f-body);color:var(--muted)}
 details.more form{display:grid;gap:10px;padding-top:10px}
+/* Section rows above a list (Check Gmail, Add a role): 44px targets, 12px before the first card. */
+#view>details.more{padding-top:0;margin-bottom:12px}#view>details.more>summary{min-height:44px;box-sizing:border-box;display:flex;align-items:center;gap:8px}#view>details.more>summary::before{content:"\25B8";font-size:.8em}#view>details.more[open]>summary::before{content:"\25BE"}#view>details.more>summary::-webkit-details-marker{display:none}#view>details.more>summary{list-style:none}
 .st-applied,.st-screen,.st-interviewing{background:var(--good-soft);color:var(--good)}
 .st-offer{background:var(--good);color:var(--surface)}
 .st-applying{background:var(--warn-soft);color:var(--warn)}
@@ -202,6 +204,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .fitr .k{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
 .fitr .k small{font:600 .8rem var(--f-body);color:var(--muted);min-width:4.4em}
 .fitr .r{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+@media (max-width:480px){.fitr{grid-template-columns:minmax(0,1fr);gap:2px}.fitr .r{margin-bottom:4px}}
 .rate{font:600 .8rem/1.3 var(--f-body);padding:1px 8px;border-radius:999px;border:1px solid transparent}
 .r-great{background:var(--good);color:var(--surface)}
 .r-good{background:var(--good-soft);color:var(--good)}
@@ -218,7 +221,9 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .rec .who{font-family:var(--f-display);font-weight:500;font-size:1.08rem;margin:2px 0 0}
 .rec .next{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.9rem}
 .rec .next b{font-weight:600}
-.why-score{font:400 .78rem var(--f-mono);color:var(--muted)}
+.why-score{font:400 .72rem/1.45 var(--f-mono);color:var(--muted)}
+.why-score span{white-space:nowrap}
+.dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
 .demo{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);justify-self:start}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
@@ -446,7 +451,10 @@ function scoreLine(j){
   if(!SC||!specData) return "";
   const r=SC.scoreJob(j,specData);
   const differs=typeof j.score==="number"&&j.score!==r.score;
-  return `<div class="why-score" title="Score from your criteria">${esc(SC.explain(r))} = ${r.score}${r.dream?` · dream role: ${esc(r.dream.why)}${r.dream.check?` (check: ${esc(r.dream.check)})`:""}`:""}${differs?` · scan said ${esc(j.score)} (it also reads the posting)`:""}</div>`;
+  // Segments wrap whole ("45 sector +" never splits), so the math stays one or two short lines on a phone.
+  const parts=String(SC.explain(r)).split(/ (?=[+−-] )/).map((x,i,a)=>`<span>${esc(x)}${i===a.length-1?` = ${r.score}`:""}</span>`).join(" ");
+  const dream=r.dream?`<p class="dream-note">Dream role: ${esc(r.dream.why)}${r.dream.check?` (check: ${esc(r.dream.check)})`:""}</p>`:"";
+  return `<div class="why-score" title="Score from your criteria">${parts}${differs?` <span>· scan said ${esc(j.score)}</span>`:""}</div>${dream}`;
 }
 // Values and Culture badges: same rules as the scan and intake (criteria.yaml values_fit, culture_fit).
 const RATE_LABEL={great:"Great",good:"Good",neutral:"Neutral",maybe:"Maybe",no:"No",unrated:"Unrated"};
@@ -614,7 +622,9 @@ function renderJobs(){
       pipeline:["Nothing in the pipeline","Save a role, or tap Apply, and it moves here. Add roles found elsewhere above."],
       action:["Nothing needs you right now",(TOOLS?"Follow-ups due, stale applications and unsent resumes show up here.":"Follow-ups due and stale applications show up here.")],
       all:["No roles yet","After the first scan runs, every match it finds is listed here."]}[tab];
-    body=`<div class="empty"><strong>${msg[0]}</strong><span>${msg[1]}</span></div>`;
+    const noCrit=!base.length&&tab==="inbox"&&!(criteria&&criteria.spec);
+    body=noCrit?`<div class="empty"><strong>Set your criteria first</strong><span>The morning scan scores roles against your criteria. Add them and new matches show up here.</span><button class="btn cta" type="button" data-tab="criteria">Open Criteria</button></div>`
+      :`<div class="empty"><strong>${msg[0]}</strong><span>${msg[1]}</span></div>`;
   } else body=`<div class="list">${list.map(jobCard).join("")}</div>`;
   return {html:head+body,shown:list.length,total:base.length};
 }
@@ -913,7 +923,7 @@ function renderCriteria(){
       ${critErr?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr)}</p>`:""}
       <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
       <textarea id="critText" class="code" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="version: 2"${critErr?` aria-invalid="true" aria-describedby="critErr"`:""}></textarea>
-      <div class="ctl"><button class="primary" type="submit">Save criteria</button>${exampleCriteria()?`<button class="btn" type="button" id="critExample">Start from the example</button>`:""}${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
+      <div class="ctl"><button class="btn" type="submit" id="critSave">Save criteria</button>${exampleCriteria()?`<button class="btn cta" type="button" id="critExample">Start from the example</button>`:""}${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
     </form></div>`;
   // While a draft is broken or was blocked, the summary keeps showing what is saved, so nothing looks wiped.
   const shown=critErr||p.err?parseSpec((criteria&&criteria.spec)||"").data:p.data;
@@ -1071,7 +1081,7 @@ function renderProgressTab(){
 // Tabs built from the jobs collection: they wait for its first read instead of looking empty.
 const JOB_TABS=["inbox","pipeline","action","ruled","progress","all"];
 function loadState(){
-  if(jobsState==="error") return `<div class="empty" role="alert"><strong>Couldn't load your roles</strong><span>Nothing was lost. The tracker couldn't read your data just now. Reload to try again.</span><button class="btn" type="button" id="reloadPage">Reload</button></div>`;
+  if(jobsState==="error") return `<div class="empty error" role="alert"><strong>Couldn't load your roles</strong><span>Nothing was lost. The tracker couldn't read your data just now. Reload to try again.</span><button class="btn cta" type="button" id="reloadPage">Reload</button></div>`;
   return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
 }
 function render(){
@@ -1285,7 +1295,7 @@ document.addEventListener("change",async e=>{
   const f=e.target.closest("#fbar [data-v]");
   if(f){ view[f.dataset.v]=f.value; saveView(); render(); }
 });
-document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
+document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; const has=!!critDraft.trim(); $("#critSave")?.classList.toggle("cta",has); $("#critExample")?.classList.toggle("cta",!has); clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
 document.addEventListener("submit",async e=>{
   e.preventDefault(); if(!db) return;
   const sk=e.target.closest("form[data-skipform]");
