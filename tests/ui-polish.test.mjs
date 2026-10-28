@@ -266,3 +266,86 @@ test("RR-UX4-8 a failed load looks like an error, not loading: solid border and 
   assert.equal(await reload.evaluate((b) => getComputedStyle(b).backgroundColor), accent, "Reload is a filled primary");
   await page.close();
 });
+
+// ── RR-UX5: ux-reviewer pass at 7.0/10. Remaining P1/P2 findings; demo data only; red first. ──
+// Distinct text-line rows an element's visible text renders on (rounded line tops).
+const lineRows = (els) => {
+  const tops = new Set();
+  for (const el of els) {
+    if (!el || el.hidden || !el.getClientRects().length) continue;
+    const r = document.createRange(); r.selectNodeContents(el);
+    for (const b of r.getClientRects()) if (b.width > 1 && b.height > 1) tops.add(Math.round(b.top / 6));
+  }
+  return tops.size;
+};
+
+test("RR-UX5-1 at 1280 the tabs are one row and every tab still opens (public, ?full and private)", async () => {
+  const bad = [];
+  for (const [name, opts] of [["public", {}], ["public ?full", { query: "?full" }], ["private", { html: buildDemo() }]]) {
+    const { page } = name === "private" ? await openDemo({ ...LAPTOP, ...opts }) : await openPublic({ ...LAPTOP, ...opts });
+    const t = await page.locator("#tabs").evaluate((el) => {
+      const bs = [...el.querySelectorAll("button")].filter((b) => b.offsetParent);
+      return { n: bs.length, tops: [...new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top)))], h: el.getBoundingClientRect().height };
+    });
+    assert.ok(t.n >= 2, `${name}: ${t.n} tabs`);
+    if (t.tops.length !== 1 || t.h >= 56) bad.push(`${name}: ${t.n} tabs on ${t.tops.length} rows, #tabs ${Math.round(t.h)}px tall`);
+    const ids = await page.locator("#tabs button").evaluateAll((els) => els.filter((e) => e.offsetParent).map((e) => e.id));
+    for (const id of ids) {
+      await page.locator("#" + id).click();
+      assert.equal(await page.locator("#" + id).getAttribute("aria-selected"), "true", `${name}: ${id} opens`);
+    }
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth) <= 1280, `${name}: no sideways page scroll`);
+    await page.close();
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX5-2 at 1280 the header meta is at most 2 lines and New's first role title shows above 800px", async () => {
+  const bad = [];
+  for (const [name, go] of [["public", () => openPublic(LAPTOP)], ["private", () => openPrivate(LAPTOP)]]) {
+    const { page } = await go();
+    await page.click("#tab-inbox");
+    const rows = await page.evaluate((src) => (0, eval)(`(${src})`)([...document.querySelectorAll("header #demoNote, header #demoTry, header #progress, header #scanLine")]), String(lineRows));
+    const dig = await page.locator("#digestCard").evaluate((d) => d.open).catch(() => null);
+    assert.notEqual(dig, false, `${name}: digest card is open by default at 1280`);
+    const t = await page.locator("#view article.job h2").first().boundingBox();
+    if (rows > 2) bad.push(`${name}: header meta (demo note, today, last scan) renders on ${rows} lines`);
+    if (!(t && t.y >= 0 && t.y + t.height <= 800)) bad.push(`${name}: first New title ends at ${t ? Math.round(t.y + t.height) : "n/a"}px (viewport 800)`);
+    await page.close();
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Interviewing or Offer cards", async () => {
+  const { page } = await openPrivate(LAPTOP);
+  const seen = new Set();
+  for (const id of ["pipeline", "all"]) {
+    await page.click(`#tab-${id}`);
+    const cards = await page.locator("#view article.job").evaluateAll((els) => els.map((c) => ({
+      title: c.querySelector("h2")?.textContent.trim(),
+      status: c.querySelector("select[data-setstatus]")?.value,
+      apply: [...c.querySelectorAll("button, a")].filter((b) => b.offsetParent && (b.matches("[data-apply]") || /^\s*apply\b/i.test(b.textContent))).map((b) => b.textContent.trim()),
+    })));
+    for (const c of cards) {
+      seen.add(c.status);
+      if (["applied", "screen", "interviewing", "offer"].includes(c.status))
+        assert.deepEqual(c.apply, [], `${id}: '${c.title}' (${c.status}) still shows ${c.apply.join(", ")}`);
+      if (["new", "viewed", "saved", "applying"].includes(c.status))
+        assert.ok(c.apply.length >= 1, `${id}: '${c.title}' (${c.status}) lost its Apply`);
+    }
+  }
+  assert.ok(["applied", "screen", "interviewing"].some((s) => seen.has(s)), `demo covers applied-or-later cards (saw ${[...seen].join(", ")})`);
+  assert.ok(["saved", "applying"].some((s) => seen.has(s)), "demo covers saved/applying cards");
+  await page.close();
+});
+
+test("RR-UX5-5 on a phone Progress's 'Follow-up sent' button text stays on one line", async () => {
+  const { page } = await openPrivate(PHONE);
+  await page.click("#tab-progress");
+  const b = page.locator("section[aria-labelledby=pg-fu] button", { hasText: "Follow-up sent" }).first();
+  await b.waitFor();
+  const rows = await b.evaluate((el, src) => (0, eval)(`(${src})`)([el]), String(lineRows));
+  const m = await b.evaluate((el) => ({ h: el.getBoundingClientRect().height, ws: getComputedStyle(el).whiteSpace }));
+  assert.equal(rows, 1, `'Follow-up sent' wraps to ${rows} lines at 390 (height ${Math.round(m.h)}px, white-space ${m.ws})`);
+  await page.close();
+});

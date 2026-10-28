@@ -29,9 +29,13 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 /* Dates and pay inside sentences read in the body font (tabular digits keep columns tidy). */
 .next .mono,.pv-head .meta .mono,.gmlist .mono{font-family:var(--f-body)}
-#tabs{display:flex;gap:6px;flex-wrap:wrap;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:2}
+/* Tabs: one row at every width (RR-UX5-1). Tabs past the edge scroll sideways; a fade marks the hidden side. */
+#tabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:6px;z-index:2}
+#tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent)}
+#tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent)}
+#tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
 #tabs::-webkit-scrollbar{display:none}
-#tabs button{font:500 .9rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 14px;min-height:40px;cursor:pointer;display:flex;flex:none;gap:6px;align-items:center;white-space:nowrap;scroll-snap-align:start}
+#tabs button{font:500 .9rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 12px;min-height:36px;cursor:pointer;display:flex;flex:none;gap:5px;align-items:center;white-space:nowrap;scroll-snap-align:start}
 #tabs button:hover{border-color:var(--accent)}
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
@@ -59,7 +63,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .st{background:var(--accent-soft);color:var(--accent)}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
 /* Buttons: one solid-accent primary per card or form (.cta / .primary), the rest outlined. 36px on desktop, 44px on touch. */
-.btn{font:500 .875rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:0 12px;min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.btn{white-space:nowrap;font:500 .875rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:0 12px;min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
 .btn.cta{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
 .btn.cta:hover{filter:brightness(1.08)}
@@ -108,8 +112,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .fbar{margin:0 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px}
 .fbar .fields{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
 #ftoggle{display:none;align-items:center}
-/* On phones the tab bar wraps to 2-3 rows, so it scrolls away instead of covering a fifth of the screen. */
-@media (max-width:600px){#tabs{position:static;flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
+/* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
+@media (max-width:600px){#tabs{position:static;gap:6px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}}
 /* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
@@ -228,6 +232,10 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .why-score{font:400 .72rem/1.45 var(--f-mono);color:var(--muted)}
 .why-score span{white-space:nowrap}
 .dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
+/* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
+.hrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
+.hrow:not(:has(> :not([hidden]))){display:none}
+@media (min-width:601px){header .sub{font-size:.85rem}.meta-row:has(#progress:not([hidden])){flex-wrap:nowrap}#progress{white-space:nowrap}#progress:not([hidden])+#scanLine{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}#progress:not([hidden])+#scanLine::before{content:"·";margin-right:10px}}
 .demo{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);justify-self:start}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
@@ -288,10 +296,10 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   <header>
     <h1>Role Radar</h1>
     <p class="lede" id="lede" hidden>A job-search radar I built for my own search. It reads job boards every weekday and scores each role 0–100 against criteria I edit, with the math on every card. Applying stays my own call.</p>
-    <span class="demo" id="demoNote" hidden>Demo data</span>
-    <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p>
-    <p class="sub progress" id="progress" role="status" hidden></p>
-    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p>
+    <div class="hrow"><span class="demo" id="demoNote" hidden>Demo data</span>
+    <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p></div>
+    <div class="hrow meta-row"><p class="sub progress" id="progress" role="status" hidden></p>
+    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p></div>
     <p class="sub stale" id="scanStale" role="status" hidden></p>
   </header>
 
@@ -454,15 +462,31 @@ function renderTabs(){
   const c=counts();
   if(tab==="people"&&!showPeople()) tab="inbox";
   $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}">${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
+  tabsInView();
 }
+// One-row tab bar (RR-UX5-1): scroll the selected tab into view and fade whichever edge hides more tabs.
+function tabsEdges(){ const el=$("#tabs"); if(!el) return; const max=el.scrollWidth-el.clientWidth;
+  el.classList.toggle("more-l",el.scrollLeft>2); el.classList.toggle("more-r",el.scrollLeft<max-2); }
+function tabsInView(){ const el=$("#tabs"), b=el&&el.querySelector('[aria-selected="true"]'); if(!b) return;
+  const r=b.getBoundingClientRect(), e=el.getBoundingClientRect();
+  if(r.left<e.left) el.scrollLeft-=e.left-r.left+48; else if(r.right>e.right) el.scrollLeft+=r.right-e.right+48;
+  tabsEdges(); }
+$("#tabs").addEventListener("scroll",tabsEdges,{passive:true});
+addEventListener("resize",tabsEdges);
+$("#tabs").addEventListener("keydown",e=>{
+  const bs=[...$("#tabs").querySelectorAll("[role=tab]")], i=bs.indexOf(document.activeElement); if(i<0) return;
+  const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:bs.length-1}[e.key]; if(j===undefined) return;
+  e.preventDefault(); bs[(j+bs.length)%bs.length].focus();
+});
 // "greenhouse:orbitline" -> "Greenhouse"
 const boardName=v=>{const a=String(v||"").split(":")[0].toLowerCase(); return (PV&&PV.ATS_LABEL[a])||{workday:"Workday",ashby:"Ashby"}[a]||a||"?";};
 function renderScan(){
   const sw=$("#scanStale"), stale=!!(scan&&scan.lastRun&&PG&&PG.scanStale&&PG.scanStale(scan.lastRun,Date.now()));
   sw.textContent=stale?`Scan hasn't run since ${fmtDate(scan.lastRun)}. New roles may be missing; check the scheduled scan.`:""; sw.hidden=!stale;
   if(!scan){ $("#scanLine").textContent="Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning. No scan has run yet."; return;}
-  const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
+  const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
   $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards · ${esc(scan.newMatches??0)} new matches${scan.note?` · ${esc(scan.note)}`:""}`;
+  $("#scanLine").title=$("#scanLine").textContent; // full text when the laptop meta row trims it
 }
 
 function datesLine(j){
@@ -522,6 +546,7 @@ function jobCard(j){
   const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
   const cta=INBOX.includes(s)?"save":s==="saved"&&TOOLS?"apply":s==="applying"?"applied":fupDue?"fup":"";
   const btn=k=>`btn${cta===k?" cta":""}`;
+  const preApply=TOOLS&&(INBOX.includes(s)||s==="saved"||s==="applying"); // Apply (or Re-run intake) only until you apply
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
@@ -553,10 +578,10 @@ function jobCard(j){
     ${j.nextStep?`<p class="note"><b>Next:</b> ${esc(j.nextStep)}</p>`:""}
     ${j.emailNote?`<p class="note" style="color:var(--muted)">Inbox: ${esc(j.emailNote)}</p>`:""}
     ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="note" style="color:var(--muted)">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}
-    <div class="apply-row">
-      ${TOOLS?`<button class="btn apply${cta==="apply"?" cta":""}" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
-      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:`<span class="hint">Copies an intake prompt for a new chat</span>`)}
-    </div>
+    ${TOOLS&&(preApply||resumeUrl||j.resumeName)?`<div class="apply-row">
+      ${preApply?`<button class="btn apply${cta==="apply"?" cta":""}" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
+      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:preApply?`<span class="hint">Copies an intake prompt for a new chat</span>`:"")}
+    </div>`:""}
     <div class="ctl">
       <label class="sr" style="display:flex;gap:6px;align-items:center">Status
         <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
