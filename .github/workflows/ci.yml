@@ -1,0 +1,31 @@
+name: ci
+# Every pull request and every push to main: privacy check, studio checks and the full test suite
+# (unit + browser tests in headless Chromium). Pages deploys only after this passes on main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Personal-data check
+        run: node scripts/check-private.mjs
+      - name: Browser for the UI tests
+        run: npx playwright install --with-deps chromium
+      - name: Tests (agent roster, log hygiene, unit and browser)
+        run: npm test
+      - name: Build the public demo
+        run: node scripts/build-demo.mjs --public _site/index.html

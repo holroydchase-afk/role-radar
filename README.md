@@ -1,5 +1,7 @@
 # Role Radar
 
+[![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
 **A job search that runs itself every weekday morning.** Role Radar scans job boards, scores each new role against criteria written as code, and keeps every application, follow-up and recruiter in one place. I built it for my own search for a senior product role, and I use it every day.
 
 **[Try the live demo](https://chaseholroyd.com/role-radar/)** (sample data, no login) · [More of my work](https://chaseholroyd.com/)

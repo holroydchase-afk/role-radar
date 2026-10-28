@@ -90,7 +90,8 @@
     return str(s).replace(/^\s*((re|fw|fwd)\s*:\s*)+/i, "").replace(/\s+/g, " ").trim().slice(0, 90);
   }
 
-  function messagesOf(t) { return arr(t && (t.messages || t.messageList)); }
+  // Malformed connector payloads: a null or non-object message is skipped, never read.
+  function messagesOf(t) { return arr(t && (t.messages || t.messageList)).filter((m) => m && typeof m === "object"); }
   const isSent = (m) => arr(m && (m.labelIds || m.label_ids)).includes("SENT");
 
   /** Threads from a search_threads or batch_get_threads payload, whatever it is wrapped in. */
@@ -103,7 +104,7 @@
   /** True when the search preview left out some of the thread's messages (it shows the oldest 5). */
   function needsFullThread(t) {
     const n = Number(t && t.messageCount);
-    return n > messagesOf(t).length;
+    return n > arr(t && (t.messages || t.messageList)).length;
   }
 
   // Accents fold to plain letters (José → jose); names with no Latin letters fall back to the address.

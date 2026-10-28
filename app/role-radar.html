@@ -40,6 +40,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
 .job .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
 .job .head{min-width:0}
+/* Very long unbroken text (a pasted URL, a run of letters) wraps inside the card instead of widening the page. */
+.job,.ruled .row,.prog .row{overflow-wrap:anywhere}.job .chip{white-space:normal}
+/* Long lists (200+ cards): cards off screen skip layout until scrolled near (RR-H-21). */
+.list.long>.job{content-visibility:auto;contain-intrinsic-size:auto 340px}
 .job .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 /* One label style: sentence case, 0.8rem/600. Only the demo-data chip stays uppercase. */
 .job .co{font:600 .8rem var(--f-body);color:var(--muted)}
@@ -478,6 +482,9 @@ function jobCard(j){
   const sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url);
   const scoreTile=typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"";
   const fitChip=(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
+  const title=String(j.title??"").trim()||"Untitled role";
+  // A status this page doesn't know (an older scan, a hand edit) is listed as itself, never shown as New.
+  const stOpts=(STATUS_LABEL[s]?"":`<option value="${esc(s)}" selected>${esc(sentence(s))}</option>`)+STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("");
   const stChip=s!=="new"?`<span class="chip st st-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`:"";
   // The public demo shows one category per card (the sector); the lane is Chase's own grouping.
   const laneChip=j.lane&&!(window.__RR_SHOWCASE__&&j.sector)?`<span class="chip lane">${esc(j.lane)}</span>`:"";
@@ -500,7 +507,7 @@ function jobCard(j){
   return `<article class="job${preview===j._id?" sel":""}">
     <div class="top"><div class="head">
       <div class="co">${esc(j.company)}</div>
-      <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(j.title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(j.title)}</a>`:esc(j.title)}</h2>
+      <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(title)}</a>`:esc(title)}</h2>
     </div>${scoreTile}</div>
     ${fitChip||cfChip||stChip?`<div class="chips">${fitChip}${cfChip}${stChip}</div>`:""}
     ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}
@@ -525,8 +532,8 @@ function jobCard(j){
       ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:`<span class="hint">Copies an intake prompt for a new chat</span>`)}
     </div>
     <div class="ctl">
-      <label class="sr" for="st-${id}" style="display:flex;gap:6px;align-items:center">Status
-        <select id="st-${id}" data-setstatus="${id}">${STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("")}</select></label>
+      <label class="sr" style="display:flex;gap:6px;align-items:center">Status
+        <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
       ${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
       ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
       ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
@@ -537,7 +544,15 @@ function jobCard(j){
     ${skipRow}
     <details class="more" data-more="${id}"${openMore.has(j._id)?" open":""}>
       <summary>Lane, tags, referral, notes</summary>
-      <form data-edit="${id}">
+      ${openMore.has(j._id)?editForm(j):""}
+    </details>
+  </article>`;
+}
+
+// The details form is built when its section opens (see the toggle listener), so a long list stays quick to draw.
+function editForm(j){
+  const id=esc(j._id), tags=tagsOf(j);
+  return `<form data-edit="${id}">
         <div class="fields">
           <label for="ln-${id}">Lane<select id="ln-${id}" name="lane"><option value="">None</option>${LANES.map(l=>`<option${l===j.lane?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
           <label for="tg-${id}">Tags (comma separated)<input id="tg-${id}" name="tags" value="${esc(tags.join(", "))}" placeholder="priority, referral"></label>
@@ -547,11 +562,19 @@ function jobCard(j){
         <label for="nx-${id}">Next step<input id="nx-${id}" name="nextStep" value="${esc(j.nextStep||"")}"></label>
         <label for="nt-${id}">Notes<textarea id="nt-${id}" name="notes">${esc(j.notes||"")}</textarea></label>
         <button class="primary" type="submit">Save details</button>
-      </form>
-    </details>
-  </article>`;
+      </form>`;
 }
-
+// Cards are reused between redraws while nothing they show has changed, so search and tab switches move
+// existing cards instead of rebuilding thousands of them (RR-H-21).
+const cardCache=new Map(); let cardCtx=null;
+function cardEls(list){
+  const ctx=[tab==="action",specData,config,filters,LANES,today()];
+  if(!cardCtx||ctx.some((x,i)=>x!==cardCtx[i])){ cardCache.clear(); cardCtx=ctx; }
+  const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id)+openMore.has(j._id);
+  const keys=list.map(keyOf), miss=list.filter((j,i)=>{const c=cardCache.get(j._id); return !c||c.key!==keys[i];});
+  if(miss.length){ const t=document.createElement("template"); t.innerHTML=miss.map(jobCard).join(""); [...t.content.children].forEach((el,i)=>cardCache.set(miss[i]._id,{key:keyOf(miss[i]),el})); }
+  return list.map(j=>cardCache.get(j._id).el);
+}
 function opts(list,cur,all){return `<option value="">${all}</option>`+list.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");}
 function filterBar(){
   const statusList=(tab==="inbox"?STATUSES.filter(([v])=>INBOX.includes(v)):tab==="pipeline"?STATUSES.filter(([v])=>PIPE.includes(v)):STATUSES);
@@ -625,8 +648,8 @@ function renderJobs(){
     const noCrit=!base.length&&tab==="inbox"&&!(criteria&&criteria.spec);
     body=noCrit?`<div class="empty"><strong>Set your criteria first</strong><span>The morning scan scores roles against your criteria. Add them and new matches show up here.</span><button class="btn cta" type="button" data-tab="criteria">Open Criteria</button></div>`
       :`<div class="empty"><strong>${msg[0]}</strong><span>${msg[1]}</span></div>`;
-  } else body=`<div class="list">${list.map(jobCard).join("")}</div>`;
-  return {html:head+body,shown:list.length,total:base.length};
+  } else body=`<div class="list"></div>`;
+  return {html:head+body,shown:list.length,total:base.length,list};
 }
 
 // Board health: written by the scan (meta/scan.coverage, plus lastOk / failStreak / readMode on each company).
@@ -713,7 +736,7 @@ const hashOf=x=>{let h=5381; for(const ch of String(x)) h=((h*33)^ch.codePointAt
 function docKey(...parts){ const key=parts.map(slugOf).filter(Boolean).join("-").slice(0,60); return parts.some(x=>String(x||"").trim()&&!slugOf(x))||!key?(key?key+"-":"")+hashOf(parts.join(" ")):key; }
 function parseSpec(t){
   if(!window.jsyaml) return {data:null,err:""};
-  try{ const d=window.jsyaml.load(t); if(!d||typeof d!=="object") return {err:"The spec should be a YAML map (key: value)."}; return {data:d,err:""}; }
+  try{ const d=window.jsyaml.load(t); if(!d||typeof d!=="object"||Array.isArray(d)) return {err:"The spec should be a YAML map (key: value)."}; return {data:d,err:""}; }
   catch(e){ return {err:String(e.message||e).split("\n")[0],line:e.mark&&Number.isFinite(e.mark.line)?e.mark.line+1:null}; }
 }
 const money=n=>typeof n==="number"?"$"+Math.round(n/1000)+"K":esc(n??"—");
@@ -1096,7 +1119,7 @@ function render(){
   if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
   if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
-  const r=renderJobs(); v.innerHTML=r.html;
+  const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
   const c=$("#fcount"); if(c) c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:"";
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
@@ -1120,7 +1143,7 @@ async function setStatus(j,next,extra,opts){
   // Undo puts back every field this change touched (appliedAt, followUpDue, skipReason...), not just the status.
   const prev=Object.fromEntries(Object.keys(patch).map(k=>[k,k==="status"?st(j):(j[k]??"")]));
   try{await db.doc("jobs/"+j._id).update(patch);}
-  catch(err){toast("Couldn't save that change. Try again in a moment.");return;}
+  catch(err){cardCache.delete(j._id); toast("Couldn't save that change. Try again in a moment.");return;}
   if(!(opts&&opts.undo)){ toast("Marked "+(STATUS_LABEL[next]||next).toLowerCase()); return; }
   toast("Moved to "+(STATUS_LABEL[next]||next),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Back in "+(STATUS_LABEL[prev.status]||prev.status)); render(); focusCard(j._id);}catch(_){toast("Couldn't undo that.");}}});
 }
@@ -1282,6 +1305,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("toggle",e=>{
   const d=e.target; if(!d.matches||!d.matches("details[data-more]")) return;
   const id=d.dataset.more;
+  if(d.open&&!d.querySelector("form")&&!d.id){ const j=jobs.find(x=>x._id===id); if(j) d.insertAdjacentHTML("beforeend",editForm(j)); }
   if(d.open){ openMore.add(id); openMore.delete(id+"-closed"); markViewed(jobs.find(x=>x._id===id)); } else { openMore.delete(id); openMore.add(id+"-closed"); }
 },true);
 document.addEventListener("change",async e=>{
@@ -1312,7 +1336,7 @@ document.addEventListener("submit",async e=>{
     const j=jobs.find(x=>x._id===ed.dataset.edit); if(!j) return;
     const g=n=>ed.elements[n].value.trim();
     const body={lane:g("lane"),tags:g("tags").split(",").map(s=>s.trim()).filter(Boolean),referral:g("referral"),followUpDue:g("followUpDue"),nextStep:g("nextStep"),notes:ed.elements.notes.value.trim()};
-    try{await db.doc("jobs/"+j._id).update(body); document.activeElement?.blur?.(); toast("Saved");}catch(err){toast("Couldn't save. Try again in a moment.");}
+    try{await db.doc("jobs/"+j._id).update(body); document.activeElement?.blur?.(); toast("Saved"); render();}catch(err){toast("Couldn't save. Try again in a moment.");}
     return;
   }
   const rf=e.target.closest("form[data-recform]");
@@ -1328,7 +1352,9 @@ document.addEventListener("submit",async e=>{
     return;
   }
   if(e.target.id==="addJob"){
-    const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim(); if(!co||!ti) return;
+    const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim();
+    // Blank or spaces only: say what's missing instead of adding an empty role (required alone lets spaces through).
+    if(!co||!ti){ const miss=!co?$("#aj-co"):$("#aj-ti"); [["#aj-co",co],["#aj-ti",ti]].forEach(([k,v])=>$(k).setAttribute("aria-invalid",String(!v))); toast(!co&&!ti?"Add the company and the role title.":!co?"Add the company.":"Add the role title."); miss.focus(); return; }
     const id="manual-"+docKey(co,ti), now=new Date().toISOString(), status=$("#aj-st").value;
     // Already tracked (added by hand or found by the scan): never overwrite its status or history.
     const have=jobs.find(j=>j._id===id||(slugOf(j.company)===slugOf(co)&&slugOf(j.title)===slugOf(ti)));
@@ -1340,8 +1366,9 @@ document.addEventListener("submit",async e=>{
   }
   if(e.target.id==="addCo"){
     const ats=$("#coAts").value, slug=$("#coSlug").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
-    if(!slug) return;
-    const name=$("#coName").value.trim(), have=companies.find(c=>c._id===ats+"-"+slug||String(c.name||"").trim().toLowerCase()===name.toLowerCase());
+    const name=$("#coName").value.trim();
+    if(!name||!slug){ const bad=!name?$("#coName"):$("#coSlug"); $("#coName").setAttribute("aria-invalid",String(!name)); $("#coSlug").setAttribute("aria-invalid",String(!!name)); toast(!name?"Add the company's name.":"That slug has no letters or numbers. Use the company part of the board URL, as in stripe."); bad.focus(); return; }
+    const have=companies.find(c=>c._id===ats+"-"+slug||String(c.name||"").trim().toLowerCase()===name.toLowerCase());
     // Never overwrite a tracked company: that would reset its board health, or quietly bring back a vetoed one.
     if(have){ toast(have.status==="vetoed"?`${have.name} is already on your Never show list. Use Restore there to watch it again.`:`${have.name} is already on your watchlist.`); return; }
     try{await db.doc("companies/"+ats+"-"+slug).set({name,ats,slug,industry:$("#coInd").value.trim(),status:"unverified",via:"you"}); toast("Added. The next scan will check it."); e.target.reset(); document.activeElement?.blur?.(); render();}
