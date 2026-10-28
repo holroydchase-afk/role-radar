@@ -19,7 +19,9 @@ test("a skip needs both a reason chip and a comment, and nothing saves until bot
   const title = await card.locator("h2").innerText();
   await card.locator("[data-quick=skipped]").click();
   const form = page.locator("[data-skipform]");
-  assert.equal(await page.evaluate(() => document.activeElement?.dataset.skipwhy !== undefined), true, "focus lands on the first reason");
+  // Focus moves after the form renders; wait for it rather than reading it the same tick (flaked on CI).
+  const focused = await page.waitForFunction(() => document.activeElement?.dataset.skipwhy !== undefined, null, { timeout: 5000 }).then(() => true, () => false);
+  assert.equal(focused, true, "focus lands on the first reason");
   await form.locator("button[type=submit]").click();
   assert.equal(await form.locator("[data-skiperr]").innerText(), "Pick a reason first.");
   await form.locator("[data-skipwhy='Wrong level']").click();
