@@ -39,6 +39,12 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 #tabs button:hover{border-color:var(--accent)}
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
+/* Wide screens: every tab fits in one row with no sideways scroll (RR-UX6-1). Settings sit as a quieter group on the right. */
+@media (min-width:900px){#tabs{gap:2px}#tabs button{padding:0 9px;font-size:.85rem;gap:4px}#tabs .n{font-size:.74rem}
+  #tabs button.set{background:none;border-color:transparent;color:var(--muted);padding:0 7px}
+  #tabs button.set:hover{color:var(--ink);border-color:var(--line)}
+  #tabs button.set[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  #tabs button.set1{margin-left:auto}}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
@@ -230,6 +236,13 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .rec .next{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.9rem}
 .rec .next b{font-weight:600}
 .why-score{font:400 .72rem/1.45 var(--f-mono);color:var(--muted)}
+/* "Why <score>?": Values/Culture and the score math, open on wide screens, one tap away on a phone (RR-UX6-2). */
+.whybox{display:grid;gap:6px}.whybtn{display:none}
+@media (max-width:600px){.whybtn{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-block:-12px}.whybtn::after{content:"\25BE";font-size:.8em}.whybtn[aria-expanded="true"]::after{content:"\25B4"}
+  .whybox:not(.open){display:none}.ctl .wide-only{display:none}
+  /* One row of actions: status picker takes the spare width, its visible "Status" word stays for screen readers. */
+  .ctl label.sr{flex:1 1 96px;min-width:0}.ctl label.sr select{width:100%;min-width:0}.ctl>.btn{flex:none;padding-inline:12px}
+  .ctl .stl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .why-score span{white-space:nowrap}
 .dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
 /* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
@@ -357,6 +370,7 @@ let recruiters=[], editRec=null, filtersOpen=false;
 const RS=window.RoleRadarRecruiters||null;
 let recStore=null, savedTab=null;
 const showPeople=()=>TOOLS&&!!recStore&&recStore.visible;
+const SET_TABS=["criteria","watch","filters"]; // settings, grouped at the right of the tab rail on wide screens
 const tabList=()=>TABS.filter(t=>t.id!=="people"||showPeople());
 // Privacy: recruiter details are hidden on screen until this viewer chooses to show them.
 let recPrivate=true;
@@ -374,7 +388,7 @@ let skipFb=null, critFrom=null;
 let preview=null, previewFrom=null; const postings=new Map();
 // jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
 let jobsState="loading", dbChecked=false;
-let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
+let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), openWhy=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view={...DEF_VIEW,...v};}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
 // Deep links: ?tab=<id> opens a tab (it beats the remembered one), #role-<id> jumps to a role card.
@@ -461,7 +475,7 @@ function counts(){
 function renderTabs(){
   const c=counts();
   if(tab==="people"&&!showPeople()) tab="inbox";
-  $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}">${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
+  $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}"${SET_TABS.includes(t.id)?` class="set${t.id===SET_TABS[0]?" set1":""}"`:""}>${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
   tabsInView();
 }
 // One-row tab bar (RR-UX5-1): scroll the selected tab into view and fade whichever edge hides more tabs.
@@ -542,6 +556,8 @@ function jobCard(j){
   const cf=conflictOf(j);
   const cfChip=cf?`<span class="chip conflict" title="Overlaps a product you're building">Conflict</span>`:"";
   const why=tab==="action"?actionReason(j):null;
+  // Values/Culture and the score math: always shown on wide screens, behind "Why <score>?" on a phone (RR-UX6-2).
+  const whyBody=fitRows(j)+scoreLine(j), whyOpen=openWhy.has(j._id);
   // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
   const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
   const cta=INBOX.includes(s)?"save":s==="saved"&&TOOLS?"apply":s==="applying"?"applied":fupDue?"fup":"";
@@ -569,10 +585,10 @@ function jobCard(j){
       <span>${esc(srcName(j.source||j.ats||""))}</span>
       ${laneChip}
       ${j.sector?`<span class="chip lane">${esc(j.sector)}</span>`:""}
+      ${whyBody?`<button class="linkbtn whybtn" type="button" data-why="${id}" aria-expanded="${whyOpen}" aria-controls="why-${id}">Why ${typeof j.score==="number"?esc(j.score):"this score"}?</button>`:""}
     </div>
-    ${fitRows(j)}
     ${datesLine(j)}
-    ${scoreLine(j)}
+    ${whyBody?`<div class="whybox${whyOpen?" open":""}" id="why-${id}">${whyBody}</div>`:""}
     ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
     ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
     ${j.nextStep?`<p class="note"><b>Next:</b> ${esc(j.nextStep)}</p>`:""}
@@ -583,14 +599,14 @@ function jobCard(j){
       ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:preApply?`<span class="hint">Copies an intake prompt for a new chat</span>`:"")}
     </div>`:""}
     <div class="ctl">
-      <label class="sr" style="display:flex;gap:6px;align-items:center">Status
+      <label class="sr" style="display:flex;gap:6px;align-items:center"><span class="stl">Status</span>
         <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
       ${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
       ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
       ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
       ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
       <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
-      ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn" type="button" data-sample="${id}">Sample posting</button>`:""}
+      ${url?`<a class="btn wide-only" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn wide-only" type="button" data-sample="${id}">Sample posting</button>`:""}
     </div>
     ${skipRow}
     <details class="more" data-more="${id}"${openMore.has(j._id)?" open":""}>
@@ -696,12 +712,12 @@ function digestCard(){
   const n=d.items.length;
   const body=n?`<ol class="dig">${d.items.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}" title="${esc(x.job.company)} · ${esc(x.job.title)}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
     :`<p class="hint">Nothing in New clears the minimum score yet.</p>`;
-  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${n} ${n===1?"role":"roles"}</span></summary>${body}</details>`;
+  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${n===1?"Top pick":`Top ${n} picks`}</span></summary>${body}</details>`;
 }
 function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
   const list=sortList(applyView(base));
-  const head=(tab==="inbox"?digestCard():"")+filterBar()+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
+  const head=(tab==="inbox"?digestCard():"")+(base.length?filterBar():"")+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
   let body;
   if(!list.length){
     const msg=base.length?["No roles match these filters","Clear a filter to see more."]:{inbox:["Nothing new right now","The morning scan adds matching roles here. Open one and it's marked viewed; save or skip it to clear it out."],
@@ -1326,6 +1342,9 @@ document.addEventListener("click",async e=>{
   const dl=e.target.closest&&e.target.closest("#digestCard a[data-role]");
   if(dl){ e.preventDefault(); focusRole(dl.dataset.role); return; }
   if(e.target.closest("#pvClose")){ closePreview(); return; }
+  const wb=e.target.closest("[data-why]");
+  if(wb){ const id=wb.dataset.why, on=!openWhy.has(id); on?openWhy.add(id):openWhy.delete(id);
+    wb.setAttribute("aria-expanded",String(on)); document.getElementById(wb.getAttribute("aria-controls"))?.classList.toggle("open",on); return; }
   const pv=e.target.closest("[data-preview]");
   // A plain click on the title previews; Cmd/Ctrl/Shift/middle click still opens the posting in a new tab.
   if(pv&&!(pv.tagName==="A"&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0))){

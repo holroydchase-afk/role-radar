@@ -17,6 +17,9 @@ const accentRgb = (page) => page.evaluate(() => {
   const c = getComputedStyle(s).color; s.remove(); return c;
 });
 
+// On a phone Values/Culture and the score math sit behind each card's "Why <score>?" (RR-UX6-2): open them to measure.
+const openWhys = (page) => page.evaluate(() => document.querySelectorAll('.job .whybtn[aria-expanded="false"]').forEach((b) => b.offsetParent && b.click()));
+
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
@@ -99,6 +102,7 @@ test("RR-UX3-5 the Values/Culture text column lines up across every card", async
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openDemo({ ...vp, query: "" });
     await page.click("#tab-all");
+    await openWhys(page);
     const xs = await page.locator(".job .fitr .r").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().left));
     assert.ok(xs.length >= 4, "fit rows on several cards");
     const spread = Math.max(...xs) - Math.min(...xs);
@@ -180,6 +184,7 @@ test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targ
 test("RR-UX4-3 on a phone each Values/Culture reason sits under its label and uses the card's width", async () => {
   const { page } = await openPrivate(PHONE);
   await page.click("#tab-all");
+  await openWhys(page);
   const rows = await page.locator(".job .fitr").evaluateAll((els) => els.flatMap((f) => {
     const fw = f.getBoundingClientRect().width, ks = [...f.querySelectorAll(".k")];
     return [...f.querySelectorAll(".r")].map((r, i) => {
@@ -243,6 +248,7 @@ test("RR-UX4-6 first run with no criteria: New's empty state points to Criteria"
 
 test("RR-UX4-7 on a phone the score math is small and at most two lines", async () => {
   const { page } = await openPublic(PHONE);
+  await openWhys(page);
   const m = await page.locator(".job .score-math, .job .why-score").evaluateAll((els) => els.map((e) => {
     const cs = getComputedStyle(e), fs = parseFloat(cs.fontSize);
     const lh = cs.lineHeight === "normal" ? fs * 1.2 : parseFloat(cs.lineHeight);
@@ -348,4 +354,81 @@ test("RR-UX5-5 on a phone Progress's 'Follow-up sent' button text stays on one l
   const m = await b.evaluate((el) => ({ h: el.getBoundingClientRect().height, ws: getComputedStyle(el).whiteSpace }));
   assert.equal(rows, 1, `'Follow-up sent' wraps to ${rows} lines at 390 (height ${Math.round(m.h)}px, white-space ${m.ws})`);
   await page.close();
+});
+
+// ── RR-UX6: ux-reviewer final pass at 7.3/10. P1/P2 findings; public demo unless noted; demo data only; red first. ──
+test("RR-UX6-1 at >=900px every tab is fully visible with no sideways tab scroll, one row at 1280, first New title above 800px", async () => {
+  const bad = [];
+  for (const vp of [LAPTOP, { width: 1000, height: 800 }]) {
+    const { page } = await openPublic(vp);
+    await page.click("#tab-inbox");
+    const t = await page.locator("#tabs").evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const bs = [...el.querySelectorAll("button")].filter((b) => b.offsetParent);
+      return { sw: el.scrollWidth, cw: el.clientWidth, h: box.height,
+        clipped: bs.filter((b) => { const r = b.getBoundingClientRect(); return r.left < box.left - 1 || r.right > box.right + 1 || r.top < box.top - 1 || r.bottom > box.bottom + 1; })
+          .map((b) => `${b.id} ${Math.round(b.getBoundingClientRect().left)}-${Math.round(b.getBoundingClientRect().right)}`) };
+    });
+    if (t.sw > t.cw + 1) bad.push(`${vp.width}: #tabs scrollWidth ${t.sw} > clientWidth ${t.cw}`);
+    if (t.clipped.length) bad.push(`${vp.width}: tabs outside #tabs' visible box: ${t.clipped.join(", ")}`);
+    if (vp.width === 1280) {
+      if (t.h > 56) bad.push(`1280: #tabs ${Math.round(t.h)}px tall (one row is <= 56)`);
+      const dig = await page.locator("#digestCard").evaluate((d) => d.open).catch(() => null);
+      assert.notEqual(dig, false, "digest open by default at 1280");
+      const h = await page.locator("#view article.job h2").first().boundingBox();
+      if (!(h && h.y + h.height <= 800)) bad.push(`1280: first New title ends at ${h ? Math.round(h.y + h.height) : "n/a"}px`);
+    }
+    await page.close();
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score math behind a 'why' disclosure, <=4 actions, Save the only primary", async () => {
+  const { page } = await openPublic(PHONE);
+  await page.click("#tab-inbox");
+  const accent = await accentRgb(page);
+  const cards = page.locator("#view article.job");
+  assert.ok(await cards.count() >= 3, "at least 3 New cards");
+  const bad = [];
+  for (let i = 0; i < 3; i++) {
+    const c = cards.nth(i);
+    const m = await c.evaluate((el, accent) => {
+      const vis = (x) => { const r = x.getBoundingClientRect(); return !!x.offsetParent && r.width > 2 && r.height > 2; };
+      return { title: el.querySelector("h2")?.textContent.trim(), h: el.getBoundingClientRect().height,
+        fitr: [...el.querySelectorAll(".fitr")].some(vis), why: [...el.querySelectorAll(".why-score")].some(vis),
+        ctl: [...el.querySelectorAll(".ctl button, .ctl a, .ctl select")].filter(vis).map((x) => x.tagName === "SELECT" ? "status" : x.textContent.trim()),
+        filled: [...el.querySelectorAll("button, a")].filter((b) => vis(b) && getComputedStyle(b).backgroundColor === accent).map((b) => b.textContent.trim()) };
+    }, accent);
+    const tag = `card ${i + 1} '${m.title}'`;
+    if (m.h > 460) bad.push(`${tag}: ${Math.round(m.h)}px tall`);
+    if (m.fitr || m.why) bad.push(`${tag}: Values/Culture (.fitr ${m.fitr}) or score math (.why-score ${m.why}) visible by default`);
+    if (m.ctl.length > 4) bad.push(`${tag}: ${m.ctl.length} action controls (${m.ctl.join(", ")})`);
+    if (m.filled.length !== 1 || !/^save$/i.test(m.filled[0] || "")) bad.push(`${tag}: filled primaries [${m.filled.join(", ")}]`);
+    const why = c.locator("summary, button[aria-expanded]").filter({ hasText: /why/i }).first();
+    if (!(await why.count())) { bad.push(`${tag}: no 'why' disclosure`); continue; }
+    await why.click();
+    const open = await c.evaluate((el) => ["fitr", "why-score"].map((k) => [...el.querySelectorAll("." + k)].some((x) => !!x.offsetParent && x.getBoundingClientRect().height > 2)));
+    if (!open.every(Boolean)) bad.push(`${tag}: opening 'why' shows .fitr ${open[0]}, .why-score ${open[1]}`);
+  }
+  await page.close();
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX6-3 the digest count matches the header's new count (or labels its set); a tab with zero roles hides #fbar", async () => {
+  const { page } = await openPublic(LAPTOP);
+  await page.click("#tab-inbox");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
+  assert.ok(head, "header shows 'N new matches'");
+  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  const bare = [...sum.matchAll(/\b(\d+) roles?\b/gi)].filter((m) => m[1] !== head[1]).map((m) => m[0]);
+  const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}es'`] : [];
+  await page.close();
+  const { page: empty } = await openEmpty(LAPTOP);
+  for (const id of ["inbox", "pipeline", "all"]) {
+    await empty.click(`#tab-${id}`);
+    if (await empty.locator("#view article.job").count()) continue;
+    if (await empty.locator("#fbar").isVisible()) bad.push(`empty db, ${id}: #fbar visible with zero roles`);
+  }
+  await empty.close();
+  assert.deepEqual(bad, []);
 });
