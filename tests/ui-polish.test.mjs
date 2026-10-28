@@ -432,3 +432,66 @@ test("RR-UX6-3 the digest count matches the header's new count (or labels its se
   await empty.close();
   assert.deepEqual(bad, []);
 });
+
+// ── RR-UX7: ux-reviewer pass at 7.6/10, no P0/P1. P2 polish pins; demo data only; red first. ──
+test("RR-UX7-0 private build at 1280 and 1000: every tab (incl. Recruiters) is fully visible inside #tabs with no sideways scroll", async () => {
+  const bad = [];
+  for (const vp of [LAPTOP, { width: 1000, height: 800 }]) {
+    const { page } = await openPrivate({ ...vp, ready: "#tab-inbox" });
+    const t = await page.locator("#tabs").evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const bs = [...el.querySelectorAll("button")].filter((b) => b.offsetParent);
+      return { sw: el.scrollWidth, cw: el.clientWidth, n: bs.length,
+        clipped: bs.filter((b) => { const r = b.getBoundingClientRect(); return r.left < box.left - 1 || r.right > box.right + 1 || r.top < box.top - 1 || r.bottom > box.bottom + 1; })
+          .map((b) => `${b.id} ${Math.round(b.getBoundingClientRect().left)}-${Math.round(b.getBoundingClientRect().right)} (box ${Math.round(box.left)}-${Math.round(box.right)})`) };
+    });
+    if (t.sw > t.cw + 1) bad.push(`${vp.width}: #tabs scrollWidth ${t.sw} > clientWidth ${t.cw}`);
+    if (t.clipped.length) bad.push(`${vp.width}: tabs outside #tabs' visible box: ${t.clipped.join(", ")}`);
+    await page.close();
+  }
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX7-1 phone first screen (public, 390x844, New): the first role title starts at or above 560px", async () => {
+  const { page } = await openPublic(PHONE);
+  await page.click("#tab-inbox");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const h = await page.locator("#view article.job h2").first().boundingBox();
+  assert.ok(h && h.y <= 560, `first New title top at ${h ? Math.round(h.y) : "n/a"}px (want <= 560)`);
+  await page.close();
+});
+
+test("RR-UX7-2 Pipeline cards at 390 (private): the visible action-row buttons/links share one line (top within 4px)", async () => {
+  const { page } = await openPrivate({ ...PHONE, ready: "#tab-inbox" });
+  await page.click("#tab-pipeline");
+  const cards = await page.locator("#view article.job").evaluateAll((els) => els.map((el) => {
+    const vis = (x) => { const r = x.getBoundingClientRect(); return !!x.offsetParent && r.width > 2 && r.height > 2; };
+    const ctl = [...el.querySelectorAll(".ctl button, .ctl a")].filter(vis)
+      .map((x) => ({ t: x.textContent.trim(), top: Math.round(x.getBoundingClientRect().top) }));
+    return { title: el.querySelector("h2")?.textContent.trim(), ctl };
+  }));
+  assert.ok(cards.length >= 1, "at least one Pipeline card");
+  const bad = cards.filter((c) => c.ctl.length > 1 && Math.max(...c.ctl.map((x) => x.top)) - Math.min(...c.ctl.map((x) => x.top)) > 4)
+    .map((c) => `'${c.title}': ${c.ctl.map((x) => `${x.t}@${x.top}`).join(", ")}`);
+  await page.close();
+  assert.deepEqual(bad, []);
+});
+
+test("RR-UX7-3 one story: the digest says 'Top N of M' with M = the header's new count; with ?fail=jobs the header shows no new count", async () => {
+  const { page } = await openPublic(LAPTOP);
+  await page.click("#tab-inbox");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
+  assert.ok(head, "header shows 'N new matches'");
+  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  const bad = [];
+  const top = sum.match(/Top (\d+) of (\d+)/i);
+  if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}es')`);
+  else if (top[2] !== head[1]) bad.push(`digest '${top[0]}' vs header '${head[0]}es'`);
+  await page.close();
+  const { page: failed } = await openPrivate({ ...LAPTOP, query: "?fail=jobs", ready: "#tab-inbox" });
+  const fh = (await failed.locator("header").innerText()).replace(/\s+/g, " ");
+  const n = fh.match(/\d+ new match\w*/);
+  if (n) bad.push(`?fail=jobs header still shows '${n[0]}'`);
+  await failed.close();
+  assert.deepEqual(bad, []);
+});
