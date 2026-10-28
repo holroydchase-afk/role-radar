@@ -40,11 +40,12 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
 /* Wide screens: every tab fits in one row with no sideways scroll (RR-UX6-1). Settings sit as a quieter group on the right. */
-@media (min-width:900px){#tabs{gap:2px}#tabs button{padding:0 9px;font-size:.85rem;gap:4px}#tabs .n{font-size:.74rem}
-  #tabs button.set{background:none;border-color:transparent;color:var(--muted);padding:0 7px}
+@media (min-width:900px){#tabs{gap:2px}#tabs button{padding:0 6px;font-size:.82rem;gap:2px}#tabs .n{font-size:.72rem}
+  #tabs button.set{background:none;border-color:transparent;color:var(--muted);padding:0 4px}
   #tabs button.set:hover{color:var(--ink);border-color:var(--line)}
   #tabs button.set[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  #tabs button.set1{margin-left:auto}}
+  #tabs button.set1{margin-left:auto}
+  #tab-watch .n{display:none} /* RR-UX7-0: the settings group stays a quiet label row so every tab fits at 900+; the Watchlist page shows its count */}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
@@ -121,12 +122,19 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 /* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
 @media (max-width:600px){#tabs{position:static;gap:6px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
-@media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}}
+@media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
+  /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
+  header .hrow:has(#demoNote:not([hidden])){display:block}header .hrow #demoNote{display:inline-block;margin-right:8px}header .hrow #demoTry{display:inline}
+  .fbar{padding:8px 12px;gap:6px}.fbar .qlbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 /* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
 #ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}
 /* Touch: every control at least 44px tall. */
 @media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.kv a{display:inline-flex;align-items:center;min-height:44px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
 .fbar .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+/* Phones (RR-UX7-1): search and the filter toggle share one row; the count shows only once a filter or search hides roles. */
+@media (max-width:600px){.fbar{grid-template-columns:minmax(0,1fr) auto;align-items:center}.fbar>label[for=q]{grid-column:1;grid-row:1}.fbar .foot{display:contents}
+  #ftoggle{grid-column:2;grid-row:1}.fbar .fields{grid-column:1/-1}#fcount{grid-column:1}#fclear{grid-column:2;justify-self:end}
+  #fcount[data-all]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .linkbtn{font:500 .82rem var(--f-body);background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
 .dates{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:.8rem;color:var(--muted)}
 .dates b{font-weight:500;color:var(--ink)}
@@ -136,7 +144,7 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .tag{font:500 .76rem var(--f-body);padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--ink)}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .why{font:600 .8rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;justify-self:start}
-.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ctl .acts{display:contents}
 .ctl select{padding:0 8px;min-height:36px;font-size:.875rem}
 @media (max-width:600px), (pointer:coarse){.ctl select,.primary{min-height:44px}}
 .skipwhy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
@@ -241,7 +249,9 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 @media (max-width:600px){.whybtn{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-block:-12px}.whybtn::after{content:"\25BE";font-size:.8em}.whybtn[aria-expanded="true"]::after{content:"\25B4"}
   .whybox:not(.open){display:none}.ctl .wide-only{display:none}
   /* One row of actions: status picker takes the spare width, its visible "Status" word stays for screen readers. */
-  .ctl label.sr{flex:1 1 96px;min-width:0}.ctl label.sr select{width:100%;min-width:0}.ctl>.btn{flex:none;padding-inline:12px}
+  .ctl label.sr{flex:1 1 96px;min-width:0}.ctl label.sr select{width:100%;min-width:0}.ctl>.btn,.ctl .acts>.btn{flex:none;padding-inline:12px}
+  /* The card's actions wrap as one group under Status, never one by one (RR-UX7-2). */
+  .ctl .acts{display:flex;flex:none;flex-wrap:nowrap;gap:6px;max-width:100%}
   .ctl .stl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .why-score span{white-space:nowrap}
 .dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
@@ -302,6 +312,8 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   #preview{inset:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
   body.previewing{overflow:hidden}
 }
+/* RR-UX7-1: phones get tighter spacing above the first role (these follow the base rules they override). */
+@media (max-width:600px){.main{gap:10px}.fbar{margin-bottom:8px}#digestCard{margin-bottom:8px}.lede{line-height:1.45}}
 </style>
 
 <div class="wrap">
@@ -345,7 +357,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 const TOOLS=!window.__RR_PUBLIC__;
 const TABS=[
   {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},{id:"progress",label:"Progress"},
-  {id:"all",label:"All roles"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
+  {id:"all",label:"All"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
 const STATUSES=[["new","New"],["viewed","Viewed"],["saved","Saved"],["applying","Applying"],["applied","Applied"],["screen","Screen"],["interviewing","Interviewing"],["offer","Offer"],["skipped","Skipped"],["rejected","Rejected"],["closed","Closed"]];
 const STATUS_LABEL=Object.fromEntries(STATUSES);
 const INBOX=["new","viewed"], PIPE=["saved","applying","applied","screen","interviewing","offer"], DONE=["skipped","rejected","closed"];
@@ -499,7 +511,7 @@ function renderScan(){
   sw.textContent=stale?`Scan hasn't run since ${fmtDate(scan.lastRun)}. New roles may be missing; check the scheduled scan.`:""; sw.hidden=!stale;
   if(!scan){ $("#scanLine").textContent="Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning. No scan has run yet."; return;}
   const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards · ${esc(scan.newMatches??0)} new matches${scan.note?` · ${esc(scan.note)}`:""}`;
+  $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards${jobsState==="error"?"":` · ${esc(scan.newMatches??0)} new matches`}${scan.note?` · ${esc(scan.note)}`:""}`;
   $("#scanLine").title=$("#scanLine").textContent; // full text when the laptop meta row trims it
 }
 
@@ -601,12 +613,12 @@ function jobCard(j){
     <div class="ctl">
       <label class="sr" style="display:flex;gap:6px;align-items:center"><span class="stl">Status</span>
         <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
-      ${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
+      <span class="acts">${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
       ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
       ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
       ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
       <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
-      ${url?`<a class="btn wide-only" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn wide-only" type="button" data-sample="${id}">Sample posting</button>`:""}
+      ${url?`<a class="btn wide-only" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn wide-only" type="button" data-sample="${id}">Sample posting</button>`:""}</span>
     </div>
     ${skipRow}
     <details class="more" data-more="${id}"${openMore.has(j._id)?" open":""}>
@@ -650,7 +662,7 @@ function filterBar(){
   const active=["q","status","lane","fit","values","culture","source","tag","found","conflict"].filter(k=>view[k]).length;
   const nf=active-(view.q?1:0);
   return `<form class="fbar${filtersOpen?" open":""}" id="fbar">
-    <label for="q">Search company, title or notes<input id="q" class="search" value="${esc(view.q)}" placeholder="e.g. solar, payments"></label>
+    <label for="q"><span class="qlbl">Search company, title or notes</span><input id="q" class="search" value="${esc(view.q)}" placeholder="Search, e.g. solar, payments"></label>
     <div class="fields">
       <label for="fv-status">Status<select id="fv-status" data-v="status">${opts(statusList,view.status,"Any")}</select></label>
       <label for="fv-lane">Lane<select id="fv-lane" data-v="lane">${opts(LANES.map(l=>[l,l]),view.lane,"Any")}</select></label>
@@ -710,9 +722,11 @@ function digestCard(){
   const d=digestOf(specData); if(!d) return "";
   const open=digestOpen??(typeof matchMedia==="function"&&matchMedia("(min-width:900px)").matches);
   const n=d.items.length;
+  // "Top N of M new" with M the header's new-match count, so the digest and the header tell one story (RR-UX7-3).
+  const of=Number(scan&&scan.newMatches)||jobs.filter(j=>inTab(j,"inbox")).length;
   const body=n?`<ol class="dig">${d.items.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}" title="${esc(x.job.company)} · ${esc(x.job.title)}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
     :`<p class="hint">Nothing in New clears the minimum score yet.</p>`;
-  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${n===1?"Top pick":`Top ${n} picks`}</span></summary>${body}</details>`;
+  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${of>n?`Top ${n} of ${of} new`:n===1?"Top pick":`Top ${n} picks`}</span></summary>${body}</details>`;
 }
 function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
@@ -1210,7 +1224,7 @@ function render(){
   const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
   const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
   if(keep&&keep.isConnected&&document.activeElement!==keep) keep.focus({preventScroll:true});
-  const c=$("#fcount"); if(c) c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:"";
+  const c=$("#fcount"); if(c){ c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:""; c.toggleAttribute("data-all",r.shown===r.total); }
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
 function softRender(){ const a=document.activeElement; if(a&&a.closest&&a.closest("form")&&a.closest("form").id!=="fbar"){renderTabs();return;} render(); }
