@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
       - name: Personal-data check
         run: node scripts/check-private.mjs
+      - name: Studio checks (agent roster, log hygiene)
+        run: bash scripts/check-agents.sh && node scripts/check-logs.mjs
       - name: Unit tests
         run: node --test tests/scoring.test.mjs tests/alerts.test.mjs tests/gmail-import.test.mjs tests/check-private.test.mjs tests/demo.test.mjs
       - name: Build the public demo

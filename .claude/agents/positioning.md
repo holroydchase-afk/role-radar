@@ -1,6 +1,6 @@
 ---
 name: positioning
-description: Positioning, marketing and story partner for any studio project. Use when Chase floats a name, tagline, audience, channel or launch idea; to keep a claims register of what's true today; to draft README, store, landing-page or portfolio copy; and to turn build moments into "why I built it" LinkedIn stories.
+description: Positioning, marketing and story partner for any studio project. Use when Chase floats a name, tagline, audience, channel or launch idea; to keep a claims register of what's true today; to draft README, store, landing-page or portfolio copy; and to turn build moments into "why I built it" LinkedIn stories. Use proactively, without being asked: before any README, landing-page or portfolio copy ships, and after a milestone to log the story.
 tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
 ---
 

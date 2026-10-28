@@ -6,7 +6,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --test \"tests/*.test.mjs\"",
+    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node --test \"tests/*.test.mjs\"",
+    "check:agents": "bash scripts/check-agents.sh",
+    "check:logs": "node scripts/check-logs.mjs",
     "build:demo": "node scripts/build-demo.mjs",
     "check:private": "node scripts/check-private.mjs",
     "screenshots": "node scripts/screenshots.mjs",

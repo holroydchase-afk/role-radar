@@ -1,0 +1,6 @@
+{
+  "logs": {
+    "roots": ["src"],
+    "banned": []
+  }
+}
