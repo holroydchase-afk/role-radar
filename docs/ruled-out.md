@@ -15,7 +15,7 @@ Every role the owner eliminates is kept, with a reason and a date, and counted a
 ```
 
 ## The feedback loop
-`src/skip-feedback.js` reads the owner's skips from the last 30 days (rule skips never count) and turns repeats into suggestions. Nothing changes on its own:
+`src/skip-feedback.ts` reads the owner's skips from the last 30 days (rule skips never count) and turns repeats into suggestions. Nothing changes on its own:
 
 | Pattern | Suggestion | Criteria change |
 |---|---|---|
@@ -31,7 +31,7 @@ The **Ruled out** tab shows them under *What your skips are teaching the scan*, 
 The page keeps `meta/skipFeedback` current for the scan: `{open: [{id, kind, text, why, change}], scanNotes, dismissed, accepted, updatedAt}`. The scan follows `scanNotes`, marks new roles that look like past skips in their fit note (without changing scores), lists up to 3 open suggestions in the digest under "Your skips suggest", and never edits the criteria itself.
 
 ## Who skipped it
-Only the owner's own decisions count as ruled out. `skippedBy` says who made the call: `"owner"` for the page's Skip and an intake No, `"rule"` for a scan or a criteria cleanup that takes roles out in bulk. A skip without the field counts as the owner's. Rule skips are left out of the header count and the family email's "ruled out", and listed apart on the Ruled out tab under "Removed by screening rules". The definitions live in `src/progress.js`.
+Only the owner's own decisions count as ruled out. `skippedBy` says who made the call: `"owner"` for the page's Skip and an intake No, `"rule"` for a scan or a criteria cleanup that takes roles out in bulk. A skip without the field counts as the owner's. Rule skips are left out of the header count and the family email's "ruled out", and listed apart on the Ruled out tab under "Removed by screening rules". The definitions live in `src/progress.ts`.
 
 ## From an intake chat
 When an intake screen returns No, the intake writes the same fields to the tracker's `jobs` collection, so the role is counted and the scan never re-adds it:

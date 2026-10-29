@@ -7,6 +7,7 @@ Role Radar has three parts: a tracker page, your criteria, and a scan that runs 
 ```sh
 npm install
 npm run build:demo   # writes dist/demo.html
+npm run typecheck    # strict TypeScript over src/ and tests/
 npm test
 ```
 
@@ -28,7 +29,7 @@ You can edit this later on the page's Criteria tab, which previews tomorrow's di
 
 ## 3. Publish the tracker
 
-1. Ask Claude to publish [`app/role-radar.html`](../app/role-radar.html) as a private artifact with [`src/scoring.js`](../src/scoring.js) and [`src/gmail-import.js`](../src/gmail-import.js), [`src/posting.js`](../src/posting.js), [`src/alerts.js`](../src/alerts.js) and [`src/recruiter-store.js`](../src/recruiter-store.js) as supporting files of the same names. Pass [`app/capabilities.json`](../app/capabilities.json) as its capabilities, as-is: the database with an owner-only rule on `recruiters`, plus the Gmail connector with only the read-only tools `search_threads` and `batch_get_threads`. Pass the same file on every republish; publishing with a bare `db: {}` resets the rule.
+1. Run `npm run build`. It bundles each [`src/*.ts`](../src) module into the classic script the page loads, in `build/`: `scoring.js`, `gmail-import.js`, `posting.js`, `alerts.js`, `progress.js`, `recruiter-store.js` and `skip-feedback.js`. `build/` is gitignored, so build again before every publish. Then ask Claude to publish [`app/role-radar.html`](../app/role-radar.html) as a private artifact with those seven `build/*.js` files as supporting files of the same names. Pass [`app/capabilities.json`](../app/capabilities.json) as its capabilities, as-is: the database with an owner-only rule on `recruiters`, plus the Gmail connector with only the read-only tools `search_threads` and `batch_get_threads`. Pass the same file on every republish; publishing with a bare `db: {}` resets the rule.
 2. Open the page. Every tab starts empty.
 3. On the Criteria tab, paste your `criteria.yaml` and save.
 4. On the Recruiters tab, open *Import from Gmail* and choose *Find recruiters in Gmail*. Claude asks once whether the page may use your Gmail connector (add the connector in claude.ai Settings first if you haven't). Untick anyone who isn't a recruiter, then add the rest. To change what it searches for, set `gmailQuery` in the tracker's `meta/config` to any Gmail search.

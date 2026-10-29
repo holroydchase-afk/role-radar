@@ -15,12 +15,14 @@ export const PATTERNS = [
   { name: "Gmail link to a thread or search", re: /mail\.google\.com\/mail\/u\/\d+\/#\w+\/[^"'`\s+)]+/g },
 ];
 
+/** @param {string} [path] @returns {string[]} */
 export function loadDenylist(path) {
   if (!path || !existsSync(path)) return [];
   return readFileSync(path, "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** @param {string} text @param {string[]} [denylist] @returns {{kind: string, match: string}[]} */
 export function scanText(text, denylist = []) {
   const hits = [];
   for (const p of PATTERNS) for (const m of text.matchAll(p.re)) if (!(p.allow && p.allow(m[0]))) hits.push({ kind: p.name, match: m[0] });

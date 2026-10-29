@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+/** @param {Record<string, unknown>} profile @param {string} [template] @returns {string} */
 export function renderScanPrompt(profile, template = readFileSync(join(root, "scan/scan-prompt.template.md"), "utf8")) {
   const missing = new Set();
   const out = template

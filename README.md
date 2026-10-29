@@ -38,11 +38,11 @@ flowchart LR
 ```
 
 1. **Criteria as code.** Everything I'm looking for lives in one YAML file ([`criteria.yaml`](criteria.yaml)). It sets sector weights, title and location gates, comp floors, culture red flags, hard excludes, and how many roles from each sector can appear in one digest. I edit it on the Criteria tab, and the next scan follows it.
-2. **A transparent score.** Every role gets 0 to 100 from one formula, and each card shows how its score was reached (`45 sector + 35 experience + 10 comp = 90`). The rules live in [`src/scoring.js`](src/scoring.js) and are pinned down by tests, so the page, the tests and the scan's instructions agree.
+2. **A transparent score.** Every role gets 0 to 100 from one formula, and each card shows how its score was reached (`45 sector + 35 experience + 10 comp = 90`). The rules live in [`src/scoring.ts`](src/scoring.ts) and are pinned down by tests, so the page, the tests and the scan's instructions agree.
 3. **A scheduled scan agent.** Each weekday morning, a scheduled Claude run reads the criteria, checks the boards and aggregators, reads job-alert and application emails (read-only), adds new matches, moves application statuses forward from confirmations and rejections, and sends me a short digest. Its instructions are in [`scan/scan-prompt.template.md`](scan/scan-prompt.template.md).
 4. **One tracker.** New roles land in *New*. Saving or applying moves them to *Pipeline*. *Needs action* lists follow-ups that are due, applications with no reply, and resumes that are ready but not sent. *Ruled out* keeps every role I said no to, with the reason. *Recruiters* keeps each contact's last touchpoint and next step, and can be filled from Gmail in one pass (below).
 5. **One-tap intake.** *Apply* copies a prompt for my job-intake agent, which screens the posting, asks only the gap questions that would change a bullet, and builds a tailored resume from my career master doc.
-6. **Read the posting in place.** Click a role and a panel on the right shows the posting's own description, word for word, loaded straight from the company's public Greenhouse, Ashby or Lever board. It costs no AI tokens and nothing is saved; roles from other sources get an *Open posting* link instead. On a phone it opens as a full-screen sheet. The logic lives in [`src/posting.js`](src/posting.js).
+6. **Read the posting in place.** Click a role and a panel on the right shows the posting's own description, word for word, loaded straight from the company's public Greenhouse, Ashby or Lever board. It costs no AI tokens and nothing is saved; roles from other sources get an *Open posting* link instead. On a phone it opens as a full-screen sheet. The logic lives in [`src/posting.ts`](src/posting.ts).
 
 ![A role's description in the preview panel](docs/screenshots/preview.png)
 
@@ -64,7 +64,7 @@ The Criteria tab previews tomorrow's digest while you edit. In the screenshot be
 
 ### Alerts you set in the same file
 
-The `alerts:` block in `criteria.yaml` decides what pings my phone: a recruiter's reply or an interview invite right away, a rejection only in the next summary, a new role only above a score I choose, and quiet hours overnight. The Criteria tab spells out each rule in a plain sentence and previews what would ping with the roles on the page. The rules are code in [`src/alerts.js`](src/alerts.js), with tests.
+The `alerts:` block in `criteria.yaml` decides what pings my phone: a recruiter's reply or an interview invite right away, a rejection only in the next summary, a new role only above a score I choose, and quiet hours overnight. The Criteria tab spells out each rule in a plain sentence and previews what would ping with the roles on the page. The rules are code in [`src/alerts.ts`](src/alerts.ts), with tests.
 
 ![Alerts card: each rule in a sentence and a live preview of what would ping](docs/screenshots/alerts.png)
 
@@ -104,6 +104,7 @@ Or run it locally:
 ```sh
 npm install
 npm run build:demo        # writes dist/demo.html; open it in a browser
+npm run typecheck         # strict TypeScript over src/ and tests/
 npm test                  # unit tests plus headless-browser tests on demo data
 npm run screenshots       # regenerates docs/screenshots
 ```
@@ -116,18 +117,20 @@ The demo runs the real page against an in-memory database ([`demo/mock-claude.js
 
 | Path | What it is |
 | --- | --- |
-| `app/role-radar.html` | The tracker page (single file, no build step) |
-| `src/scoring.js` | Scoring and matching rules, shared by the page and the tests |
-| `src/posting.js` | Finds a role's public job-board API and reads its description for the preview panel |
-| `src/alerts.js` | The `alerts:` rules: what pings, how loud, quiet hours |
-| `src/progress.js` | The progress numbers: daily bar, funnel, response rate, and the daily email's report |
-| `src/gmail-import.js` | Reads Gmail search results into recruiter suggestions and pipeline status updates |
-| `src/recruiter-store.js` | The one place recruiters are read and written; owner-only |
+| `app/role-radar.html` | The tracker page (single file; it loads the `build/*.js` scripts) |
+| `src/scoring.ts` | Scoring and matching rules, shared by the page and the tests |
+| `src/posting.ts` | Finds a role's public job-board API and reads its description for the preview panel |
+| `src/alerts.ts` | The `alerts:` rules: what pings, how loud, quiet hours |
+| `src/progress.ts` | The progress numbers: daily bar, funnel, response rate, and the daily email's report |
+| `src/gmail-import.ts` | Reads Gmail search results into recruiter suggestions and pipeline status updates |
+| `src/recruiter-store.ts` | The one place recruiters are read and written; owner-only |
+| `src/skip-feedback.ts` | Turns the owner's recent skips into suggested criteria changes |
+| `build/` | `npm run build` output (gitignored): each `src/*.ts` bundled by esbuild into the classic script the page loads, same name and global |
 | `app/capabilities.json` | What the live page may use: its database (with the owner-only recruiter rule) and read-only Gmail |
 | `criteria.yaml` | Example criteria for a demo candidate |
 | `scan/` | The weekday scan prompt, as a template |
 | `demo/` | Fictional seed data and the in-memory database |
-| `scripts/` | Demo build, screenshots, scan-prompt renderer, privacy check |
+| `scripts/` | Bundle build, demo build, screenshots, scan-prompt renderer, privacy check |
 | `tests/` | Node test runner: scoring, privacy check, demo build, Playwright UI |
 | `PLAN.md`, `HANDOFF.md` | The v1 plan and the current state of work |
 
