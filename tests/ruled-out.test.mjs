@@ -23,17 +23,18 @@ test("the header counts today's and this week's applications and ruled-out roles
 
 test("the Ruled out tab lists skipped roles newest first, with the reason, note and day", async () => {
   const { page, errors } = await openDemo();
-  assert.equal((await page.locator("#tab-ruled").innerText()).replace(/\D/g, ""), "3");
+  assert.equal((await page.locator("#tab-ruled").innerText()).replace(/\D/g, ""), "4");
   await page.click("#tab-ruled");
   const view = page.locator("#view");
   assert.match(await view.locator(".sum").innerText(), /This week you applied to \d+ and ruled out \d+/);
-  assert.match(await view.locator(".sum").innerText(), /3 ruled out in all · .*Location 1/);
+  assert.match(await view.locator(".sum").innerText(), /4 ruled out in all · Culture 2 · .*Location 1/);
   const heads = await view.locator("h3").allTextContents();
   assert.equal(heads[0], "Today · 1 ruled out");
   const rows = await view.locator(".row").allInnerTexts();
   assert.match(rows[0], /Harborline Mutual · Location\. Belfast office only, and the posting had already closed · screened in intake/);
   assert.match(rows[1], /Tidewater Analytics · Culture/);
-  assert.match(rows[2], /Copperleaf Insurance · Not remote/);
+  assert.match(rows[2], /Tidewater Analytics · Culture\. Reviews say always-on/);
+  assert.match(rows[3], /Copperleaf Insurance · Not remote/);
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -44,8 +45,9 @@ test("skipping with a reason and a note lands on Ruled out and bumps today's cou
   const card = page.locator("article.job").first();
   const company = (await card.locator(".co").innerText()).trim();
   await card.locator("[data-quick=skipped]").click();
-  await page.locator("[data-skipform] input[name=skipNote]").fill("Needs relocation to Denver");
   await page.locator("[data-skipform] [data-skipwhy='Location']").click();
+  await page.locator("[data-skipform] textarea[name=skipNote]").fill("Needs relocation to Denver");
+  await page.click("[data-skipform] button[type=submit]");
   await page.waitForFunction(() => /ruled out 2 ·/.test(document.querySelector("#progress").textContent));
   await page.click("#tab-ruled");
   const first = await page.locator("#view .row").first().innerText();
@@ -59,8 +61,8 @@ test("skipping with a reason and a note lands on Ruled out and bumps today's cou
 test("Reconsider moves a ruled-out role back to New and clears its reason", async () => {
   const { page, errors } = await openDemo();
   await page.click("#tab-ruled");
-  await page.locator("#view .row", { hasText: "Tidewater" }).locator("[data-reconsider]").click();
-  await page.waitForFunction(() => !/Tidewater/.test(document.querySelector("#view").textContent));
+  await page.locator("#view .row", { hasText: "Senior Product Manager, Growth" }).locator("[data-reconsider]").click();
+  await page.waitForFunction(() => !/Manager, Growth/.test(document.querySelector("#view .ruled").textContent));
   assert.match(await page.locator("#toast").innerText(), /Moved to Viewed/);
   await page.click("#tab-inbox");
   const card = page.locator("article.job", { hasText: "Tidewater" });

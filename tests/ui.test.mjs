@@ -150,10 +150,13 @@ test("on a phone, filters fold away behind one button", async () => {
   await page.close();
 });
 
-test("on a wide screen, filters are always shown", async () => {
+// Superseded by RR-UX4-1 (2026-10-28): filters fold behind the toggle at every width. The toggle still opens them.
+test("on a wide screen, filters fold behind the toggle and open on demand", async () => {
   const { page } = await openDemo({ width: 1100 });
+  assert.ok(await page.locator("#ftoggle").isVisible());
+  assert.ok(!(await page.locator("#fv-status").isVisible()));
+  await page.click("#ftoggle");
   assert.ok(await page.locator("#fv-status").isVisible());
-  assert.ok(!(await page.locator("#ftoggle").isVisible()));
   await page.close();
 });
 
@@ -173,6 +176,7 @@ test("cards show Values and Culture badges with a reason", async () => {
 test("Values and Culture filters narrow the list", async () => {
   const { page } = await openDemo({ width: 1100 });
   await page.click("#tab-all");
+  await page.click("#ftoggle"); // filters fold behind the toggle at every width (RR-UX4-1)
   await page.selectOption("#fv-culture", "good+");
   await page.waitForFunction(() => document.querySelectorAll("article.job").length === 2);
   const cos = await page.locator("article.job .co").allTextContents();

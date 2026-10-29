@@ -90,7 +90,8 @@
     return str(s).replace(/^\s*((re|fw|fwd)\s*:\s*)+/i, "").replace(/\s+/g, " ").trim().slice(0, 90);
   }
 
-  function messagesOf(t) { return arr(t && (t.messages || t.messageList)); }
+  // Malformed connector payloads: a null or non-object message is skipped, never read.
+  function messagesOf(t) { return arr(t && (t.messages || t.messageList)).filter((m) => m && typeof m === "object"); }
   const isSent = (m) => arr(m && (m.labelIds || m.label_ids)).includes("SENT");
 
   /** Threads from a search_threads or batch_get_threads payload, whatever it is wrapped in. */
@@ -103,7 +104,7 @@
   /** True when the search preview left out some of the thread's messages (it shows the oldest 5). */
   function needsFullThread(t) {
     const n = Number(t && t.messageCount);
-    return n > messagesOf(t).length;
+    return n > arr(t && (t.messages || t.messageList)).length;
   }
 
   // Accents fold to plain letters (José → jose); names with no Latin letters fall back to the address.
@@ -295,6 +296,10 @@
     const p = { status: u.to, statusAt: u.date, statusEmail: { subject: u.subject, date: u.date, signal: u.signal } };
     if (/^https:\/\//.test(u.viewUrl || "")) p.statusEmail.url = u.viewUrl;
     if (u.to === "applied" && !job.appliedAt) p.appliedAt = u.date;
+    // Keep the move in statusHistory like the page does, so the funnel remembers every step.
+    const pipe = ["saved", "applying", "applied", "screen", "interviewing", "offer"];
+    const had = Array.isArray(job.statusHistory) ? job.statusHistory : pipe.includes(job.status) ? [{ status: job.status, at: job.statusAt || "" }] : [];
+    p.statusHistory = [...had, { status: u.to, at: u.date }];
     return p;
   }
 

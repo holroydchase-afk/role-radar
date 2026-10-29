@@ -20,7 +20,8 @@
   --bg:#121816; --surface:#1a2220; --ink:#e4ebe7; --muted:#97a59e; --line:#2c3733;
   --accent:#7cb4dc; --accent-soft:#1e3343;
   --good:#7bcfa1; --good-soft:#18342a; --warn:#e2b55a; --warn-soft:#3a2f17; --bad:#ec8f83; --bad-soft:#3d221f; color-scheme:dark}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+a{color:var(--accent);text-underline-offset:.18em}
 .wrap{max-width:760px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
 header{display:grid;gap:6px}
 h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:-.01em;margin:0;text-wrap:balance}
@@ -28,37 +29,63 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 /* Dates and pay inside sentences read in the body font (tabular digits keep columns tidy). */
 .next .mono,.pv-head .meta .mono,.gmlist .mono{font-family:var(--f-body)}
-#tabs{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:8px;z-index:2}
-#tabs button{font:500 .88rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;display:flex;gap:6px;align-items:center}
+/* Tabs: one row at every width (RR-UX5-1). Tabs past the edge scroll sideways; a fade marks the hidden side. */
+#tabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:6px;z-index:2}
+#tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent)}
+#tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent)}
+#tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
+#tabs::-webkit-scrollbar{display:none}
+#tabs button{font:500 .9rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 12px;min-height:36px;cursor:pointer;display:flex;flex:none;gap:5px;align-items:center;white-space:nowrap;scroll-snap-align:start}
+#tabs button:hover{border-color:var(--accent)}
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
+/* Wide screens: every tab fits in one row with no sideways scroll (RR-UX6-1). Settings sit as a quieter group on the right. */
+@media (min-width:900px){#tabs{gap:2px}#tabs button{padding:0 6px;font-size:.82rem;gap:2px}#tabs .n{font-size:.72rem}
+  #tabs button.set{background:none;border-color:transparent;color:var(--muted);padding:0 4px}
+  #tabs button.set:hover{color:var(--ink);border-color:var(--line)}
+  #tabs button.set[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  #tabs button.set1{margin-left:auto}
+  #tab-watch .n{display:none} /* RR-UX7-0: the settings group stays a quiet label row so every tab fits at 900+; the Watchlist page shows its count */}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
-.job .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.job .co{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.job .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.job .head{min-width:0}
+/* Very long unbroken text (a pasted URL, a run of letters) wraps inside the card instead of widening the page. */
+.job,.ruled .row,.prog .row{overflow-wrap:anywhere}.job .chip{white-space:normal}
+/* Long lists (200+ cards): cards off screen skip layout until scrolled near (RR-H-21). */
+.list.long>.job{content-visibility:auto;contain-intrinsic-size:auto 340px}
+.job .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* One label style: sentence case, 0.8rem/600. Only the demo-data chip stays uppercase. */
+.job .co{font:600 .8rem var(--f-body);color:var(--muted)}
 .job h2{font-family:var(--f-display);font-weight:500;font-size:1.15rem;margin:2px 0 0;line-height:1.25;text-wrap:balance}
 .job h2 a{color:inherit;text-decoration:none}
 .job h2 a:hover{text-decoration:underline;text-decoration-color:var(--accent)}
 .meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.85rem}
 .note{margin:0;font-size:.92rem;max-width:65ch}
-.chip{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.chip{font:600 .8rem/1.3 var(--f-body);padding:3px 10px;border-radius:999px;white-space:nowrap}
 .fit-strong{background:var(--good-soft);color:var(--good)}
 .fit-maybe{background:var(--warn-soft);color:var(--warn)}
 .fit-stretch{background:var(--bad-soft);color:var(--bad)}
 .st{background:var(--accent-soft);color:var(--accent)}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
-.btn{font:500 .84rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:7px;padding:5px 10px;cursor:pointer}
+/* Buttons: one solid-accent primary per card or form (.cta / .primary), the rest outlined. 36px on desktop, 44px on touch. */
+.btn{white-space:nowrap;font:500 .875rem var(--f-body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:0 12px;min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
+.btn.cta{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn.cta:hover{filter:brightness(1.08)}
 .btn.on{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 .gmlist{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}.gmlist label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.gmlist input{margin-top:4px}.gmlist .hint{display:block}.gmhave{font-style:normal;font-size:.8rem;color:var(--muted)}.gmfoot{display:flex;gap:10px;flex-wrap:wrap}details.gmail>summary,details.gmail-status>summary{font-weight:600}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:22px 18px;color:var(--muted);display:grid;gap:6px}
 .empty strong{color:var(--ink);font-family:var(--f-display);font-weight:500;font-size:1.05rem}
+.empty .btn{justify-self:start}
+.empty.error{border:1px solid var(--bad);background:var(--bad-soft)}
+.sub.stale{color:var(--warn)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}
 .row .nm{font-weight:600}
 .row .info{min-width:0}
 .row .info small{display:block;color:var(--muted)}
-.grp{font:600 .76rem var(--f-body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:14px 0 0}
+.grp{font:600 .8rem var(--f-body);color:var(--muted);margin:14px 0 0}
 .health{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:8px;margin:0 0 14px}
 .health.low{border-color:var(--warn);background:var(--warn-soft)}
 .health .sum{margin:0;font-size:.9rem}.health .sum b{font-family:var(--f-mono);font-weight:500}
@@ -72,13 +99,13 @@ form.add,form.filters{background:var(--surface);border:1px solid var(--line);bor
 label{display:grid;gap:4px;font-size:.82rem;color:var(--muted)}
 input,select,textarea{font:400 .92rem var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0}
 textarea{min-height:64px;resize:vertical}
-.primary{font:600 .88rem var(--f-body);background:var(--ink);color:var(--bg);border:0;border-radius:7px;padding:8px 14px;cursor:pointer;justify-self:start}
+.primary{font:600 .875rem var(--f-body);background:var(--accent);color:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:0 16px;min-height:36px;cursor:pointer;justify-self:start}
+.primary:hover{filter:brightness(1.08)}
+.primary:disabled{opacity:.55;cursor:default;filter:none}
 .toast-act{background:none;border:0;color:inherit;font:inherit;font-weight:600;text-decoration:underline;padding:4px 6px;margin-left:6px;cursor:pointer}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem}
 .search{width:100%;box-sizing:border-box}
 .apply-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:2px}
-.apply{font:600 .88rem var(--f-body);background:var(--accent);color:var(--surface);border:0;border-radius:7px;padding:7px 16px;cursor:pointer}
-.apply:hover{filter:brightness(1.08)}
 .resume{font:500 .86rem var(--f-body);color:var(--accent);text-decoration:none;min-width:0;overflow-wrap:anywhere}
 .resume:hover{text-decoration:underline}
 .hint{font-size:.8rem;color:var(--muted)}
@@ -92,13 +119,22 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .fbar{margin:0 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px}
 .fbar .fields{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
 #ftoggle{display:none;align-items:center}
-/* On phones the tab bar wraps to 2-3 rows, so it scrolls away instead of covering a fifth of the screen. */
-@media (max-width:600px){#tabs{position:static}}
-@media (max-width:600px){#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}}
-.showcase-mode #ftoggle{display:inline-flex}.showcase-mode .fbar:not(.open) .fields{display:none}
+/* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
+@media (max-width:600px){#tabs{position:static;gap:6px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
+/* Phones: a shorter header so the first role title lands on the first screen. */
+@media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
+  /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
+  header .hrow:has(#demoNote:not([hidden])){display:block}header .hrow #demoNote{display:inline-block;margin-right:8px}header .hrow #demoTry{display:inline}
+  .fbar{padding:8px 12px;gap:6px}.fbar .qlbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+/* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
+#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}
 /* Touch: every control at least 44px tall. */
-@media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
+@media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.kv a{display:inline-flex;align-items:center;min-height:44px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
 .fbar .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+/* Phones (RR-UX7-1): search and the filter toggle share one row; the count shows only once a filter or search hides roles. */
+@media (max-width:600px){.fbar{grid-template-columns:minmax(0,1fr) auto;align-items:center}.fbar>label[for=q]{grid-column:1;grid-row:1}.fbar .foot{display:contents}
+  #ftoggle{grid-column:2;grid-row:1}.fbar .fields{grid-column:1/-1}#fcount{grid-column:1}#fclear{grid-column:2;justify-self:end}
+  #fcount[data-all]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .linkbtn{font:500 .82rem var(--f-body);background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
 .dates{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:.8rem;color:var(--muted)}
 .dates b{font-weight:500;color:var(--ink)}
@@ -108,8 +144,9 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .tag{font:500 .76rem var(--f-body);padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--ink)}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .why{font:600 .8rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;justify-self:start}
-.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.ctl select{padding:5px 8px;font-size:.84rem}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ctl .acts{display:contents}
+.ctl select{padding:0 8px;min-height:36px;font-size:.875rem}
+@media (max-width:600px), (pointer:coarse){.ctl select,.primary{min-height:44px}}
 .skipwhy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
 .skipwhy input{flex:1 1 100%;font:inherit;font-size:.88rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:0}
 /* Progress line and the Ruled out tab: eliminated roles count as progress next to applications. */
@@ -120,12 +157,46 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .ruled{display:grid;gap:14px}
 .ruled .sum{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:6px}
 .ruled .sum p{margin:0}
-.ruled h3{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:6px 0 0}
+.skipwhy textarea{flex:1 1 100%;min-height:52px;font:inherit;font-size:.88rem}
+.skipwhy .chipset{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
+.skipwhy [aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.skipwhy .go{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.skipwhy .err{flex:1 1 100%}
+.fb{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:10px}
+.fb h2{font-family:var(--f-display);font-weight:500;font-size:1.05rem;margin:0}
+.fb ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.fb li{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.fb li b{font-weight:600}
+.fb .acts{display:flex;gap:8px;flex-wrap:wrap}
+.fromskips{font:500 .88rem var(--f-body);background:var(--accent-soft);color:var(--ink);border-radius:7px;padding:8px 10px;margin:0}
+.by-rule{margin-top:14px}.by-rule summary{font-weight:600;cursor:pointer}
+/* Progress tab: the daily bar first, then the week, funnel and what is due. Two columns from 640px. */
+.prog{display:grid;gap:12px}
+@media(min-width:640px){.prog{grid-template-columns:1fr 1fr}}
+.prog .big{margin:0;font-size:1.05rem}.prog .big b{font:500 1.9rem var(--f-display);margin-right:4px}
+.prog .line{margin:0}.prog .ok{font:600 .78rem var(--f-body);color:var(--good);background:var(--good-soft);border-radius:999px;padding:2px 8px;vertical-align:middle}
+.prog .ccard{align-content:start}
+.ccard.pg-today{border-color:var(--accent);background:var(--accent-soft)}
+.ccard.pg-today.met{border-color:var(--good);background:var(--good-soft)}
+.meter{height:10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);overflow:hidden}.meter i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.pg-today.met .meter i{background:var(--good)}
+.days{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.days li{display:grid;gap:2px;justify-items:center}.days .col{height:48px;width:100%;max-width:28px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.days .col i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:0}
+.days b{font:500 .85rem var(--f-mono);min-height:1.3em}.days small{font-size:.72rem;color:var(--muted)}.days .future small{opacity:.6}
+.bars{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bars li{display:grid;grid-template-columns:minmax(84px,38%) 1fr 2.2em 2.6em;gap:8px;align-items:center;min-width:0}
+.bars .lbl{font-size:.86rem;overflow-wrap:anywhere}.bars .track{height:12px;background:var(--bg);border-radius:4px;overflow:hidden}.bars .track i{display:block;height:100%;background:var(--accent);opacity:.75;border-radius:4px}
+.bars b{font:500 .85rem var(--f-mono);text-align:right}.bars small{font-size:.75rem;color:var(--muted);text-align:right}
+.prog .row{padding:8px 0}.prog .row:last-child{border-bottom:0}.prog .row h4{margin:0;font-size:.92rem}.prog .row small{color:var(--muted)}
+.ruled h3{font:600 .8rem var(--f-body);color:var(--muted);margin:6px 0 0}
 .ruled .row h4{font-family:var(--f-display);font-weight:500;font-size:1rem;margin:0;line-height:1.3}
 .ruled .row h4 a{color:inherit}
 details.more{border-top:1px solid var(--line);padding-top:8px}
 details.more summary{cursor:pointer;font:500 .84rem var(--f-body);color:var(--muted)}
 details.more form{display:grid;gap:10px;padding-top:10px}
+/* Section rows above a list (Check Gmail, Add a role): 44px targets, 12px before the first card. */
+#view>details.more{padding-top:0;margin-bottom:12px}#view>details.more>summary{min-height:44px;box-sizing:border-box;display:flex;align-items:center;gap:8px}#view>details.more>summary::before{content:"\25B8";font-size:.8em}#view>details.more[open]>summary::before{content:"\25BE"}#view>details.more>summary::-webkit-details-marker{display:none}#view>details.more>summary{list-style:none}
 .st-applied,.st-screen,.st-interviewing{background:var(--good-soft);color:var(--good)}
 .st-offer{background:var(--good);color:var(--surface)}
 .st-applying{background:var(--warn-soft);color:var(--warn)}
@@ -148,12 +219,15 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .code{font:400 .84rem/1.55 var(--f-mono);tab-size:2;min-height:420px;width:100%;box-sizing:border-box;background:var(--bg);white-space:pre;overflow:auto}
 .err{font:500 .88rem var(--f-body);color:var(--bad);background:var(--bad-soft);border-radius:7px;padding:6px 9px;margin:0;white-space:pre-wrap}
 .score{font:600 .74rem var(--f-mono);padding:3px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+/* On a role card the score is the headline number: a 48px tile at the top right. */
+.job .score{display:grid;place-items:center;box-sizing:border-box;min-width:48px;height:48px;padding:0 8px;border-radius:12px;font:700 1.5rem/1 var(--f-display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .score.hi{background:var(--good-soft);color:var(--good)}
-.fitr{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline;font:500 .84rem var(--f-body)}
+.fitr{display:grid;grid-template-columns:10.5em minmax(0,1fr);gap:4px 10px;align-items:baseline;font:500 .84rem var(--f-body)}
 .fitr .k{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
-.fitr .k small{font:600 .7rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);min-width:4.6em}
+.fitr .k small{font:600 .8rem var(--f-body);color:var(--muted);min-width:4.4em}
 .fitr .r{color:var(--muted);min-width:0;overflow-wrap:anywhere}
-.rate{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid transparent}
+@media (max-width:480px){.fitr{grid-template-columns:minmax(0,1fr);gap:2px}.fitr .r{margin-bottom:4px}}
+.rate{font:600 .8rem/1.3 var(--f-body);padding:1px 8px;border-radius:999px;border:1px solid transparent}
 .r-great{background:var(--good);color:var(--surface)}
 .r-good{background:var(--good-soft);color:var(--good)}
 .r-neutral{background:var(--accent-soft);color:var(--accent)}
@@ -169,13 +243,45 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .rec .who{font-family:var(--f-display);font-weight:500;font-size:1.08rem;margin:2px 0 0}
 .rec .next{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.9rem}
 .rec .next b{font-weight:600}
-.why-score{font:400 .78rem var(--f-mono);color:var(--muted)}
+.why-score{font:400 .72rem/1.45 var(--f-mono);color:var(--muted)}
+/* "Why <score>?": Values/Culture and the score math, open on wide screens, one tap away on a phone (RR-UX6-2). */
+.whybox{display:grid;gap:6px}.whybtn{display:none}
+@media (max-width:600px){.whybtn{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-block:-12px}.whybtn::after{content:"\25BE";font-size:.8em}.whybtn[aria-expanded="true"]::after{content:"\25B4"}
+  .whybox:not(.open){display:none}.ctl .wide-only{display:none}
+  /* One row of actions: status picker takes the spare width, its visible "Status" word stays for screen readers. */
+  .ctl label.sr{flex:1 1 96px;min-width:0}.ctl label.sr select{width:100%;min-width:0}.ctl>.btn,.ctl .acts>.btn{flex:none;padding-inline:12px}
+  /* The card's actions wrap as one group under Status, never one by one (RR-UX7-2). */
+  .ctl .acts{display:flex;flex:none;flex-wrap:nowrap;gap:6px;max-width:100%}
+  .ctl .stl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+.why-score span{white-space:nowrap}
+.dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
+/* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
+.hrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
+.hrow:not(:has(> :not([hidden]))){display:none}
+@media (min-width:601px){header .sub{font-size:.85rem}.meta-row:has(#progress:not([hidden])){flex-wrap:nowrap}#progress{white-space:nowrap}#progress:not([hidden])+#scanLine{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}#progress:not([hidden])+#scanLine::before{content:"·";margin-right:10px}}
 .demo{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);justify-self:start}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
 .dig .sub2{grid-column:2;color:var(--muted);font-size:.8rem}
+/* This morning's digest: a compact card at the top of New; each entry jumps to its role card. */
+#digestCard{gap:0;padding:4px 16px;margin-bottom:12px}
+#digestCard>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none}
+#digestCard>summary::-webkit-details-marker{display:none}
+#digestCard>summary::before{content:"\25B8";font-size:.8em;color:var(--muted)}#digestCard[open]>summary::before{content:"\25BE"}
+#digestCard>summary h2{flex:1;min-width:0}
+#digestCard>summary .hint{white-space:nowrap}
+#digestCard .dig{gap:2px;padding:2px 0 10px}#digestCard .dig li{display:block}
+#digestCard .dig a{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:10px;align-items:center;min-height:36px;padding:2px 6px;margin-inline:-6px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:.9rem}
+#digestCard .dig a .score{text-align:center}
+#digestCard .dig a .t{overflow-wrap:anywhere}#digestCard .dig a b{font-weight:600}
+#digestCard .dig a:hover .t{color:var(--accent);text-decoration:underline}
+#digestCard .dig a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#digestCard>.hint{margin:0 0 10px}
+@media (max-width:600px), (pointer:coarse){#digestCard .dig a{min-height:44px}#digestCard>summary{padding-block:0}}
+@media (min-width:900px){#digestCard .dig{display:block;columns:2;column-gap:20px;padding-bottom:8px}#digestCard .dig li{break-inside:avoid}#digestCard .dig a{min-height:30px;padding-block:1px}#digestCard .dig a .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#digestCard>summary{min-height:40px}}
+.job{scroll-margin-top:72px}.job:focus{outline:none}.job.target{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .arules{display:grid;gap:6px;margin:0;padding:0;list-style:none}.arules li{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:10px;align-items:baseline}
-.lvl{font:600 .7rem var(--f-mono);text-transform:uppercase;letter-spacing:.04em;text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.lvl{font:600 .8rem var(--f-body);text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .privbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.privbar .hint{margin:0;max-width:65ch}
 .showcase[hidden]{display:none}.showcase{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.9rem}.showcase a{color:var(--accent);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;min-height:44px}.showcase a:hover{text-decoration:underline}
 .lede{margin:0;max-width:62ch;font-size:1rem}
@@ -186,7 +292,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 #preview[hidden]{display:none}
 .pv-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:16px 18px 10px;border-bottom:1px solid var(--line)}
 .pv-head h2{font-family:var(--f-display);font-weight:500;font-size:1.2rem;line-height:1.25;margin:2px 0 4px;text-wrap:balance}
-.pv-head .co{font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pv-head .co{font:600 .8rem var(--f-body);color:var(--muted)}
 .pv-head .btn{flex:none}
 .pv-scroll{overflow-y:auto;overscroll-behavior:contain;padding:14px 18px 24px;display:grid;gap:12px;align-content:start;flex:1;min-height:0}
 .pv-body{font-size:.95rem;line-height:1.6;max-width:70ch;min-width:0;overflow-wrap:anywhere}
@@ -206,6 +312,10 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   #preview{inset:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
   body.previewing{overflow:hidden}
 }
+/* RR-UX7-1: phones get tighter spacing above the first role (these follow the base rules they override). */
+@media (max-width:600px){.main{gap:8px}.fbar{margin-bottom:8px;padding-block:6px}#digestCard{margin-bottom:8px}
+  .wrap{padding-top:4px}.showcase{margin-bottom:-12px}.showcase a{font-size:.85rem}h1{font-size:1.5rem;line-height:1.15}
+  .lede{font-size:.875rem;line-height:1.4}header .sub{font-size:.84rem;line-height:1.4}#tabs{padding-block:2px}}
 </style>
 
 <div class="wrap">
@@ -213,10 +323,11 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   <header>
     <h1>Role Radar</h1>
     <p class="lede" id="lede" hidden>A job-search radar I built for my own search. It reads job boards every weekday and scores each role 0–100 against criteria I edit, with the math on every card. Applying stays my own call.</p>
-    <span class="demo" id="demoNote" hidden>Demo data</span>
-    <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p>
-    <p class="sub progress" id="progress" role="status" hidden></p>
-    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p>
+    <div class="hrow"><span class="demo" id="demoNote" hidden>Demo data</span>
+    <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p></div>
+    <div class="hrow meta-row"><p class="sub progress" id="progress" role="status" hidden></p>
+    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p></div>
+    <p class="sub stale" id="scanStale" role="status" hidden></p>
   </header>
 
   <main class="main">
@@ -239,21 +350,23 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 <script src="gmail-import.js"></script>
 <script src="posting.js"></script>
 <script src="alerts.js"></script>
+<script src="progress.js"></script>
 <script src="recruiter-store.js"></script>
+<script src="skip-feedback.js"></script>
 <script>
 // The public demo (chaseholroyd.com/role-radar/) is radar only: scan, score, pipeline. Resume intake, intake
 // settings and the Recruiters tab show only with ?full. The demo build sets __RR_PUBLIC__; the live app never does.
 const TOOLS=!window.__RR_PUBLIC__;
 const TABS=[
-  {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},
-  {id:"all",label:"All roles"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
+  {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},{id:"progress",label:"Progress"},
+  {id:"all",label:"All"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
 const STATUSES=[["new","New"],["viewed","Viewed"],["saved","Saved"],["applying","Applying"],["applied","Applied"],["screen","Screen"],["interviewing","Interviewing"],["offer","Offer"],["skipped","Skipped"],["rejected","Rejected"],["closed","Closed"]];
 const STATUS_LABEL=Object.fromEntries(STATUSES);
 const INBOX=["new","viewed"], PIPE=["saved","applying","applied","screen","interviewing","offer"], DONE=["skipped","rejected","closed"];
 // Per-person settings live in the database (meta/config) so this page can be reused by anyone.
 // These defaults apply only until a config document exists.
 const DEF_CONFIG={owner:"",lanes:["Pricing & payments","Checkout","Ops & processing","AI platform","Geospatial / clean energy","Other"],
-  skipReasons:["Comp too low","Not remote","Location","Wrong level","Wrong domain","Culture","Posting closed","Other"],followUpBusinessDays:5,staleAppliedDays:14,staleSavedDays:7,
+  dailyBar:3,skipReasons:["Comp too low","Not remote","Location","Wrong level","Wrong domain","Culture","Posting closed","Other"],followUpBusinessDays:5,staleAppliedDays:14,staleSavedDays:7,
   intakeCommand:"/job-intake",intakeWhere:"a new chat in your job-search project",
   intakeInstructions:"Ask only what you need. Then build the tailored resume and link it on this role in Role Radar (status \"applying\")."};
 let config={...DEF_CONFIG};
@@ -271,6 +384,7 @@ let recruiters=[], editRec=null, filtersOpen=false;
 const RS=window.RoleRadarRecruiters||null;
 let recStore=null, savedTab=null;
 const showPeople=()=>TOOLS&&!!recStore&&recStore.visible;
+const SET_TABS=["criteria","watch","filters"]; // settings, grouped at the right of the tab rail on wide screens
 const tabList=()=>TABS.filter(t=>t.id!=="people"||showPeople());
 // Privacy: recruiter details are hidden on screen until this viewer chooses to show them.
 let recPrivate=true;
@@ -279,15 +393,31 @@ const initials=n=>String(n||"").replace(/\([^)]*\)/g,"").trim().split(/\s+/).fil
 let criteria=null, critDraft=null, critErr="", specData=null;
 const SC=window.RoleRadarScoring||null, AL=window.RoleRadarAlerts||null;
 const PV=window.RoleRadarPosting||null;
+// Progress numbers come from progress.js, the same module the daily family email reads.
+const PG=window.RoleRadarProgress||null;
+// Skip feedback: the owner's skips (reason + comment) turned into suggested criteria changes. Never applied without a Save.
+const SF=window.RoleRadarSkipFeedback||null;
+let skipFb=null, critFrom=null;
 // Preview panel: which role is open, and descriptions loaded this visit (never saved).
 let preview=null, previewFrom=null; const postings=new Map();
-let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
+// jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
+let jobsState="loading", dbChecked=false;
+let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), openWhy=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view={...DEF_VIEW,...v};}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
+// Deep links: ?tab=<id> opens a tab (it beats the remembered one), #role-<id> jumps to a role card.
+// A tab this viewer can't see (Recruiters on the public build) or an unknown id never opens; the URL drops it.
+function setUrlTab(t,hash=""){ try{ const u=new URL(location.href); if(t) u.searchParams.set("tab",t); else u.searchParams.delete("tab"); u.hash=hash; history.replaceState(history.state,"",u.href); }catch(_){} }
+let urlTab=null, deepRole=null;
+try{ const q=new URLSearchParams(location.search).get("tab");
+  if(q!==null){ if(q==="people"&&TOOLS){ urlTab=q; savedTab=q; } else if(TABS.some(x=>x.id===q&&x.id!=="people")){ urlTab=q; tab=q; savedTab=null; } else setUrlTab(null,location.hash); }
+  const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)) deepRole=h; }catch(_){}
 
 const $=s=>document.querySelector(s);
 // Only http(s) links from scan or email data become clickable.
 const safeUrl=u=>/^https?:\/\//i.test(String(u||"").trim())?String(u).trim():"";
+// A role card's anchor: id="role-<_id>", limited to safe id characters, so #role-<id> links can find it.
+const roleAnchor=id=>"role-"+String(id??"").replace(/[^A-Za-z0-9_-]/g,"_");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate=s=>{if(!s)return"";const d=new Date(String(s).length===10?s+"T12:00:00":s);return isNaN(d)?esc(s):d.toLocaleDateString(undefined,{month:"short",day:"numeric"});};
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -302,6 +432,8 @@ const toastHold=()=>clearTimeout(toast._t), toastLetGo=()=>{clearTimeout(toast._
 const st=j=>j.status||"new";
 // Ruled out = skipped by the owner, here or in an intake chat (source "intake"). Counted as progress next to applications.
 const ruledAt=j=>j.skippedAt||j.statusAt||"";
+// Skips a scan or criteria cleanup made (skippedBy "rule") are listed apart and never counted as the owner's progress.
+const byRule=j=>String(j.skippedBy||"").toLowerCase()==="rule";
 // Sort key for ruled-out dates: date-only values count as local noon, like dayOf, so they sort among full timestamps.
 const ruledTime=j=>{const s=ruledAt(j); if(!s) return -Infinity; const d=new Date(String(s).length===10?s+"T12:00:00":s); return isNaN(d)?-Infinity:d.getTime();};
 const dayOf=s=>{if(!s)return"";const d=new Date(String(s).length===10?s+"T12:00:00":s);return isNaN(d)?"":d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
@@ -311,7 +443,7 @@ function progressOf(list){
   const t=today(), w=weekStart(), p={today:{applied:0,ruled:0},week:{applied:0,ruled:0}};
   list.forEach(j=>{
     const a=dayOf(j.appliedAt); if(a&&a>=w&&a<=t){p.week.applied++; if(a===t)p.today.applied++;}
-    if(st(j)==="skipped"){const r=dayOf(ruledAt(j)); if(r&&r>=w&&r<=t){p.week.ruled++; if(r===t)p.today.ruled++;}}
+    if(st(j)==="skipped"&&!byRule(j)){const r=dayOf(ruledAt(j)); if(r&&r>=w&&r<=t){p.week.ruled++; if(r===t)p.today.ruled++;}}
   });
   return p;
 }
@@ -344,26 +476,45 @@ function inTab(j,t){
   const s=st(j);
   if(t==="inbox") return INBOX.includes(s);
   if(t==="pipeline") return PIPE.includes(s);
-  if(t==="ruled") return s==="skipped";
+  if(t==="ruled") return s==="skipped"&&!byRule(j);
   if(t==="action") return !!actionReason(j);
   return true;
 }
 function counts(){
-  const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
+  const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",progress:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
   jobs.forEach(j=>{["inbox","pipeline","action","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
+  if(jobsState!=="ready") JOB_TABS.forEach(t=>{if(t!=="progress") c[t]="";});
   return c;
 }
 function renderTabs(){
   const c=counts();
   if(tab==="people"&&!showPeople()) tab="inbox";
-  $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}">${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
+  $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}"${SET_TABS.includes(t.id)?` class="set${t.id===SET_TABS[0]?" set1":""}"`:""}>${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
+  tabsInView();
 }
+// One-row tab bar (RR-UX5-1): scroll the selected tab into view and fade whichever edge hides more tabs.
+function tabsEdges(){ const el=$("#tabs"); if(!el) return; const max=el.scrollWidth-el.clientWidth;
+  el.classList.toggle("more-l",el.scrollLeft>2); el.classList.toggle("more-r",el.scrollLeft<max-2); }
+function tabsInView(){ const el=$("#tabs"), b=el&&el.querySelector('[aria-selected="true"]'); if(!b) return;
+  const r=b.getBoundingClientRect(), e=el.getBoundingClientRect();
+  if(r.left<e.left) el.scrollLeft-=e.left-r.left+48; else if(r.right>e.right) el.scrollLeft+=r.right-e.right+48;
+  tabsEdges(); }
+$("#tabs").addEventListener("scroll",tabsEdges,{passive:true});
+addEventListener("resize",tabsEdges);
+$("#tabs").addEventListener("keydown",e=>{
+  const bs=[...$("#tabs").querySelectorAll("[role=tab]")], i=bs.indexOf(document.activeElement); if(i<0) return;
+  const j={ArrowRight:i+1,ArrowLeft:i-1,Home:0,End:bs.length-1}[e.key]; if(j===undefined) return;
+  e.preventDefault(); bs[(j+bs.length)%bs.length].focus();
+});
 // "greenhouse:orbitline" -> "Greenhouse"
 const boardName=v=>{const a=String(v||"").split(":")[0].toLowerCase(); return (PV&&PV.ATS_LABEL[a])||{workday:"Workday",ashby:"Ashby"}[a]||a||"?";};
 function renderScan(){
+  const sw=$("#scanStale"), stale=!!(scan&&scan.lastRun&&PG&&PG.scanStale&&PG.scanStale(scan.lastRun,Date.now()));
+  sw.textContent=stale?`Scan hasn't run since ${fmtDate(scan.lastRun)}. New roles may be missing; check the scheduled scan.`:""; sw.hidden=!stale;
   if(!scan){ $("#scanLine").textContent="Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning. No scan has run yet."; return;}
-  const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards · ${esc(scan.newMatches??0)} new matches${scan.note?` · ${esc(scan.note)}`:""}`;
+  const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
+  $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards${jobsState==="error"?"":` · ${esc(scan.newMatches??0)} new matches`}${scan.note?` · ${esc(scan.note)}`:""}`;
+  $("#scanLine").title=$("#scanLine").textContent; // full text when the laptop meta row trims it
 }
 
 function datesLine(j){
@@ -382,7 +533,10 @@ function scoreLine(j){
   if(!SC||!specData) return "";
   const r=SC.scoreJob(j,specData);
   const differs=typeof j.score==="number"&&j.score!==r.score;
-  return `<div class="why-score" title="Score from your criteria">${esc(SC.explain(r))} = ${r.score}${r.dream?` · dream role: ${esc(r.dream.why)}${r.dream.check?` (check: ${esc(r.dream.check)})`:""}`:""}${differs?` · scan said ${esc(j.score)} (it also reads the posting)`:""}</div>`;
+  // Segments wrap whole ("45 sector +" never splits), so the math stays one or two short lines on a phone.
+  const parts=String(SC.explain(r)).split(/ (?=[+−-] )/).map((x,i,a)=>`<span>${esc(x)}${i===a.length-1?` = ${r.score}`:""}</span>`).join(" ");
+  const dream=r.dream?`<p class="dream-note">Dream role: ${esc(r.dream.why)}${r.dream.check?` (check: ${esc(r.dream.check)})`:""}</p>`:"";
+  return `<div class="why-score" title="Score from your criteria">${parts}${differs?` <span>· scan said ${esc(j.score)}</span>`:""}</div>${dream}`;
 }
 // Values and Culture badges: same rules as the scan and intake (criteria.yaml values_fit, culture_fit).
 const RATE_LABEL={great:"Great",good:"Good",neutral:"Neutral",maybe:"Maybe",no:"No",unrated:"Unrated"};
@@ -404,7 +558,11 @@ function jobCard(j){
   const id=esc(j._id), s=st(j), fit=(j.fit||"").toLowerCase(), resumeUrl=safeUrl(j.resumeUrl);
   // Demo roles are made up: their example.com links would be dead ends, so they become a "Sample posting" note.
   const sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url);
-  const fitChip=(typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"")+(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
+  const scoreTile=typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"";
+  const fitChip=(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
+  const title=String(j.title??"").trim()||"Untitled role";
+  // A status this page doesn't know (an older scan, a hand edit) is listed as itself, never shown as New.
+  const stOpts=(STATUS_LABEL[s]?"":`<option value="${esc(s)}" selected>${esc(sentence(s))}</option>`)+STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("");
   const stChip=s!=="new"?`<span class="chip st st-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`:"";
   // The public demo shows one category per card (the sector); the lane is Chase's own grouping.
   const laneChip=j.lane&&!(window.__RR_SHOWCASE__&&j.sector)?`<span class="chip lane">${esc(j.lane)}</span>`:"";
@@ -412,13 +570,27 @@ function jobCard(j){
   const cf=conflictOf(j);
   const cfChip=cf?`<span class="chip conflict" title="Overlaps a product you're building">Conflict</span>`:"";
   const why=tab==="action"?actionReason(j):null;
-  // A form, so a redraw from the database doesn't wipe a note being typed (see softRender).
-  const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}">Why skip?${SKIP_REASONS.map(r=>`<button class="btn" type="button" data-skipwhy="${esc(r)}" data-job="${id}">${esc(r)}</button>`).join("")}<button class="linkbtn" type="button" data-skipcancel="1">Cancel</button><input name="skipNote" maxlength="200" aria-label="Note, optional" placeholder="Note, optional (e.g. Belfast only, closed Oct 6)"></form>`:"";
-  return `<article class="job${preview===j._id?" sel":""}">
-    <div class="top"><div style="min-width:0">
+  // Values/Culture and the score math: always shown on wide screens, behind "Why <score>?" on a phone (RR-UX6-2).
+  const whyBody=fitRows(j)+scoreLine(j), whyOpen=openWhy.has(j._id);
+  // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
+  const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
+  const cta=INBOX.includes(s)?"save":s==="saved"&&TOOLS?"apply":s==="applying"?"applied":fupDue?"fup":"";
+  const btn=k=>`btn${cta===k?" cta":""}`;
+  const preApply=TOOLS&&(INBOX.includes(s)||s==="saved"||s==="applying"); // Apply (or Re-run intake) only until you apply
+  // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
+  // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
+  const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
+      <span>Why skip? Pick one, then say what made it a no. Your words teach the next scan.</span>
+      <div class="chipset" role="group" aria-label="Reason">${SKIP_REASONS.map(r=>`<button class="btn" type="button" aria-pressed="false" data-skipwhy="${esc(r)}">${esc(r)}</button>`).join("")}</div>
+      <textarea name="skipNote" maxlength="300" aria-label="What made it a no" placeholder="What made it a no? e.g. Belfast office only, always-on culture, title is really a Director"></textarea>
+      <p class="err" data-skiperr role="alert" hidden></p>
+      <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
+  return `<article class="job${preview===j._id?" sel":""}" id="${roleAnchor(j._id)}" tabindex="-1">
+    <div class="top"><div class="head">
       <div class="co">${esc(j.company)}</div>
-      <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(j.title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(j.title)}</a>`:esc(j.title)}</h2>
-    </div><div class="actions">${fitChip}${cfChip}${stChip}</div></div>
+      <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(title)}</a>`:esc(title)}</h2>
+    </div>${scoreTile}</div>
+    ${fitChip||cfChip||stChip?`<div class="chips">${fitChip}${cfChip}${stChip}</div>`:""}
     ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}
     ${why?`<div class="why">${esc(why)}</div>`:""}
     <div class="meta">
@@ -427,32 +599,41 @@ function jobCard(j){
       <span>${esc(srcName(j.source||j.ats||""))}</span>
       ${laneChip}
       ${j.sector?`<span class="chip lane">${esc(j.sector)}</span>`:""}
+      ${whyBody?`<button class="linkbtn whybtn" type="button" data-why="${id}" aria-expanded="${whyOpen}" aria-controls="why-${id}">Why ${typeof j.score==="number"?esc(j.score):"this score"}?</button>`:""}
     </div>
-    ${fitRows(j)}
     ${datesLine(j)}
-    ${scoreLine(j)}
+    ${whyBody?`<div class="whybox${whyOpen?" open":""}" id="why-${id}">${whyBody}</div>`:""}
     ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
     ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
     ${j.nextStep?`<p class="note"><b>Next:</b> ${esc(j.nextStep)}</p>`:""}
     ${j.emailNote?`<p class="note" style="color:var(--muted)">Inbox: ${esc(j.emailNote)}</p>`:""}
     ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="note" style="color:var(--muted)">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}
-    <div class="apply-row">
-      ${TOOLS?`<button class="apply" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
-      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:`<span class="hint">Copies an intake prompt for a new chat</span>`)}
-    </div>
+    ${TOOLS&&(preApply||resumeUrl||j.resumeName)?`<div class="apply-row">
+      ${preApply?`<button class="btn apply${cta==="apply"?" cta":""}" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
+      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:preApply?`<span class="hint">Copies an intake prompt for a new chat</span>`:"")}
+    </div>`:""}
     <div class="ctl">
-      <label class="sr" for="st-${id}" style="display:flex;gap:6px;align-items:center">Status
-        <select id="st-${id}" data-setstatus="${id}">${STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("")}</select></label>
-      ${INBOX.includes(s)?`<button class="btn" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
-      ${s==="applying"?`<button class="btn" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
+      <label class="sr" style="display:flex;gap:6px;align-items:center"><span class="stl">Status</span>
+        <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
+      <span class="acts">${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
+      ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
+      ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
       ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
       <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
-      ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn" type="button" data-sample="${id}">Sample posting</button>`:""}
+      ${url?`<a class="btn wide-only" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn wide-only" type="button" data-sample="${id}">Sample posting</button>`:""}</span>
     </div>
     ${skipRow}
     <details class="more" data-more="${id}"${openMore.has(j._id)?" open":""}>
       <summary>Lane, tags, referral, notes</summary>
-      <form data-edit="${id}">
+      ${openMore.has(j._id)?editForm(j):""}
+    </details>
+  </article>`;
+}
+
+// The details form is built when its section opens (see the toggle listener), so a long list stays quick to draw.
+function editForm(j){
+  const id=esc(j._id), tags=tagsOf(j);
+  return `<form data-edit="${id}">
         <div class="fields">
           <label for="ln-${id}">Lane<select id="ln-${id}" name="lane"><option value="">None</option>${LANES.map(l=>`<option${l===j.lane?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
           <label for="tg-${id}">Tags (comma separated)<input id="tg-${id}" name="tags" value="${esc(tags.join(", "))}" placeholder="priority, referral"></label>
@@ -462,11 +643,19 @@ function jobCard(j){
         <label for="nx-${id}">Next step<input id="nx-${id}" name="nextStep" value="${esc(j.nextStep||"")}"></label>
         <label for="nt-${id}">Notes<textarea id="nt-${id}" name="notes">${esc(j.notes||"")}</textarea></label>
         <button class="primary" type="submit">Save details</button>
-      </form>
-    </details>
-  </article>`;
+      </form>`;
 }
-
+// Cards are reused between redraws while nothing they show has changed, so search and tab switches move
+// existing cards instead of rebuilding thousands of them (RR-H-21).
+const cardCache=new Map(); let cardCtx=null;
+function cardEls(list){
+  const ctx=[tab==="action",specData,config,filters,LANES,today()];
+  if(!cardCtx||ctx.some((x,i)=>x!==cardCtx[i])){ cardCache.clear(); cardCtx=ctx; }
+  const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id)+openMore.has(j._id);
+  const keys=list.map(keyOf), miss=list.filter((j,i)=>{const c=cardCache.get(j._id); return !c||c.key!==keys[i];});
+  if(miss.length){ const t=document.createElement("template"); t.innerHTML=miss.map(jobCard).join(""); [...t.content.children].forEach((el,i)=>cardCache.set(miss[i]._id,{key:keyOf(miss[i]),el})); }
+  return list.map(j=>cardCache.get(j._id).el);
+}
 function opts(list,cur,all){return `<option value="">${all}</option>`+list.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");}
 function filterBar(){
   const statusList=(tab==="inbox"?STATUSES.filter(([v])=>INBOX.includes(v)):tab==="pipeline"?STATUSES.filter(([v])=>PIPE.includes(v)):STATUSES);
@@ -475,7 +664,7 @@ function filterBar(){
   const active=["q","status","lane","fit","values","culture","source","tag","found","conflict"].filter(k=>view[k]).length;
   const nf=active-(view.q?1:0);
   return `<form class="fbar${filtersOpen?" open":""}" id="fbar">
-    <label for="q">Search company, title or notes<input id="q" class="search" value="${esc(view.q)}" placeholder="e.g. solar, payments"></label>
+    <label for="q"><span class="qlbl">Search company, title or notes</span><input id="q" class="search" value="${esc(view.q)}" placeholder="Search, e.g. solar, payments"></label>
     <div class="fields">
       <label for="fv-status">Status<select id="fv-status" data-v="status">${opts(statusList,view.status,"Any")}</select></label>
       <label for="fv-lane">Lane<select id="fv-lane" data-v="lane">${opts(LANES.map(l=>[l,l]),view.lane,"Any")}</select></label>
@@ -527,19 +716,35 @@ function addRoleForm(){
       <label for="aj-st">Status<select id="aj-st">${STATUSES.filter(([v])=>["saved","applying","applied"].includes(v)).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
     </div><button class="primary" type="submit">Add role</button></form></details>`;
 }
+// "This morning's digest" at the top of New: what the weekday scan would send, ranked as the Criteria preview ranks it.
+// Open on wide screens, a one-line summary on phones; the viewer's own toggle is kept across redraws.
+let digestOpen=null;
+function digestCard(){
+  if(!SC||!specData) return "";
+  const d=digestOf(specData); if(!d) return "";
+  const open=digestOpen??(typeof matchMedia==="function"&&matchMedia("(min-width:900px)").matches);
+  const n=d.items.length;
+  // "Top N of M new" with M the header's new-match count, so the digest and the header tell one story (RR-UX7-3).
+  const of=Number(scan&&scan.newMatches)||jobs.filter(j=>inTab(j,"inbox")).length;
+  const body=n?`<ol class="dig">${d.items.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}" title="${esc(x.job.company)} · ${esc(x.job.title)}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
+    :`<p class="hint">Nothing in New clears the minimum score yet.</p>`;
+  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${of>n?`Top ${n} of ${of} new`:n===1?"Top pick":`Top ${n} picks`}</span></summary>${body}</details>`;
+}
 function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
   const list=sortList(applyView(base));
-  const head=filterBar()+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
+  const head=(tab==="inbox"?digestCard():"")+(base.length?filterBar():"")+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
   let body;
   if(!list.length){
     const msg=base.length?["No roles match these filters","Clear a filter to see more."]:{inbox:["Nothing new right now","The morning scan adds matching roles here. Open one and it's marked viewed; save or skip it to clear it out."],
       pipeline:["Nothing in the pipeline","Save a role, or tap Apply, and it moves here. Add roles found elsewhere above."],
       action:["Nothing needs you right now",(TOOLS?"Follow-ups due, stale applications and unsent resumes show up here.":"Follow-ups due and stale applications show up here.")],
       all:["No roles yet","After the first scan runs, every match it finds is listed here."]}[tab];
-    body=`<div class="empty"><strong>${msg[0]}</strong><span>${msg[1]}</span></div>`;
-  } else body=`<div class="list">${list.map(jobCard).join("")}</div>`;
-  return {html:head+body,shown:list.length,total:base.length};
+    const noCrit=!base.length&&tab==="inbox"&&!(criteria&&criteria.spec);
+    body=noCrit?`<div class="empty"><strong>Set your criteria first</strong><span>The morning scan scores roles against your criteria. Add them and new matches show up here.</span><button class="btn cta" type="button" data-tab="criteria">Open Criteria</button></div>`
+      :`<div class="empty"><strong>${msg[0]}</strong><span>${msg[1]}</span></div>`;
+  } else body=`<div class="list"></div>`;
+  return {html:head+body,shown:list.length,total:base.length,list};
 }
 
 // Board health: written by the scan (meta/scan.coverage, plus lastOk / failStreak / readMode on each company).
@@ -626,7 +831,7 @@ const hashOf=x=>{let h=5381; for(const ch of String(x)) h=((h*33)^ch.codePointAt
 function docKey(...parts){ const key=parts.map(slugOf).filter(Boolean).join("-").slice(0,60); return parts.some(x=>String(x||"").trim()&&!slugOf(x))||!key?(key?key+"-":"")+hashOf(parts.join(" ")):key; }
 function parseSpec(t){
   if(!window.jsyaml) return {data:null,err:""};
-  try{ const d=window.jsyaml.load(t); if(!d||typeof d!=="object") return {err:"The spec should be a YAML map (key: value)."}; return {data:d,err:""}; }
+  try{ const d=window.jsyaml.load(t); if(!d||typeof d!=="object"||Array.isArray(d)) return {err:"The spec should be a YAML map (key: value)."}; return {data:d,err:""}; }
   catch(e){ return {err:String(e.message||e).split("\n")[0],line:e.mark&&Number.isFinite(e.mark.line)?e.mark.line+1:null}; }
 }
 const money=n=>typeof n==="number"?"$"+Math.round(n/1000)+"K":esc(n??"—");
@@ -824,16 +1029,26 @@ async function gsApply(){
   toast(ok===picks.length?`Updated ${ok} ${ok===1?"role":"roles"}`:`Updated ${ok} of ${picks.length}. Try the rest again.`);
   render();
 }
+// The repo's example criteria.yaml, embedded below the script for a first-time user (tests keep it in sync).
+const exampleCriteria=()=>($("#exampleCriteria")?.textContent||"").replace(/^\n/,"");
 function renderCriteria(){
   const text=critDraft??(criteria&&criteria.spec)??"";
-  const p=parseSpec(text);
+  const p=text?parseSpec(text):{data:null,err:""};
   const when=criteria&&criteria.updatedAt?new Date(criteria.updatedAt).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  if(!text) return `<div class="empty"><strong>No criteria yet</strong><span>Once a criteria spec is saved, the morning scan reads it before every run.</span></div>`;
+  // No criteria saved yet: an empty editor, with the example one tap away (it fills the editor; nothing saves until Save).
+  if(!(criteria&&criteria.spec)&&!text) return `<div class="crit"><form class="ccard" id="critForm"><h2>criteria.yaml</h2>
+      <p class="sub" style="margin:0">No criteria yet. The morning scan reads this before every run. Write your own, or start from the example and change it to fit your search, then save.</p>
+      ${critErr?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr)}</p>`:""}
+      <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
+      <textarea id="critText" class="code" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="version: 2"${critErr?` aria-invalid="true" aria-describedby="critErr"`:""}></textarea>
+      <div class="ctl"><button class="btn" type="submit" id="critSave">Save criteria</button>${exampleCriteria()?`<button class="btn cta" type="button" id="critExample">Start from the example</button>`:""}${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
+    </form></div>`;
   // While a draft is broken or was blocked, the summary keeps showing what is saved, so nothing looks wiped.
   const shown=critErr||p.err?parseSpec((criteria&&criteria.spec)||"").data:p.data;
   return `<div class="crit">${critSummary(shown)}
     <form class="ccard" id="critForm"><h2>criteria.yaml</h2>
       <p class="sub" style="margin:0">The scan reads this before every run. Change a weight, add a company to <span class="mono">hard_exclude</span>, or move the comp floor, then save.${when?` Last saved ${esc(when)}.`:""}</p>
+      ${critFrom&&critDraft!==null?`<p class="fromskips" id="fromSkips" role="status">From your skips: <b>${esc(critFrom.text)}</b>. ${esc(critFrom.why)} Nothing changes until you save.</p>`:""}
       ${critErr||p.err?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr||p.err)}</p>`:""}
       ${!window.jsyaml?`<p class="err">The YAML reader didn't load, so the summary and preview are off. You can still edit and save.</p>`:""}
       <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
@@ -876,11 +1091,19 @@ function alertsPreview(spec){
     :`<p class="hint">Nothing on this page would alert right now.</p>`;
   return rules+how+now;
 }
+// The digest ranking (scoring.js buildDigest over the roles in New): shared by the Criteria preview and the New tab card.
+// Memoized on the jobs array and the spec object: both are replaced (never mutated) on each snapshot or edit,
+// so a search keystroke or tab switch reuses the last ranking instead of re-scoring every new role.
+let digestMemo=null;
+function digestOf(spec){
+  if(digestMemo&&digestMemo.jobs===jobs&&digestMemo.spec===spec) return digestMemo.d;
+  const pool=jobs.filter(j=>INBOX.includes(st(j))), d=pool.length?SC.buildDigest(pool,spec):null;
+  digestMemo={jobs,spec,d}; return d;
+}
 function digestPreview(spec){
   if(!SC||!spec) return `<p class="hint">Preview needs a valid spec.</p>`;
-  const pool=jobs.filter(j=>INBOX.includes(st(j)));
-  if(!pool.length) return `<p class="hint">No new roles to rank yet.</p>`;
-  const d=SC.buildDigest(pool,spec);
+  const d=digestOf(spec);
+  if(!d) return `<p class="hint">No new roles to rank yet.</p>`;
   const labels=Object.fromEntries((Array.isArray(spec.sectors)?spec.sectors:[]).map(s=>[s.id,s.label||s.id]));
   const extra=Object.entries(d.extras).map(([k,n])=>k==="_overflow"?`+${n} more past the digest limit`:`+${n} more ${esc(labels[k]||k)} (capped)`);
   return (d.items.length?`<ol class="dig">${d.items.map(x=>`<li><span class="score${x.result.score>=70?" hi":""}">${x.result.score}</span><span>${esc(x.job.company)} · ${esc(x.job.title)}</span><span class="sub2">${esc(x.result.sector.label||"Other")} · ${esc(SC.explain(x.result))}</span></li>`).join("")}</ol>`:`<p class="hint">Nothing in New clears the minimum score.</p>`)
@@ -889,14 +1112,49 @@ function digestPreview(spec){
 
 function renderProgress(){
   const el=$("#progress"); if(!el) return;
-  if(!db){el.hidden=true;return;}
+  if(!db||jobsState!=="ready"){el.hidden=true;return;}
   const p=progressOf(jobs); el.hidden=false;
   el.innerHTML=`Today: ${progressText(p.today)} · This week: ${progressText(p.week)}`;
 }
+// What the owner's last 30 days of skips say, as criteria changes to accept or set aside. Accepting only fills the
+// Criteria editor; the owner reviews and saves. Notes for the scan go to meta/skipFeedback, which the scan reads.
+function skipAnalysis(){ return SF&&specData?SF.analyze(jobs,specData,{dismissed:(skipFb&&skipFb.dismissed)||[]}):null; }
+function feedbackCard(){
+  const a=skipAnalysis(); if(!a) return "";
+  const ev=s=>s.evidence.slice(0,3).map(x=>`${esc(x.company)} · ${esc(x.title)}${x.note?` <i>"${esc(x.note)}"</i>`:""}`).join("<br>")+(s.evidence.length>3?`<br>and ${s.evidence.length-3} more`:"");
+  const item=(s,scan)=>`<li><b>${esc(s.text)}</b><span class="hint">${esc(s.why)}</span><span class="hint">${ev(s)}</span>
+    <div class="acts">${scan?`<span class="hint">The next scan reads this.</span>`:`<button class="btn" type="button" data-fbaccept="${esc(s.id)}">Add to criteria</button>`}<button class="linkbtn" type="button" data-fbdismiss="${esc(s.id)}">Not now</button></div></li>`;
+  const n=a.suggestions.length+a.scanNotes.length;
+  return `<section class="fb" aria-labelledby="fb-h"><h2 id="fb-h">What your skips are teaching the scan</h2>
+    ${n?`<p class="hint" style="margin:0">From ${a.skips} ${a.skips===1?"skip":"skips"} in the last ${a.days} days. Adding a change opens it on the Criteria tab; nothing changes until you save.</p>
+      <ul>${a.suggestions.map(s=>item(s,false)).join("")}${a.scanNotes.map(s=>item(s,true)).join("")}</ul>`
+      :`<p class="hint" style="margin:0">${a.skips?`Nothing repeats yet in your last ${a.skips} ${a.skips===1?"skip":"skips"}.`:"No skips in the last 30 days."} When the same company, title word, culture phrase or pay gap comes up twice, a suggested criteria change shows here.</p>`}
+  </section>`;
+}
+// Keeps meta/skipFeedback current for the scan: open suggestions, notes for the scan, and what was set aside or accepted.
+async function syncSkipFeedback(extra){
+  if(!db||!SF||!specData) return;
+  const fb={dismissed:[],accepted:[],...(skipFb||{}),...(extra||{})};
+  const a=SF.analyze(jobs,specData,{dismissed:fb.dismissed});
+  const brief=s=>({id:s.id,kind:s.kind,text:s.text,why:s.why,...(s.change?{change:s.change}:{})});
+  skipFb={...fb,open:a.suggestions.map(brief),scanNotes:a.scanNotes.map(brief),updatedAt:new Date().toISOString()};
+  try{ await db.doc("meta/skipFeedback").set(skipFb); }catch(_){}
+}
+function acceptSuggestion(id){
+  const a=skipAnalysis(), sg=a&&a.suggestions.find(x=>x.id===id); if(!sg) return;
+  const base=critDraft??(criteria&&criteria.spec)??"";
+  const next=SF.applyToYaml(base,sg.change,window.jsyaml&&window.jsyaml.load);
+  if(next===null){ toast("Couldn't place that change in criteria.yaml. Add it on the Criteria tab by hand."); return; }
+  critDraft=next; critErr=""; critFrom=sg; tab="criteria"; try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render();
+  toast("Added to the editor. Review it, then Save criteria.");
+  requestAnimationFrame(()=>document.getElementById("fromSkips")?.scrollIntoView({block:"center"}));
+}
+
 // Ruled out: every role the owner eliminated, newest first, grouped by day, with the reason.
 function renderRuled(){
-  const list=jobs.filter(j=>st(j)==="skipped").sort((a,b)=>(ruledTime(b)-ruledTime(a))||0);
-  if(!list.length) return `<div class="empty"><strong>Nothing ruled out yet</strong><span>Skip a role and pick a reason, and it's listed and counted here.${TOOLS?" Roles screened out in an intake chat land here too.":""}</span></div>`;
+  const all=jobs.filter(j=>st(j)==="skipped").sort((a,b)=>(ruledTime(b)-ruledTime(a))||0);
+  const list=all.filter(j=>!byRule(j)), rules=all.filter(byRule);
+  if(!all.length) return `<div class="empty"><strong>Nothing ruled out yet</strong><span>Skip a role and pick a reason, and it's listed and counted here.${TOOLS?" Roles screened out in an intake chat land here too.":""}</span></div>`;
   const p=progressOf(jobs), reasons={};
   list.forEach(j=>{const r=j.skipReason||"No reason given"; reasons[r]=(reasons[r]||0)+1;});
   const top=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
@@ -906,23 +1164,69 @@ function renderRuled(){
     return `<div class="row"><div class="info"><h4>${url?`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(j.title)}</a>`:esc(j.title)}</h4><small>${esc(j.company)}${why?` · ${esc(why)}`:""}${TOOLS&&j.source==="intake"?" · screened in intake":""}</small></div>
       <button class="btn" type="button" data-reconsider="${id}">Reconsider</button></div>`;};
   return `<div class="ruled">
+    ${feedbackCard()}
     <div class="sum"><p>This week you applied to <b>${p.week.applied}</b> and ruled out <b>${p.week.ruled}</b>. Every role ruled out is one less to wonder about.</p>
       <p class="hint">${list.length} ruled out in all · ${top.map(([r,n])=>`${esc(r)} ${n}`).join(" · ")}</p></div>
     ${groups.map(g=>`<section aria-label="${esc(dayLabel(g.d))}"><h3>${esc(dayLabel(g.d))} · ${g.items.length} ruled out</h3>${g.items.map(row).join("")}</section>`).join("")}
+    ${rules.length?`<details class="by-rule"><summary>Removed by screening rules · ${rules.length}</summary><p class="hint">A scan or a criteria change took these out. They don't count as roles you ruled out.</p>${rules.map(row).join("")}</details>`:""}
   </div>`;
 }
 
+// Progress: today against the daily bar, the week, the funnel, response rate, follow-ups due and sector mix.
+// Every number comes from progress.js, the same rules the daily family email uses.
+function renderProgressTab(){
+  if(!PG) return `<div class="empty"><strong>Progress didn't load</strong><span>Reload the page to try again.</span></div>`;
+  const d=PG.dashboard(jobs,{bar:Number(config.dailyBar)||3}), t=d.today;
+  const pct=Math.min(100,Math.round(t.total/t.bar*100)), maxDay=Math.max(1,...d.week.days.map(x=>x.applied));
+  const wd=k=>new Date(k+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
+  const top=d.funnel[0].count, maxMix=Math.max(1,...d.sectorMix.map(x=>x.count));
+  const STAGE={applied:"Applied",screen:"Screen",interviewing:"Interviewing",offer:"Offer"};
+  const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+  return `<div class="prog">
+    <section class="ccard pg-today${t.met?" met":""}" aria-labelledby="pg-today"><h2 id="pg-today">Today</h2>
+      <p class="big"><b>${t.total}</b> of ${t.bar}${t.met?` <span class="ok">bar met</span>`:""}</p>
+      <div class="meter" role="meter" aria-label="Applications and follow-ups today" aria-valuemin="0" aria-valuemax="${t.bar}" aria-valuenow="${t.total}"><i style="width:${pct}%"></i></div>
+      <p class="hint">${plural(t.applied,"application")} and ${plural(t.followUps,"follow-up")} sent today</p></section>
+    <section class="ccard" aria-labelledby="pg-week"><h2 id="pg-week">This week</h2>
+      <p class="line">Applied <b>${d.week.applied}</b>, ruled out <b>${d.week.ruledOut}</b> · <button type="button" class="linkbtn" data-tab="ruled">See ruled out</button></p>
+      ${d.week.removedByRules?`<p class="hint">Plus ${d.week.removedByRules} removed by screening rules, not counted.</p>`:""}
+      <ol class="days" aria-label="Applications each day this week">${d.week.days.map(x=>`<li class="${x.future?"future":""}"><span class="col"><i style="height:${x.future?0:Math.round(x.applied/maxDay*100)}%"></i></span><b>${x.future?"":x.applied}</b><small>${esc(wd(x.day))}</small></li>`).join("")}</ol></section>
+    <section class="ccard" aria-labelledby="pg-funnel"><h2 id="pg-funnel">Funnel</h2>
+      ${top?`<ul class="bars">${d.funnel.map((x,i)=>`<li><span class="lbl">${STAGE[x.stage]}</span><span class="track"><i style="width:${Math.round(x.count/top*100)}%"></i></span><b>${x.count}</b>${i&&d.funnel[i-1].count?`<small>${Math.round(x.count/d.funnel[i-1].count*100)}%</small>`:"<small></small>"}</li>`).join("")}</ul>
+      <p class="hint">Roles that reached each step, all time. Percent = carried on from the step before.</p>`:`<p class="hint">No applications yet. Mark a role Applied and it shows up here.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-resp"><h2 id="pg-resp">Response rate</h2>
+      ${d.response.pct===null?`<p class="hint">Not enough yet. It counts roles applied ${d.response.afterDays} or more days ago.</p>`:`<p class="big"><b>${d.response.pct}%</b> heard back</p>
+      <p class="hint">${d.response.heard} of ${d.response.eligible} roles applied ${d.response.afterDays}+ days ago reached Screen or later.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-fu"><h2 id="pg-fu">Follow-ups due</h2>
+      ${d.followUpsDue.length?d.followUpsDue.map(x=>`<div class="row"><div class="info"><h4>${esc(x.company)}</h4><small>${esc(x.title)} · due ${fmtDate(x.due)}</small></div><button class="btn" type="button" data-fupsent="${esc(x.id)}">Follow-up sent</button></div>`).join(""):`<p class="hint">Nothing due. A follow-up is set ${esc(config.followUpBusinessDays)} business days after you apply.</p>`}</section>
+    <section class="ccard" aria-labelledby="pg-mix"><h2 id="pg-mix">Sector mix this month</h2>
+      ${d.sectorMix.length?`<ul class="bars">${d.sectorMix.map(x=>`<li><span class="lbl">${esc(x.sector)}</span><span class="track"><i style="width:${Math.round(x.count/maxMix*100)}%"></i></span><b>${x.count}</b></li>`).join("")}</ul>`:`<p class="hint">No applications this month yet.</p>`}</section>
+  </div>`;
+}
+
+// Tabs built from the jobs collection: they wait for its first read instead of looking empty.
+const JOB_TABS=["inbox","pipeline","action","ruled","progress","all"];
+function loadState(){
+  if(jobsState==="error") return `<div class="empty error" role="alert"><strong>Couldn't load your roles</strong><span>Nothing was lost. The tracker couldn't read your data just now. Reload to try again.</span><button class="btn cta" type="button" id="reloadPage">Reload</button></div>`;
+  return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
+}
 function render(){
   renderTabs(); renderScan(); renderProgress();
   const v=$("#view");
+  if(!db&&!dbChecked){ v.innerHTML=loadState(); return; }
   if(!db){ v.innerHTML=`<div class="empty"><strong>Sign in to see your roles</strong><span>This tracker reads its data from your Claude account, so it needs a signed-in view.</span></div>`; return;}
   if(tab==="watch"){v.innerHTML=renderWatch();return;}
   if(tab==="filters"){v.innerHTML=renderFilters();return;}
   if(tab==="criteria"){v.innerHTML=renderCriteria();return;}
   if(tab==="people"){v.innerHTML=renderPeople();return;}
+  if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
-  const r=renderJobs(); v.innerHTML=r.html;
-  const c=$("#fcount"); if(c) c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:"";
+  if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
+  // Reused cards keep their focus across a redraw (a #role- link or digest jump stays put when data arrives).
+  const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
+  const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
+  if(keep&&keep.isConnected&&document.activeElement!==keep) keep.focus({preventScroll:true});
+  const c=$("#fcount"); if(c){ c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:""; c.toggleAttribute("data-all",r.shown===r.total); }
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
 function softRender(){ const a=document.activeElement; if(a&&a.closest&&a.closest("form")&&a.closest("form").id!=="fbar"){renderTabs();return;} render(); }
@@ -931,7 +1235,11 @@ function patchFor(j,next){
   const now=new Date().toISOString(), p={status:next,statusAt:now};
   if(next==="viewed"&&!j.viewedAt) p.viewedAt=now;
   if(next!=="new"&&next!=="viewed"&&!j.viewedAt) p.viewedAt=now;
-  if(next==="skipped") p.skippedAt=now;
+  // A skip made on this page is the owner's own call; scans and criteria cleanups write skippedBy "rule".
+  if(next==="skipped"){ p.skippedAt=now; p.skippedBy="owner"; }
+  // Every pipeline move is kept, so the funnel still counts a Screen after a later Rejected.
+  // The first move starts the history with the step the role was already on.
+  if(!INBOX.includes(next)){ const had=Array.isArray(j.statusHistory)?j.statusHistory:(PIPE.includes(st(j))?[{status:st(j),at:j.statusAt||""}]:[]); p.statusHistory=[...had,{status:next,at:now}]; }
   if(next==="applied"){ if(!j.appliedAt) p.appliedAt=now; if(!j.followUpDue) p.followUpDue=addBusinessDays(j.appliedAt||now,config.followUpBusinessDays); }
   return p;
 }
@@ -941,9 +1249,17 @@ async function setStatus(j,next,extra,opts){
   // Undo puts back every field this change touched (appliedAt, followUpDue, skipReason...), not just the status.
   const prev=Object.fromEntries(Object.keys(patch).map(k=>[k,k==="status"?st(j):(j[k]??"")]));
   try{await db.doc("jobs/"+j._id).update(patch);}
-  catch(err){toast("Couldn't save that change. Try again in a moment.");return;}
+  catch(err){cardCache.delete(j._id); toast("Couldn't save that change. Try again in a moment.");return;}
   if(!(opts&&opts.undo)){ toast("Marked "+(STATUS_LABEL[next]||next).toLowerCase()); return; }
   toast("Moved to "+(STATUS_LABEL[next]||next),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Back in "+(STATUS_LABEL[prev.status]||prev.status)); render(); focusCard(j._id);}catch(_){toast("Couldn't undo that.");}}});
+}
+// A follow-up counts toward the daily bar; the next one is due a few business days later.
+async function followUpSent(j){
+  if(!db) return;
+  const now=new Date().toISOString(), prev={followUpsSent:Array.isArray(j.followUpsSent)?j.followUpsSent:[],followUpDue:j.followUpDue||""};
+  const patch={followUpsSent:[...prev.followUpsSent,now],followUpDue:addBusinessDays(now,config.followUpBusinessDays)};
+  try{await db.doc("jobs/"+j._id).update(patch);}catch(_){toast("Couldn't save that. Try again in a moment.");return;}
+  toast("Follow-up counted. Next one "+fmtDate(patch.followUpDue),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Undone"); render();}catch(_){toast("Couldn't undo that.");}}});
 }
 // After a card leaves the list, put focus on the card that took its place so keyboard users don't land at the top.
 function focusCard(id){ requestAnimationFrame(()=>{ const sel=document.getElementById("st-"+id); const c=sel&&sel.closest("article.job"); const h=c&&c.querySelector("h2 a, h2"); if(h){ if(!h.matches("a")) h.tabIndex=-1; h.focus(); } }); }
@@ -1022,8 +1338,29 @@ async function copyText(s){
   try{ await navigator.clipboard.writeText(s); return true; }catch(_){}
   try{ const ta=$("#applyText"); ta.focus(); ta.select(); return document.execCommand("copy"); }catch(_){ return false; }
 }
+// Focuses and scrolls to a role card by its anchor. If the current tab (or its filters) hides the role, switches
+// to All roles, clearing filters only when they hide it there too. Unknown anchors are ignored.
+function focusRole(anchor){
+  if(!jobs.some(x=>roleAnchor(x._id)===anchor)) return false;
+  const find=()=>{const el=document.getElementById(anchor); return el&&el.matches("#view article.job")?el:null;};
+  let el=find();
+  if(!el){ tab="all"; view.status=""; saveView(); setUrlTab(tab,anchor); render(); el=find(); }
+  if(!el){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); el=find(); }
+  if(!el) return false;
+  el.classList.add("target"); el.addEventListener("blur",()=>el.classList.remove("target"),{once:true});
+  el.focus({preventScroll:true});
+  el.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+  return true;
+}
+document.addEventListener("toggle",e=>{ if(e.target&&e.target.id==="digestCard") digestOpen=e.target.open; },true);
+addEventListener("hashchange",()=>{ try{ const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)&&jobsState==="ready") focusRole(h); }catch(_){} });
 document.addEventListener("click",async e=>{
+  const dl=e.target.closest&&e.target.closest("#digestCard a[data-role]");
+  if(dl){ e.preventDefault(); focusRole(dl.dataset.role); return; }
   if(e.target.closest("#pvClose")){ closePreview(); return; }
+  const wb=e.target.closest("[data-why]");
+  if(wb){ const id=wb.dataset.why, on=!openWhy.has(id); on?openWhy.add(id):openWhy.delete(id);
+    wb.setAttribute("aria-expanded",String(on)); document.getElementById(wb.getAttribute("aria-controls"))?.classList.toggle("open",on); return; }
   const pv=e.target.closest("[data-preview]");
   // A plain click on the title previews; Cmd/Ctrl/Shift/middle click still opens the posting in a new tab.
   if(pv&&!(pv.tagName==="A"&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0))){
@@ -1059,20 +1396,29 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="recPrivacy"){ recPrivate=!recPrivate; editRec=null; try{localStorage.setItem("rr-rec-private",recPrivate?"1":"0")}catch(_){} render(); return; }
   const re=e.target.closest("[data-recedit]");
   if(re){ editRec=editRec===re.dataset.recedit?null:re.dataset.recedit; render(); return; }
-  if(e.target.id==="critReset"){ critDraft=null; critErr=""; render(); return; }
+  if(e.target.id==="critReset"){ critDraft=null; critErr=""; critFrom=null; render(); return; }
+  if(e.target.id==="critExample"){ critDraft=exampleCriteria(); critErr=""; render(); $("#critText")?.focus({preventScroll:true}); toast("Example loaded. Change it to fit your search, then Save criteria."); return; }
+  if(e.target.id==="reloadPage"){ location.reload(); return; }
   if(e.target.id==="ftoggle"){ filtersOpen=!filtersOpen; render(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); return; }
   const t=e.target.closest("[data-tab]");
-  if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} render(); return;}
+  if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); return;}
+  const fa=e.target.closest("[data-fbaccept]");
+  if(fa){ acceptSuggestion(fa.dataset.fbaccept); return; }
+  const fd=e.target.closest("[data-fbdismiss]");
+  if(fd){ await syncSkipFeedback({dismissed:[...new Set([...((skipFb&&skipFb.dismissed)||[]),fd.dataset.fbdismiss])]}); render(); toast("Set aside. It won't come back."); return; }
   const rc=e.target.closest("[data-reconsider]");
-  if(rc){ const j=jobs.find(x=>x._id===rc.dataset.reconsider); if(j) await setStatus(j,"viewed",{skipReason:"",skipNote:"",skippedAt:""},{undo:true}); render(); return; }
+  if(rc){ const j=jobs.find(x=>x._id===rc.dataset.reconsider); if(j) await setStatus(j,"viewed",{skipReason:"",skipNote:"",skippedAt:"",skippedBy:""},{undo:true}); render(); return; }
   if(e.target.closest("[data-skipcancel]")){ skipOpen=null; render(); return; }
   const sw=e.target.closest("[data-skipwhy]");
+  if(sw){ sw.closest("form").querySelectorAll("[data-skipwhy]").forEach(b=>b.setAttribute("aria-pressed",String(b===sw))); const er=sw.closest("form").querySelector("[data-skiperr]"); if(er) er.hidden=true; return; }
   if(sw){ const j=jobs.find(x=>x._id===sw.dataset.job); skipOpen=null; const i=[...document.querySelectorAll("#view article.job")].indexOf(sw.closest("article.job")); const note=(sw.closest("form")?.elements.skipNote?.value||"").trim(); if(j) await setStatus(j,"skipped",{skipReason:sw.dataset.skipwhy,skipNote:note},{undo:true}); render(); focusCardAfter(Math.max(0,i)); return; }
+  const fs=e.target.closest("[data-fupsent]");
+  if(fs){ const j=jobs.find(x=>x._id===fs.dataset.fupsent); if(j) await followUpSent(j); render(); return; }
   const qk=e.target.closest("[data-quick]");
   if(qk){
     const j=jobs.find(x=>x._id===qk.dataset.job); if(!j) return;
-    if(qk.dataset.quick==="skipped"){ skipOpen=j._id; render(); return; }
+    if(qk.dataset.quick==="skipped"){ skipOpen=j._id; render(); requestAnimationFrame(()=>document.querySelector("[data-skipform] [data-skipwhy]")?.focus()); return; }
     const i=[...document.querySelectorAll("#view article.job")].indexOf(qk.closest("article.job"));
     await setStatus(j,qk.dataset.quick,null,{undo:true}); render(); focusCardAfter(Math.max(0,i)); return;
   }
@@ -1086,12 +1432,13 @@ document.addEventListener("click",async e=>{
 document.addEventListener("toggle",e=>{
   const d=e.target; if(!d.matches||!d.matches("details[data-more]")) return;
   const id=d.dataset.more;
+  if(d.open&&!d.querySelector("form")&&!d.id){ const j=jobs.find(x=>x._id===id); if(j) d.insertAdjacentHTML("beforeend",editForm(j)); }
   if(d.open){ openMore.add(id); openMore.delete(id+"-closed"); markViewed(jobs.find(x=>x._id===id)); } else { openMore.delete(id); openMore.add(id+"-closed"); }
 },true);
 document.addEventListener("change",async e=>{
   const s=e.target.closest("[data-setstatus]");
   if(s){ const j=jobs.find(x=>x._id===s.dataset.setstatus); if(!j) return;
-    if(s.value==="skipped"&&!j.skipReason){ skipOpen=j._id; render(); return; }
+    if(s.value==="skipped"){ skipOpen=j._id; render(); return; }
     const i=[...document.querySelectorAll("#view article.job")].indexOf(s.closest("article.job")), id=j._id;
     await setStatus(j,s.value,null,{undo:true}); render();
     // Still listed (All roles): stay on its menu. Moved off this tab: go to the card that took its place.
@@ -1099,15 +1446,24 @@ document.addEventListener("change",async e=>{
   const f=e.target.closest("#fbar [data-v]");
   if(f){ view[f.dataset.v]=f.value; saveView(); render(); }
 });
-document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
+document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; const has=!!critDraft.trim(); $("#critSave")?.classList.toggle("cta",has); $("#critExample")?.classList.toggle("cta",!has); clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
 document.addEventListener("submit",async e=>{
   e.preventDefault(); if(!db) return;
+  const sk=e.target.closest("form[data-skipform]");
+  if(sk){
+    const j=jobs.find(x=>x._id===sk.dataset.skipform); if(!j) return;
+    const reason=sk.querySelector('[data-skipwhy][aria-pressed="true"]')?.dataset.skipwhy||"", note=sk.elements.skipNote.value.trim(), er=sk.querySelector("[data-skiperr]");
+    const miss=!reason?"Pick a reason first.":!note?"Add a few words on what made it a no. They tune the next scan.":"";
+    if(miss){ er.textContent=miss; er.hidden=false; (reason?sk.elements.skipNote:sk.querySelector("[data-skipwhy]")).focus(); return; }
+    const i=[...document.querySelectorAll("#view article.job")].indexOf(sk.closest("article.job"));
+    skipOpen=null; await setStatus(j,"skipped",{skipReason:reason,skipNote:note},{undo:true}); render(); focusCardAfter(Math.max(0,i)); syncSkipFeedback(); return;
+  }
   const ed=e.target.closest("form[data-edit]");
   if(ed){
     const j=jobs.find(x=>x._id===ed.dataset.edit); if(!j) return;
     const g=n=>ed.elements[n].value.trim();
     const body={lane:g("lane"),tags:g("tags").split(",").map(s=>s.trim()).filter(Boolean),referral:g("referral"),followUpDue:g("followUpDue"),nextStep:g("nextStep"),notes:ed.elements.notes.value.trim()};
-    try{await db.doc("jobs/"+j._id).update(body); document.activeElement?.blur?.(); toast("Saved");}catch(err){toast("Couldn't save. Try again in a moment.");}
+    try{await db.doc("jobs/"+j._id).update(body); document.activeElement?.blur?.(); toast("Saved"); render();}catch(err){toast("Couldn't save. Try again in a moment.");}
     return;
   }
   const rf=e.target.closest("form[data-recform]");
@@ -1123,17 +1479,26 @@ document.addEventListener("submit",async e=>{
     return;
   }
   if(e.target.id==="addJob"){
-    const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim(); if(!co||!ti) return;
+    const co=$("#aj-co").value.trim(), ti=$("#aj-ti").value.trim();
+    // Blank or spaces only: say what's missing instead of adding an empty role (required alone lets spaces through).
+    if(!co||!ti){ const miss=!co?$("#aj-co"):$("#aj-ti"); [["#aj-co",co],["#aj-ti",ti]].forEach(([k,v])=>$(k).setAttribute("aria-invalid",String(!v))); toast(!co&&!ti?"Add the company and the role title.":!co?"Add the company.":"Add the role title."); miss.focus(); return; }
     const id="manual-"+docKey(co,ti), now=new Date().toISOString(), status=$("#aj-st").value;
-    const doc={company:co,title:ti,url:$("#aj-url").value.trim(),lane:$("#aj-ln").value,source:"manual",firstSeen:now,status,statusAt:now,viewedAt:now};
+    // Already tracked (added by hand or found by the scan): never overwrite its status or history.
+    const have=jobs.find(j=>j._id===id||(slugOf(j.company)===slugOf(co)&&slugOf(j.title)===slugOf(ti)));
+    if(have){ toast(`Already tracking ${have.company} · ${have.title} (${STATUS_LABEL[st(have)]||st(have)}). Nothing changed.`); return; }
+    const doc={company:co,title:ti,url:$("#aj-url").value.trim(),lane:$("#aj-ln").value,source:"manual",firstSeen:now,status,statusAt:now,viewedAt:now,statusHistory:[{status,at:now}]};
     if(status==="applied"){doc.appliedAt=now; doc.followUpDue=addBusinessDays(now,config.followUpBusinessDays);}
     try{await db.doc("jobs/"+id).set(doc); toast("Added to the pipeline"); e.target.reset(); document.activeElement?.blur?.(); render();}catch(err){toast("Couldn't add that role.");}
     return;
   }
   if(e.target.id==="addCo"){
     const ats=$("#coAts").value, slug=$("#coSlug").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,"");
-    if(!slug) return;
-    try{await db.doc("companies/"+ats+"-"+slug).set({name:$("#coName").value.trim(),ats,slug,industry:$("#coInd").value.trim(),status:"unverified",via:"you"}); toast("Added. The next scan will check it."); e.target.reset(); document.activeElement?.blur?.(); render();}
+    const name=$("#coName").value.trim();
+    if(!name||!slug){ const bad=!name?$("#coName"):$("#coSlug"); $("#coName").setAttribute("aria-invalid",String(!name)); $("#coSlug").setAttribute("aria-invalid",String(!!name)); toast(!name?"Add the company's name.":"That slug has no letters or numbers. Use the company part of the board URL, as in stripe."); bad.focus(); return; }
+    const have=companies.find(c=>c._id===ats+"-"+slug||String(c.name||"").trim().toLowerCase()===name.toLowerCase());
+    // Never overwrite a tracked company: that would reset its board health, or quietly bring back a vetoed one.
+    if(have){ toast(have.status==="vetoed"?`${have.name} is already on your Never show list. Use Restore there to watch it again.`:`${have.name} is already on your watchlist.`); return; }
+    try{await db.doc("companies/"+ats+"-"+slug).set({name,ats,slug,industry:$("#coInd").value.trim(),status:"unverified",via:"you"}); toast("Added. The next scan will check it."); e.target.reset(); document.activeElement?.blur?.(); render();}
     catch(err){toast("Couldn't add that company.");}
   }
   if(e.target.id==="cfgForm"){
@@ -1153,7 +1518,7 @@ document.addEventListener("submit",async e=>{
     if(parsed.err){ showErr(parsed.err,`${parsed.line?`Line ${parsed.line} has`:"There's"} a YAML error. Nothing was saved.`); return; }
     const gone=droppedParts(parsed.data,parseSpec((criteria&&criteria.spec)||"").data);
     if(gone.length){ const m=`This would remove: ${gone.join(", ")}. Nothing was saved.`; showErr(m+" Put those sections back, or choose Discard changes.",m); return; }
-    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
+    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); if(critFrom){ const id=critFrom.id; critFrom=null; syncSkipFeedback({accepted:[...new Set([...((skipFb&&skipFb.accepted)||[]),id])]}); } toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
     catch(err){toast("Couldn't save the criteria.");}
   }
 });
@@ -1171,19 +1536,246 @@ render();
 (async()=>{
   Promise.resolve(window.claude?.use?.("mcp")).then(m=>{mcp=m||null; mcpState=m?"ready":"none";},()=>{mcpState="none";}).then(()=>{ if(tab==="people"||tab==="pipeline") render(); });
   try{ db=await window.claude?.use?.("db"); }catch(e){ db=null; }
+  dbChecked=true;
   if(!db){ render(); return; }
   let user=null; try{ user=await window.claude?.use?.("user"); }catch(_){ user=null; }
   recStore=RS?RS.create({db,user,publicView:!TOOLS}):null;
   if(recStore) await recStore.init();
   if(savedTab&&showPeople()) tab=savedTab;
+  if(urlTab==="people"&&tab!=="people") setUrlTab(null,location.hash);
   render();
-  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); softRender();},()=>{});
-  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},()=>{});
-  db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},()=>{});
-  db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},()=>{});
+  // A failed read logs only which collection failed, never the error (it can carry data or links).
+  const readFailed=name=>()=>console.warn("Role Radar: couldn't read "+name);
+  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender(); if(deepRole){ const r=deepRole; deepRole=null; setTimeout(()=>focusRole(r),0); }},()=>{readFailed("jobs")(); jobsState="error"; render();});
+  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},readFailed("companies"));
+  db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},readFailed("meta/filters"));
+  db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},readFailed("meta/config"));
   if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people") softRender(); else renderTabs();});
-  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},()=>{});
-  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},()=>{});
+  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},readFailed("meta/criteria"));
+  db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},readFailed("meta/skipFeedback"));
+  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},readFailed("meta/scan"));
 })();
+</script>
+<script type="text/plain" id="exampleCriteria">
+# ─────────────────────────────────────────────────────────────
+#  Role Radar · search criteria (EXAMPLE: a demo candidate, not real settings)
+#  The weekday 7:45 ET scan reads this before every run.
+#  Edit it on the Criteria tab in Role Radar. Comments are fine.
+#
+#  How a role is scored (0–100, higher ranks first in the digest):
+#    sector   = weight × 15            (0–45)   ← what the company does
+#    experience (key: fit) = strong 35 · maybe ("partial" on cards) 20 · stretch 5 ← match to your background
+#    culture signals = +10 good signals, −10 per red flag (max −20); a hard red flag means never added
+#    startup  = −20 if the company is early-stage (see company_stage)
+#    comp     = +10 if base top ≥ stretch_target
+#    dream    = +15 if the role is like one of dream_roles (see below)
+#  Roles under `scoring.min_score_to_add` are not added (hard excludes never are).
+# ─────────────────────────────────────────────────────────────
+
+version: 2
+owner: Demo Candidate
+updated: 2026-10-21
+demo: true
+
+# ── The job itself ───────────────────────────────────────────
+role:
+  track: individual_contributor        # no people management
+  levels: [senior, staff, principal, lead]
+  title_include:
+    - Senior Product Manager
+    - Sr. Product Manager
+    - Sr Product Manager
+    - Staff Product Manager
+    - Principal Product Manager
+    - Lead Product Manager
+    - Product Manager            # plain titles only if the posting reads senior (6+ yrs)
+  title_exclude:
+    - Director
+    - VP
+    - Head of
+    - Group Product Manager
+    - Associate
+    - Intern
+    - Marketing
+    - Program Manager
+    - Engineer
+    - Designer
+
+# ── Where and how ────────────────────────────────────────────
+work:
+  remote: fully_remote_us              # remote-first or "Remote, US" with no hub requirement
+  home_state: CO                       # reject state lists that leave out CO
+  planned_move: { state: UT, when: next year }   # optional: flag roles closed to your next state
+  hybrid_ok_near: [Denver, CO]        # the only place hybrid is fine
+  reject: [hybrid, in_office, relocation, non_us_only, travel_over_25pct]
+
+comp:
+  base_floor_usd: 150000               # skip if the stated base range tops out below this
+  priority_sector_floor_usd: 140000    # weight-3 sectors may dip to here (flag it in the note)
+  stretch_target_usd: 185000           # +10 score when the range reaches this
+  missing_comp: keep                   # judge from company and level
+
+culture:
+  want: [calm pace, ~40-hour weeks, async / remote-first, generous PTO, 12+ weeks parental leave]
+  good_signals: [unlimited PTO with a minimum, parental leave, "sustainable pace", 4-day week, B Corp, mission-driven]
+  red_flags: [fast-paced, hustle, scrappy, "wear many hats", "work hard play hard", 50+ hours, high-intensity, on-call, in-office]
+  red_flag_effect: skip_hard           # hard_red_flags = never add; other red_flags = −10 each (score_only = never skip)
+  hard_red_flags: [fast-paced, hustle, high-intensity, "work hard play hard", 50+ hours, on-call, in-office]
+  must_read_posting: true              # open the posting before scoring; a title alone can't show red flags
+
+# ── Company stage ────────────────────────────────────────────
+company_stage:
+  startup_penalty: -20                 # added to the score; the role still shows if it clears min_score_to_add
+  startup_means: "under ~200 employees, or seed / Series A / Series B"
+  established: "public, Series C or later, or 200+ employees, or a large nonprofit"
+  unknown: established                 # if you can't tell, don't penalize
+
+# ── What the company does (0 ignore · 1 allowed · 2 good · 3 priority) ──
+sectors:
+  - id: solar_energy
+    label: Solar, storage & distributed energy
+    weight: 3
+    keywords: [solar, PV, storage, battery, VPP, DER, grid, utility, interconnection, community solar, EV charging, electrification, heat pump]
+    examples: [Enphase, Sunrun, SolarEdge, Generac, EnergyHub, Span]
+
+  - id: climate_tech
+    label: Climate & sustainability software
+    weight: 3
+    keywords: [climate, carbon, emissions, decarbonization, sustainability, ESG, climate risk, circular economy, wildfire, water]
+    examples: [Watershed, Persefoni, Pachama, WattTime]
+
+  - id: climate_nonprofit
+    label: Climate science & mission nonprofits (if comp clears)
+    weight: 3
+    keywords: [nonprofit, foundation, climate science, conservation, environmental]
+    examples: [RMI, Environmental Defense Fund, The Nature Conservancy]
+
+  - id: space_geo
+    label: Space & geospatial
+    weight: 2
+    keywords: [satellite, earth observation, geospatial, remote sensing, GIS, mapping, drone, aerial imagery]
+    examples: [Maxar, Esri, Mapbox, Spire]
+
+  - id: outdoor_brands
+    label: Adventure & outdoor brands
+    weight: 2
+    keywords: [outdoor, adventure, conservation, travel, national parks]
+    examples: [Patagonia, National Geographic, REI, AllTrails, Strava, Outside]
+
+  - id: green_finance
+    label: Climate & solar finance
+    weight: 2
+    keywords: [solar lending, green finance, climate fintech, energy finance, PACE]
+    examples: [Generate Capital, Mosaic]
+
+  - id: big_corp
+    label: Large stable companies
+    weight: 1
+    examples: [large insurers, national retailers, utilities]
+
+  - id: fintech
+    label: General fintech & payments
+    weight: 1                          # still allowed, just lower in the list
+    examples: [Stripe, Plaid, Square]
+
+  - id: ai_tooling
+    label: AI tooling & automation
+    weight: 1
+    examples: [Zapier, Glean]
+
+  - id: home_services
+    label: Home services & insurance
+    weight: 1
+    examples: [Thumbtack, Jobber]
+
+default_sector_weight: 1               # companies that fit none of the above
+
+# ── Never show these ─────────────────────────────────────────
+hard_exclude:
+  companies: []                       # add company names you never want to see
+  business_models:
+    - short-term consumer lending
+    - payday or cash-advance apps
+    - earned wage access
+    - credit-score marketplaces
+
+# Example values penalties. Delete a line to allow it.
+values_penalty:                        # −15 score, still shown if otherwise strong
+  - fossil fuel extraction
+  - weapons or defense prime contractors
+  - gambling or sports betting
+  - crypto trading or speculation
+
+# ── Fit ratings: two badges on every role (Values · Culture) ───
+#  Values: great · good · neutral · no.  Culture: great · good · maybe · no, or "unrated" until checked.
+#  They explain the role; they don't change the 0–100 score above.
+values_fit:                            # does the company's business match what you care about?
+  by_weight: { 3: great, 2: good, 1: neutral, 0: no }   # from the sector weight
+  # anything on hard_exclude or values_penalty is always "no"
+
+culture_fit:                           # would you actually like working there?
+  bands: { great: 6, good: 3, maybe: -3 }   # total points at or above → that rating; below maybe → no
+  checks:                              # the scan fills posting checks; intake adds research checks
+    - { id: calm_pace,           points:  2, short: "calm pace",                  means: "posting or reviews say sustainable pace, ~40-hour weeks, or anti-hustle" }
+    - { id: fast_paced,          points: -2, short: "fast-paced",                 means: "posting says fast-paced, hustle, scrappy, wear many hats, 50+ hours" }
+    - { id: remote_us,           points:  1, short: "remote anywhere in the US",  means: "remote with no hub and home_state is eligible" }
+    - { id: pay_same_everywhere, points:  1, short: "same pay in your state",     means: "one national band, or home_state is in the pay tiers" }
+    - { id: pay_tier_gap,        points: -1, short: "your state not in pay tiers", means: "posting lists pay tiers that leave out home_state" }
+    - { id: planned_move_gap,    points: -1, short: "not open in your next state", means: "state list leaves out work.planned_move.state" }
+    - { id: family_benefits,     points:  1, short: "strong family benefits",     means: "12+ weeks parental leave, or unlimited PTO with a minimum" }
+    - { id: good_reviews,        points:  1, short: "good reviews",               means: "Glassdoor work-life 4.0+ or similar" }
+    - { id: poor_reviews,        points: -1, short: "weak work-life reviews",     means: "Glassdoor work-life under 3.5, or burnout themes" }
+    - { id: recent_layoffs,      points: -2, short: "recent layoffs",             means: "layoffs in the last 12 months" }
+    - { id: crunch_risk,         points: -1, short: "launch crunch risk",         means: "new team, greenfield launch, or reviews mention crunches" }
+
+# ── Dream roles: calibration anchors ─────────────────────────
+#  Roles like these score at the top. A role counts as "like" an anchor when it is at
+#  one of these companies, or its title has a role_keywords word in one of in_sectors.
+dream_roles:
+  bonus: 15                            # added to the 0–100 score (shown as "dream role")
+  like:                                # EXAMPLE anchors for the demo candidate
+    - { company: HelioHome, title: "Senior Product Manager, Home Electrification", why: "consumer energy product at a mission company" }
+    - { company: Gridlark, title: "Staff Product Manager, Virtual Power Plants", why: "grid flexibility", check: "only if the VPP is live, not a pilot" }
+  role_keywords: [processing, payments, billing, lending, financing, underwriting]
+  in_sectors: [solar_energy, climate_tech, green_finance]
+
+# ── Digest shape ─────────────────────────────────────────────
+scoring:
+  min_score_to_add: 45
+  digest_max_items: 8
+  per_sector_cap: { fintech: 2, ai_tooling: 2, home_services: 1 }  # extras still saved, just not listed
+
+# ── Alerts: what pings your phone ────────────────────────────
+#  level: loud = every channel below, right away · quiet = one line in the summary · off
+#  when:  recruiter_email · status_change (to: [...]) · new_role (min_score) · follow_up_due
+#  The first rule that matches wins, so put the specific ones first.
+alerts:
+  channels: [push, thread]             # push = phone notification · thread = message with links · email = backup email
+  quiet_hours: { start: "22:00", end: "07:00", tz: America/Denver, loud_breaks_through: false }
+  rules:
+    - { id: recruiter, when: recruiter_email, level: loud, remind_after_hours: [4, 18] }
+    - { id: interview, when: status_change, to: [screen, interviewing, offer], level: loud }
+    - { id: rejection, when: status_change, to: [rejected], level: quiet }
+    - { id: dream_match, when: new_role, min_score: 85, level: loud }
+    - { id: good_match, when: new_role, min_score: 60, level: quiet }
+    - { id: follow_up, when: follow_up_due, level: quiet }
+
+# ── Where to look ────────────────────────────────────────────
+search:
+  ziprecruiter_queries:                # remote, full-time, senior, salary ≥ floor, posted in the last day
+    - senior product manager solar
+    - senior product manager energy
+    - senior product manager climate
+    - senior product manager sustainability
+    - senior product manager geospatial
+    - staff product manager
+    - senior product manager payments
+  himalayas_queries:
+    - senior product manager
+    - staff product manager
+    - product manager climate
+    - product manager energy
+  climate_boards: [climatebase]        # climatebase.org remote PM search, Mon/Wed/Fri
+  discovery_bias: [solar_energy, climate_tech, climate_nonprofit, space_geo, outdoor_brands]
 </script>
 

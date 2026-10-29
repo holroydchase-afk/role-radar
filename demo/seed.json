@@ -312,6 +312,28 @@
       "skippedAt": "@t-1",
       "statusAt": "@t-1",
       "viewedAt": "@t-2"
+    },
+    "ashby-2231": {
+      "company": "Tidewater Analytics",
+      "title": "Staff Product Manager, Data Platform",
+      "location": "Remote, US",
+      "url": "https://example.com/jobs/tidewater-data",
+      "ats": "ashby",
+      "source": "ashby",
+      "postedAt": "@d-5",
+      "firstSeen": "@t-4",
+      "comp": "$185K–$215K",
+      "fit": "maybe",
+      "score": 45,
+      "sector": "Other",
+      "lane": "Other",
+      "tags": [],
+      "status": "skipped",
+      "skipReason": "Culture",
+      "skipNote": "Reviews say always-on, with weekend releases",
+      "skippedAt": "@t-3",
+      "statusAt": "@t-3",
+      "viewedAt": "@t-4"
     }
   },
   "companies": {

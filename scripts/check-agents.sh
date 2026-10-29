@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Roster check (from holroydchase-afk/studio-agents; proved in Hearth): every agent in .claude/agents/
+# Roster check (from studio-agents; proved in Hearth): every agent in .claude/agents/
 # is named in a CLAUDE.md table row as `name`, and every agent a CLAUDE.md table names has a file.
 # Works with the studio table (templates/CLAUDE-agents.md) and a roster with the name in the first column.
 # Usage: bash scripts/check-agents.sh   (run from anywhere inside the repo)

@@ -1,24 +1,27 @@
 name: pages
 # Builds the public demo and publishes it with GitHub Pages, at chaseholroyd.com/role-radar/
-# (this account's user site maps other repos' Pages to /<repo>/). Demo data only, from main only.
+# (this account's user site maps other repos' Pages to /<repo>/). Demo data only, from main only,
+# and only after the ci workflow (full test suite) has passed on that commit.
 # One-time setup by the repo owner: Settings → Pages → Source: GitHub Actions.
 on:
-  push:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: write
-  id-token: write
 concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
   build:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -38,6 +41,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Only the deploy job can publish; the build job (which runs npm ci) stays read-only.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

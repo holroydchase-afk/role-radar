@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Log check (from holroydchase-afk/studio-agents; proved in Hearth). Static check of every console.*
+// Log check (from studio-agents; proved in Hearth). Static check of every console.*
 // call: never log keys, URLs, emails or raw errors. Its own test is tests/check_logs_test.sh in studio-agents.
 // Rules, applied to the call's arguments with string literals blanked (template ${...} parts are kept):
 //   1. no variable or property whose name contains a banned word (key, secret, token, url, uri, email,

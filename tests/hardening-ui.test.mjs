@@ -154,6 +154,8 @@ test("RR-H-8 Undo after Skip with a reason puts the role back with no skip reaso
   const title = await first.locator("h2").innerText();
   await first.locator("button[data-quick=skipped]").click();
   await page.locator("[data-skipwhy]").first().click();
+  await page.locator("[data-skipform] textarea[name=skipNote]").fill("Not the right fit");
+  await page.click("[data-skipform] button[type=submit]");
   await page.click("#toast button", { timeout: 2000 });
   await page.waitForFunction((t) => [...document.querySelectorAll("article.job h2")].some((h) => h.textContent === t), title);
   // Skip it again from the status menu: an old reason left on the record would show up as "Skipped: …".
