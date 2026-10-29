@@ -1,13 +1,16 @@
 // Builds dist/demo.html: the real page plus an in-memory database seeded with fictional demo data.
+// The page's logic scripts are bundled from src/*.ts in memory (scripts/build.mjs) and inlined.
 // --public builds the hosted demo (chaseholroyd.com/role-radar/): radar only unless the URL has ?full.
 // Usage: node scripts/build-demo.mjs [--public] [outFile]
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundles } from "./build.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
+/** @param {{ seed?: Record<string, any>, publicDemo?: boolean }} [opts] @returns {string} */
 export function buildDemo({ seed: seedOverride, publicDemo = false } = {}) {
   const page = read("app/role-radar.html");
   const seed = seedOverride || JSON.parse(read("demo/seed.json"), (k, v) =>
@@ -18,10 +21,10 @@ export function buildDemo({ seed: seedOverride, publicDemo = false } = {}) {
   const marker = '<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/';
   if (!page.includes(marker)) throw new Error("Could not find the js-yaml script tag to inject before.");
   let out = page;
-  for (const name of ["scoring.js", "gmail-import.js", "posting.js", "alerts.js", "progress.js", "recruiter-store.js", "skip-feedback.js"]) {
+  for (const [name, code] of Object.entries(bundles())) {
     const tag = `<script src="${name}"></script>`;
     if (!out.includes(tag)) throw new Error(`Could not find the ${name} script tag.`);
-    out = out.replace(tag, () => `<script>${read("src/" + name)}</script>`);
+    out = out.replace(tag, () => `<script>${code.replace(/<\/script/gi, "<\\/script")}</script>`);
   }
   const meta = publicDemo
     ? '<meta name="description" content="Role Radar demo: a job-search radar that scores every role 0-100 against editable criteria. All data is made up."><meta name="robots" content="noindex"><link rel="icon" href="/assets/favicon.svg">'

@@ -6,7 +6,9 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node --test \"tests/*.test.mjs\"",
+    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node --test \"tests/*.test.ts\"",
+    "typecheck": "tsc -p .",
+    "build": "node scripts/build.mjs",
     "check:agents": "bash scripts/check-agents.sh",
     "check:logs": "node scripts/check-logs.mjs",
     "build:demo": "node scripts/build-demo.mjs",
@@ -20,7 +22,10 @@
     "@fontsource/bricolage-grotesque": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/instrument-sans": "^5.3.0",
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
     "js-yaml": "4.1.0",
-    "playwright": "1.56.1"
+    "playwright": "1.56.1",
+    "typescript": "7.0.2"
   }
 }

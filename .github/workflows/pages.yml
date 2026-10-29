@@ -32,7 +32,7 @@ jobs:
       - name: Studio checks (agent roster, log hygiene)
         run: bash scripts/check-agents.sh && node scripts/check-logs.mjs
       - name: Unit tests
-        run: node --test tests/scoring.test.mjs tests/alerts.test.mjs tests/gmail-import.test.mjs tests/check-private.test.mjs tests/demo.test.mjs
+        run: node --test tests/scoring.test.ts tests/alerts.test.ts tests/gmail-import.test.ts tests/check-private.test.ts tests/demo.test.ts
       - name: Build the public demo
         run: node scripts/build-demo.mjs --public _site/index.html
       - uses: actions/upload-pages-artifact@v3

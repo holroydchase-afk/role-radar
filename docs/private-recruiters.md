@@ -17,14 +17,14 @@ The live page keeps recruiter records (name, company, email, notes, next steps) 
 | C. New `private/...` path plus a one-time migration | Copy `recruiters/*` to a new owner-only path, then delete the old docs. | Rejected for now. Same protection as A, plus a migration that could lose or split data, and three external writers to repoint. A gets the same lock with one republish. |
 | D. Page-side hiding only | The page doesn't render recruiters for non-owners. | Not enough on its own: the database would still answer a direct read. Kept as a second layer on top of A. |
 
-The routine brief asked for "a private backend, the shared database as a read-for-migration source, and a one-time migration". With option A, the private backend is the same path under an owner-only rule, so the republish is the migration and no copy is needed. If the platform ever stops supporting the rule, `src/recruiter-store.js` is the one place to swap in option B or C. This choice is listed under "Decisions to review" in HANDOFF.md.
+The routine brief asked for "a private backend, the shared database as a read-for-migration source, and a one-time migration". With option A, the private backend is the same path under an owner-only rule, so the republish is the migration and no copy is needed. If the platform ever stops supporting the rule, `src/recruiter-store.ts` is the one place to swap in option B or C. This choice is listed under "Decisions to review" in HANDOFF.md.
 
 ## How it works
 
 Two layers:
 
 1. **The database rule (the lock).** `app/capabilities.json` is the publish manifest: `db.rules` makes `recruiters` owner-only, and `mcp` keeps Gmail read-only (`search_threads`, `batch_get_threads`). "Owner" means the artifact's own owner, not someone granted Editor or Owner in the share menu. For an artifact Claude made inside a project, it means every member who can post in that project. The project is believed to be private to Chase, so that would be Chase alone. This is not verified from the repo: deploy step 2 checks it.
-2. **The page (the second layer).** `src/recruiter-store.js` is the only code that reads or writes recruiters. On load it asks the platform `user.isOwner()`:
+2. **The page (the second layer).** `src/recruiter-store.ts` is the only code that reads or writes recruiters. On load it asks the platform `user.isOwner()`:
    - `owner`: Recruiters tab, Gmail import, add and edit, all as before.
    - `viewer` (shared with someone else): no Recruiters tab, no recruiter events in the Alerts preview, no recruiter count in the header. The page never asks the database for recruiters.
    - `unknown` (the platform can't say who is viewing): the page reads, and the rule decides. The owner still sees their list; anyone else gets an empty one.
@@ -34,7 +34,7 @@ Two layers:
 
 ## What the tests prove
 
-`tests/recruiter-store.test.mjs` (RR-PR-1 to RR-PR-10):
+`tests/recruiter-store.test.ts` (RR-PR-1 to RR-PR-10):
 - A viewer gets `[]`, writes refuse, and the store never touches a recruiter path (unit, with a spy database).
 - The owner reads and writes through the store. The public demo and a page with no database touch nothing.
 - The manifest declares exactly the owner-only rule plus read-only Gmail, and nothing more.
@@ -55,7 +55,7 @@ A Claude session with the Artifact and ArtifactData tools does all of this once 
 
 1. Merge order: this PR, then the stacked ones. Deploy from `main` after the merge, or from this branch if Chase says deploy first.
 2. Owner check before publishing: open the live artifact's share menu (or ask Chase for a screenshot of it) and confirm the owner row is Chase alone. If a project or channel owns it, everyone who can post there counts as owner and would see recruiters; stop and tell Chase. Also read the live artifact's current capabilities and compare them with `app/capabilities.json`. They should differ only by the new rule (today: db + read-only Gmail).
-3. Republish the live page (same URL, from project memory) with `app/role-radar.html` and supporting files `scoring.js`, `gmail-import.js`, `posting.js`, `alerts.js` and **`recruiter-store.js`** (new), all from `src/`, plus `capabilities` = the contents of `app/capabilities.json`. Don't change `contract`.
+3. Republish the live page (same URL, from project memory) with `app/role-radar.html` and supporting files `scoring.js`, `gmail-import.js`, `posting.js`, `alerts.js` and **`recruiter-store.js`** (new), all from `build/` (`npm run build`; they lived in `src/` before the TypeScript move), plus `capabilities` = the contents of `app/capabilities.json`. Don't change `contract`.
 4. Owner check: `ArtifactData list recruiters` as Chase returns the same count as before the republish (note the count first).
 5. Rule check: `ArtifactData list recruiters` with a lower `as_level` (`view`, then `interact`, then `admin`) returns nothing. A `get` of one known recruiter doc at `interact` and `admin` reads as non-existent, and an `update` at those levels is refused. If any check shows data, **don't** roll the capabilities back: the old defaults are more open. Keep the rule, make sure the live page isn't shared with anyone, and tell Chase.
 6. Open the page as Chase: the Recruiters tab, *Show details* and *Import from Gmail* work. One recruiter edit saves.

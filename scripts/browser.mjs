@@ -28,7 +28,13 @@ function fontsCss() {
   return fontCss;
 }
 
-/** Opens the demo in a new page. Returns {page, errors}. */
+/**
+ * Opens the demo in a new page. Returns {page, errors}.
+ * @param {{ newPage(options?: import("playwright").BrowserContextOptions): Promise<import("playwright").Page> }} browser
+ * @param {{ html?: string, blockYaml?: boolean, width?: number, height?: number, colorScheme?: "light" | "dark",
+ *   file?: string, ready?: string, query?: string, timezoneId?: string }} [options]
+ * @returns {Promise<{ page: import("playwright").Page, errors: string[] }>}
+ */
 export async function openDemo(browser, { html = buildDemo(), blockYaml = false, width = 900, height = 1200, colorScheme = "light", file = "dist/browser-demo.html", ready = ".job", query = "", timezoneId } = {}) {
   const out = join(root, file);
   mkdirSync(dirname(out), { recursive: true });
