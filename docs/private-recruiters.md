@@ -1,6 +1,6 @@
 # Private recruiters
 
-_RR-M2.4, designed 2026-10-24 (night shift). Status: built and tested in the repo; not yet deployed to the live page._
+_RR-M2.4, designed 2026-10-24 (night shift). Status: deployed to the live page 2026-10-24 (version 25); every check in steps 2-5 passed._
 
 ## The problem
 
