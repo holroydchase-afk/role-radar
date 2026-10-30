@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-10-30 (filters and sorting redesign, RR-FS)
+Updated: 2026-10-30 (RR-FS merged; live page republished, v27)
 
 ## Planning IDs (Oct 21, 2026)
 The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1.1.1`; product code `RR` across products). Old labels stay in git history and branch names. New work uses the new IDs.
@@ -119,10 +119,10 @@ _Updated 2026-10-24._
 - Public demo: merged (PR #17), repo renamed to `role-radar`, redeployed, Pages green after #25. Waiting on a phone check of the live URL and https, and on the portfolio repoint (intake with Chase).
 
 ## Exact next step
-- Filters redesign (RR-FS): Chase merges the draft PR, then `republish` puts it on the live page (same seven bundles, `capabilities` = `app/capabilities.json`). Mock Chase approved: phone only, in project memory.
+- Filters redesign (RR-FS): merged (PR #57) and the live page republished 2026-10-30 on Chase's `republish` (version 27: `app/role-radar.html` plus the seven `build/*.js` bundles from main, `capabilities` = `app/capabilities.json`, contract unchanged). This also brought the live page up from v25, so it now has the Progress tab, skip feedback, the culture gate and the M3 fixes. Next: Chase opens the live page once and checks New, a chip and the Sort sheet.
 - TypeScript PR: Chase merges it. Then the next live republish runs `npm run build` and publishes `app/role-radar.html` with all seven `build/*.js` files (scoring, gmail-import, posting, alerts, progress, recruiter-store, skip-feedback) and `capabilities` = `app/capabilities.json`. The live page (v25) predates progress.js and skip-feedback.js, so it needs all seven.
 - Release PR (2026-10-29, `claude/project-thread-wz6fjj`): one PR to main carrying the whole night-run stack (#39, #40, #42 to #48) plus #37. Chase merges it once; the ten drafts then close as merged-via-release. After that: `republish` the live page, then the TypeScript conversion (Product Studio INTAKE, Oct 29) starts on a fresh branch from main.
-- RR-M3: next is M3.6 demo check + final UI round (RR-UX5-1 tabs one row at 1280, RR-UX5-2 one header meta line, RR-UX5-3 no Apply on applied cards), then M3.7 reusable blocks. After merge: confirm the first `ci` run is green on GitHub and Pages still deploys. Waiting on Chase: `republish` (live page lacks the culture gate and the M3 fixes) and `scan on` (the weekday scan is off).
+- RR-M3: next is M3.6 demo check + final UI round (RR-UX5-1 tabs one row at 1280, RR-UX5-2 one header meta line, RR-UX5-3 no Apply on applied cards), then M3.7 reusable blocks. After merge: confirm the first `ci` run is green on GitHub and Pages still deploys. Live page republished 2026-10-30 (v27, includes the culture gate and M3 fixes). Waiting on Chase: `scan on` (the weekday scan is off).
 - Skip feedback (this branch): Chase merges PR #39 then this PR. A session republishes the live page with the new supporting file `skip-feedback.js` (plus `scoring.js`, `gmail-import.js`, `posting.js`, `alerts.js`, `progress.js`, `recruiter-store.js`) and `capabilities` = `app/capabilities.json`. Then the scan owner copies the SKIP FEEDBACK step from `scan/scan-prompt.template.md` into the private scan prompt. Intake skill: an intake No's `skipNote` is now required (it already writes one).
 - Progress tab (this branch): Chase merges, then a session republishes the live page with the new supporting file `progress.js` (plus the existing five) and `capabilities` = `app/capabilities.json`. Then backfill `skippedBy: "rule"` on the live skips from the Oct 26 criteria cleanup (14 of 17 live skips, per the family-email thread) so the header and email stop counting them. Intake skill: an intake No should also write `skippedBy: "owner"` (unset already counts as owner, so this is optional).
 - Studio refresh: Chase merges the PR. From then on every PR here needs an `Agents:` line (code changes name qa-tdd), or agents-check fails.
