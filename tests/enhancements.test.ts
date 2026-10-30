@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, BrowserContextOptions, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
@@ -83,7 +83,7 @@ test("RR-M3.5-3 the card lists the same roles, in the same order, as the Criteri
   const { page } = await openDemo({ width: 1280, height: 800 });
   await digestCard(page).waitFor({ timeout: 3000 });
   const ids = await entryIds(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#digestPreview ol.dig li").first().waitFor({ timeout: 3000 });
   const preview = await page.locator("#digestPreview ol.dig li").evaluateAll((lis: HTMLElement[]) =>
     lis.map((li) => ({ text: li.innerText, score: li.querySelector(".score")?.textContent!.trim() })));
@@ -135,7 +135,7 @@ test("RR-M3.5-6 with nothing in New there is no digest card error: no card, or a
   const seed = baseSeed();
   for (const j of Object.values<{ status: string }>(seed.jobs)) if (["new", "viewed"].includes(j.status)) j.status = "skipped";
   const { page, errors } = await openDemo({ seed, width: 1280, height: 800, ready: "#tab-inbox" });
-  await page.waitForFunction(() => /\d/.test(document.querySelector("#tab-all .n")?.textContent || ""), null, { timeout: 3000 });
+  await page.waitForFunction(() => /\d/.test(document.querySelector("#tab-pipeline .n")?.textContent || ""), null, { timeout: 3000 });
   if (await digestCard(page).count()) {
     assert.equal(await page.locator('#digestCard a[href^="#role-"]').count(), 0);
     assert.ok((await digestCard(page).innerText()).length < 200, "a short empty line, not a wall of text");
@@ -154,7 +154,7 @@ test("RR-M3.5-6 with nothing in New there is no digest card error: no card, or a
 
 test("RR-M3.5-7 ?tab=criteria opens Criteria on the public demo, overriding the remembered tab", async () => {
   const { page, errors } = await openDemo({ query: "?tab=criteria", init: remember, initArg: "all", width: 1280, height: 800 });
-  await page.waitForFunction(() => document.querySelector("#tab-criteria")?.getAttribute("aria-selected") === "true", null, { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelector("#view")?.getAttribute("data-tab") === "criteria", null, { timeout: 3000 });
   await page.locator("#critText, #digestPreview").first().waitFor({ timeout: 3000 });
   assert.deepEqual(errors, []);
   await page.close();
@@ -183,7 +183,7 @@ test("RR-M3.5-9 an unknown ?tab= falls back to the normal default with no error"
 
 test("RR-M3.5-10 ?tab=people never opens Recruiters on the public radar-only demo; the owner's build does open it", async () => {
   const { page, errors } = await openDemo({ query: "?tab=people" });
-  assert.equal(await page.locator("#tab-people").count(), 0, "no Recruiters tab");
+  assert.equal(await page.locator('#tab-people, #moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
   assert.equal(await selectedTab(page), "tab-inbox");
   assert.equal(await page.locator("#view article.job.rec").count(), 0, "no recruiter cards");
   assert.doesNotMatch(new URL(page.url()).search, /tab=people/, "the URL is not left pointing at a hidden tab");
@@ -191,7 +191,7 @@ test("RR-M3.5-10 ?tab=people never opens Recruiters on the public radar-only dem
   await page.close();
   // Allowed direction: the private build (owner view) opens Recruiters from the link.
   const own = await openDemo({ publicDemo: false, query: "?tab=people" });
-  await own.page.waitForFunction(() => document.querySelector("#tab-people")?.getAttribute("aria-selected") === "true", null, { timeout: 3000 });
+  await own.page.waitForFunction(() => document.querySelector("#view")?.getAttribute("data-tab") === "people", null, { timeout: 3000 });
   await own.page.close();
 });
 

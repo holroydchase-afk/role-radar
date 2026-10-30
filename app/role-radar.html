@@ -30,7 +30,7 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 /* Dates and pay inside sentences read in the body font (tabular digits keep columns tidy). */
 .next .mono,.pv-head .meta .mono,.gmlist .mono{font-family:var(--f-body)}
 /* Tabs: one row at every width (RR-UX5-1). Tabs past the edge scroll sideways; a fade marks the hidden side. */
-#tabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:6px;z-index:2}
+#tabs{display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding-block:4px;z-index:2}
 #tabs.more-r{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 48px),transparent)}
 #tabs.more-l{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 48px),transparent)}
 #tabs.more-l.more-r{-webkit-mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(to right,transparent,#000 48px,#000 calc(100% - 48px),transparent)}
@@ -39,13 +39,25 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
 #tabs button:hover{border-color:var(--accent)}
 #tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 #tabs .n{font-family:var(--f-mono);font-size:.78rem;opacity:.75}
-/* Wide screens: every tab fits in one row with no sideways scroll (RR-UX6-1). Settings sit as a quieter group on the right. */
-@media (min-width:900px){#tabs{gap:2px}#tabs button{padding:0 6px;font-size:.82rem;gap:2px}#tabs .n{font-size:.72rem}
-  #tabs button.set{background:none;border-color:transparent;color:var(--muted);padding:0 4px}
-  #tabs button.set:hover{color:var(--ink);border-color:var(--line)}
-  #tabs button.set[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-  #tabs button.set1{margin-left:auto}
-  #tab-watch .n{display:none} /* RR-UX7-0: the settings group stays a quiet label row so every tab fits at 900+; the Watchlist page shows its count */}
+/* RR-M4.1: four items (New, Pipeline, All, More), 44px pills at 15px; the rest lives in the More sheet. */
+#tabs button{min-height:44px;font-size:.9375rem;padding:0 14px}
+#tabs #moreBtn[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#moreBtn .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+#moreBtn[aria-current="page"] .dot{background:var(--bg)}
+/* More sheet: the Filters sheet pattern. A bottom sheet over a dimmed page on phones, a panel under the tabs on wider screens. */
+.main{position:relative}
+#moreSheet{display:grid;gap:4px;position:absolute;top:56px;right:0;z-index:30;width:min(320px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+#moreSheet[hidden]{display:none}
+#moreSheet h2{font:600 1rem var(--f-body);margin:4px 8px 6px}
+#moreSheet .mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;padding:0 12px;border:1px solid transparent;border-radius:8px;background:none;color:var(--ink);font:500 1rem var(--f-body);text-align:left;cursor:pointer;width:100%}
+#moreSheet .mrow:hover{border-color:var(--line)}
+#moreSheet .mrow[aria-current="page"]{background:var(--accent-soft);border-color:var(--accent)}
+#moreSheet .mrow .n{font-size:.875rem;color:var(--muted);font-variant-numeric:tabular-nums}
+#mscrim{position:fixed;inset:0;z-index:29;background:transparent;border:0;padding:0}
+#mscrim[hidden]{display:none}
+@media (max-width:600px){
+  #moreSheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;border:0;border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto;box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+  #mscrim{background:rgba(23,32,29,.42)}}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .list{display:grid;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
@@ -147,7 +159,7 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
   .fbar .sbar #fdone{flex:1 1 auto}}
 @media (max-width:600px), (pointer:coarse){.chipbtn{min-height:44px}}
 /* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
-@media (max-width:600px){#tabs{position:static;gap:6px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
+@media (max-width:600px){#tabs{position:static;gap:4px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}#tabs button{padding:0 12px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
   /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
@@ -171,10 +183,6 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 @media (max-width:600px), (pointer:coarse){.ctl select,.primary{min-height:44px}}
 .skipwhy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
 .skipwhy input{flex:1 1 100%;font:inherit;font-size:.88rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:0}
-/* Progress line and the Ruled out tab: eliminated roles count as progress next to applications. */
-.progress b{color:var(--ink);font-weight:600}
-/* Phones, public demo: the Ruled out tab carries the count, so the first role stays on the first screen. */
-@media(max-width:600px){.showcase-mode #progress{display:none}}
 .gmlist a{color:var(--accent)}
 .ruled{display:grid;gap:14px}
 .ruled .sum{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:6px}
@@ -280,7 +288,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 /* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
 .hrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
 .hrow:not(:has(> :not([hidden]))){display:none}
-@media (min-width:601px){header .sub{font-size:.85rem}.meta-row:has(#progress:not([hidden])){flex-wrap:nowrap}#progress{white-space:nowrap}#progress:not([hidden])+#scanLine{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}#progress:not([hidden])+#scanLine::before{content:"·";margin-right:10px}}
+@media (min-width:601px){header .sub{font-size:.85rem}}
 .demo{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);justify-self:start}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
@@ -347,13 +355,14 @@ details.more form{display:grid;gap:10px;padding-top:10px}
     <p class="lede" id="lede" hidden>A job-search radar I built for my own search. It reads job boards every weekday and scores each role 0–100 against criteria I edit, with the math on every card. Applying stays my own call.</p>
     <div class="hrow"><span class="demo" id="demoNote" hidden>Demo data</span>
     <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p></div>
-    <div class="hrow meta-row"><p class="sub progress" id="progress" role="status" hidden></p>
-    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p></div>
+    <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p>
     <p class="sub stale" id="scanStale" role="status" hidden></p>
   </header>
 
   <main class="main">
   <div role="tablist" id="tabs" aria-label="Sections"></div>
+  <button type="button" id="mscrim" aria-label="Close" tabindex="-1" hidden></button>
+  <div id="moreSheet" role="dialog" aria-modal="true" aria-labelledby="moreTitle" hidden></div>
 
   <section id="view"></section>
   </main>
@@ -412,8 +421,10 @@ let recruiters=[], editRec=null, filtersOpen=false, sortOpen=false;
 const RS=window.RoleRadarRecruiters||null;
 let recStore=null, savedTab=null;
 const showPeople=()=>TOOLS&&!!recStore&&recStore.visible;
-const SET_TABS=["criteria","watch","filters"]; // settings, grouped at the right of the tab rail on wide screens
+// RR-M4.1: the tab bar holds New, Pipeline, All and More; every other tab opens from the More sheet, in this order.
+const BAR_TABS=["inbox","pipeline","all"], MORE_TABS=["people","action","progress","ruled","criteria","watch","filters"];
 const tabList=()=>TABS.filter(t=>t.id!=="people"||showPeople());
+let moreOpen=false;
 // Privacy: recruiter details are hidden on screen until this viewer chooses to show them.
 let recPrivate=true;
 try{recPrivate=localStorage.getItem("rr-rec-private")!=="0";}catch(_){}
@@ -488,7 +499,6 @@ function progressOf(list){
   });
   return p;
 }
-const progressText=c=>`applied <b>${c.applied}</b>, ruled out <b>${c.ruled}</b>`;
 const tagsOf=j=>Array.isArray(j.tags)?j.tags:(j.tags?String(j.tags).split(",").map(s=>s.trim()).filter(Boolean):[]);
 // Products the owner is building (meta/filters.products). Conflicts are flags only: nothing is hidden or skipped.
 const productsOf=()=>Array.isArray(filters&&filters.products)?filters.products.filter(p=>p&&p.name):[];
@@ -530,9 +540,20 @@ function counts(){
 function renderTabs(){
   const c=counts();
   if(tab==="people"&&!showPeople()) tab="inbox";
-  $("#tabs").innerHTML=tabList().map(t=>`<button role="tab" id="tab-${t.id}" aria-selected="${t.id===tab}" data-tab="${t.id}"${SET_TABS.includes(t.id)?` class="set${t.id===SET_TABS[0]?" set1":""}"`:""}>${t.label}${c[t.id]!==""?` <span class="n">${c[t.id]}${t.id==="people"?" due":""}</span>`:""}</button>`).join("");
+  const label=id=>(TABS.find(t=>t.id===id)||{}).label||id, inMore=MORE_TABS.includes(tab);
+  // Only New and Pipeline carry a count; recruiter follow-ups due show as a dot on More (owner's build only).
+  const due=showPeople()&&c.people?c.people:0;
+  $("#tabs").innerHTML=BAR_TABS.map(id=>`<button role="tab" id="tab-${id}" aria-selected="${id===tab}" data-tab="${id}">${label(id)}${id!=="all"&&c[id]!==""?` <span class="n">${c[id]}</span>`:""}</button>`).join("")
+    +`<button type="button" id="moreBtn" aria-haspopup="dialog" aria-controls="moreSheet" aria-expanded="${moreOpen}"${inMore?` aria-current="page"`:""}${due?` aria-label="More, ${due} due"`:""}>More${due?`<span class="dot" aria-hidden="true"></span>`:""}</button>`;
+  const rowN={people:due?due+" due":"",action:c.action,ruled:c.ruled,watch:c.watch!==""?c.watch+" boards":""};
+  $("#moreSheet").innerHTML=`<h2 id="moreTitle">More</h2>`+tabList().filter(t=>MORE_TABS.includes(t.id)).sort((a,b)=>MORE_TABS.indexOf(a.id)-MORE_TABS.indexOf(b.id))
+    .map(t=>`<button type="button" class="mrow" data-tab="${t.id}"${t.id===tab?` aria-current="page"`:""}><span>${t.label}</span>${rowN[t.id]!==undefined&&rowN[t.id]!==""?`<span class="n">${rowN[t.id]}</span>`:""}</button>`).join("");
+  $("#moreSheet").hidden=!moreOpen; $("#mscrim").hidden=!moreOpen;
+  renderScan();
   tabsInView();
 }
+function openMoreSheet(){ moreOpen=true; renderTabs(); ($("#moreSheet [aria-current=page]")||$("#moreSheet .mrow"))?.focus(); }
+function closeMoreSheet(focus=true){ moreOpen=false; renderTabs(); if(focus) $("#moreBtn")?.focus(); }
 // One-row tab bar (RR-UX5-1): scroll the selected tab into view and fade whichever edge hides more tabs.
 function tabsEdges(){ const el=$("#tabs"); if(!el) return; const max=el.scrollWidth-el.clientWidth;
   el.classList.toggle("more-l",el.scrollLeft>2); el.classList.toggle("more-r",el.scrollLeft<max-2); }
@@ -552,10 +573,14 @@ const boardName=v=>{const a=String(v||"").split(":")[0].toLowerCase(); return (P
 function renderScan(){
   const sw=$("#scanStale"), stale=!!(scan&&scan.lastRun&&PG&&PG.scanStale&&PG.scanStale(scan.lastRun,Date.now()));
   sw.textContent=stale?`Scan hasn't run since ${fmtDate(scan.lastRun)}. New roles may be missing; check the scheduled scan.`:""; sw.hidden=!stale;
+  $("#scanLine").hidden=stale; // a stale scan's warning is the header's only line
   if(!scan){ $("#scanLine").textContent="Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning. No scan has run yet."; return;}
-  const when=scan.lastRun?new Date(scan.lastRun).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"";
-  $("#scanLine").innerHTML=`Last scan ${esc(when)} · ${esc(scan.boardsChecked??"?")} boards${jobsState==="error"?"":` · ${esc(scan.newMatches??0)} new matches`}${scan.note?` · ${esc(scan.note)}`:""}`;
-  $("#scanLine").title=$("#scanLine").textContent; // full text when the laptop meta row trims it
+  // RR-M4.1 (UX-H-R1): one line, `Scan 8:24 AM · 6 new`, where N is the New tab's count. Board health moves to Home.
+  const d=scan.lastRun?new Date(scan.lastRun):null, ok=d&&!isNaN(d);
+  const when=ok?(dayOf(d.toISOString())===today()?d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}):d.toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})):"";
+  const n=jobsState==="ready"?jobs.filter(j=>inTab(j,"inbox")).length:null;
+  $("#scanLine").textContent=`Scan${when?" "+when:""}${n!==null?` · ${n} new`:""}`;
+  $("#scanLine").title=scan.note?String(scan.note):"";
 }
 
 function datesLine(j){
@@ -1177,12 +1202,6 @@ function digestPreview(spec){
     +`<p class="hint">${d.passed} of ${d.considered} pass the gates and minimum score.${extra.length?" "+extra.join(" · "):""}</p>`;
 }
 
-function renderProgress(){
-  const el=$("#progress"); if(!el) return;
-  if(!db||jobsState!=="ready"){el.hidden=true;return;}
-  const p=progressOf(jobs); el.hidden=false;
-  el.innerHTML=`Today: ${progressText(p.today)} · This week: ${progressText(p.week)}`;
-}
 // What the owner's last 30 days of skips say, as criteria changes to accept or set aside. Accepting only fills the
 // Criteria editor; the owner reviews and saves. Notes for the scan go to meta/skipFeedback, which the scan reads.
 function skipAnalysis(){ return SF&&specData?SF.analyze(jobs,specData,{dismissed:(skipFb&&skipFb.dismissed)||[]}):null; }
@@ -1278,8 +1297,8 @@ function loadState(){
   return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
 }
 function render(){
-  renderTabs(); renderScan(); renderProgress();
-  const v=$("#view");
+  renderTabs();
+  const v=$("#view"); v.dataset.tab=tab;
   if(!db&&!dbChecked){ v.innerHTML=loadState(); return; }
   if(!db){ v.innerHTML=`<div class="empty"><strong>Sign in to see your roles</strong><span>This tracker reads its data from your Claude account, so it needs a signed-in view.</span></div>`; return;}
   if(tab==="watch"){v.innerHTML=renderWatch();return;}
@@ -1476,8 +1495,10 @@ document.addEventListener("click",async e=>{
   const un=e.target.closest("[data-unset]");
   if(un){ view[un.dataset.unset]=""; saveView(); render(); ($(".fbar [data-unset]")||$("#ftoggle"))?.focus(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); $("#q")?.focus(); return; }
-  const t=e.target.closest("[data-tab]");
-  if(t){tab=t.dataset.tab; view.status=""; filtersOpen=false; sortOpen=false; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); return;}
+  if(e.target.closest("#moreBtn")){ if(moreOpen) closeMoreSheet(); else openMoreSheet(); return; }
+  if(e.target.id==="mscrim"){ closeMoreSheet(); return; }
+  const t=e.target.closest("button[data-tab]"); // #view also carries data-tab (the open tab's id); only buttons navigate
+  if(t){const fromMore=!!t.closest("#moreSheet"); moreOpen=false; tab=t.dataset.tab; view.status=""; filtersOpen=false; sortOpen=false; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); if(fromMore) $("#moreBtn")?.focus(); return;}
   const fa=e.target.closest("[data-fbaccept]");
   if(fa){ acceptSuggestion(fa.dataset.fbaccept); return; }
   const fd=e.target.closest("[data-fbdismiss]");
@@ -1600,6 +1621,10 @@ document.addEventListener("submit",async e=>{
 });
 
 document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&moreOpen){ closeMoreSheet(); return; }
+  // Keep keyboard focus inside the open More sheet.
+  if(e.key==="Tab"&&moreOpen){ const rs=[...document.querySelectorAll("#moreSheet .mrow")], i=rs.indexOf(document.activeElement);
+    if(rs.length&&(i<0||(e.shiftKey&&i===0)||(!e.shiftKey&&i===rs.length-1))){ e.preventDefault(); rs[e.shiftKey?rs.length-1:0].focus(); } return; }
   if(e.key==="Escape"&&(filtersOpen||sortOpen)){ closeSheets(filtersOpen?"ftoggle":"fsort"); return; }
   if(e.key==="Escape"&&preview&&!$("#applyDlg").open){ closePreview(); return; }
   if(e.target.id!=="critText"||e.key!=="Tab"||e.shiftKey) return;

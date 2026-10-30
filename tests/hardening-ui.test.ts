@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-hardening.html" });
@@ -29,7 +29,7 @@ test("RR-UX-2 on a phone the tab bar doesn't cover a fifth of the screen while s
 
 test("RR-UX-3 saving criteria that would drop the sections the scan reads is blocked", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const before = await page.locator("#critText").inputValue();
   await page.locator("#critText").fill("foo: 1\n");
   await page.click("#critForm button[type=submit]");
@@ -50,7 +50,7 @@ test("RR-UX-3 saving criteria that would drop the sections the scan reads is blo
 
 test("RR-UX-4 a YAML error names the line, says nothing was saved and puts focus on the editor", async () => {
   const { page } = await openDemo({ width: 390, height: 844 });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#critText").fill("role:\n  title_include: [Senior\nsectors: x\n");
   await page.click("#critForm button[type=submit]");
   assert.match(await toastText(page), /^Line \d+ has a YAML error\. Nothing was saved\.$/);
@@ -83,7 +83,7 @@ test("RR-UX-6/7 the demo label says what's made up and that changes reset on rel
   assert.ok(await page.locator("#demoTry").isVisible());
   assert.match(await page.locator("#demoTry").innerText(), /roles, recruiters and scores are made up/i);
   assert.match(await page.locator("#demoTry").innerText(), /resets when you reload/);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.click("#critForm button[type=submit]");
   assert.match(await toastText(page), /for this visit/);
   await page.close();
@@ -111,7 +111,7 @@ test("RR-UX-10 the toast is announced, and the list isn't re-read on every keyst
 
 test("RR-UX-11 after adding everyone from Gmail, the import says nothing is left to add", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   await page.locator("details.gmail summary").click();
   await page.click("#gmFind");
@@ -125,7 +125,7 @@ test("RR-UX-11 after adding everyone from Gmail, the import says nothing is left
 
 test("RR-UX-13 the public Watchlist strip uses plain words, not board slugs", async () => {
   const { page } = await openPublic();
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const strip = await page.locator(".health").innerText();
   assert.doesNotMatch(strip, /mode full|greenhouse:|lever:/);
   assert.match(strip, /Orbitline moved its job board \(Greenhouse → Lever\)/);
@@ -134,7 +134,7 @@ test("RR-UX-13 the public Watchlist strip uses plain words, not board slugs", as
 
 test("RR-H-7 two recruiters added by hand with non-Latin names at one company are both kept", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   const n0 = await page.locator(".rec").count();
   for (const name of ["李明", "王芳"]) {
@@ -191,7 +191,7 @@ test("RR-R2-2 the Undo toast stays while the pointer or focus is on it", async (
 
 test("RR-R2-3 after a blocked save the summary still shows the saved criteria", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const glance = await page.locator("div.ccard", { hasText: "At a glance" }).innerText();
   await page.locator("#critText").fill("foo: 1\n");
   await page.click("#critForm button[type=submit]");
@@ -202,7 +202,7 @@ test("RR-R2-3 after a blocked save the summary still shows the saved criteria", 
 
 test("RR-R2-6 long watchlist change notes don't sit in a fully rounded pill", async () => {
   const { page } = await openPublic({ width: 390, height: 844 });
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const r = await page.locator(".hchip", { hasText: "moved its job board" }).evaluate((el) => parseFloat(getComputedStyle(el).borderTopLeftRadius));
   assert.ok(r <= 12, "radius " + r);
   await page.close();

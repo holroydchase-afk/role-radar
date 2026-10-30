@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 const TABS = ["inbox", "pipeline", "action", "all", "people", "criteria", "watch", "filters"];
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -17,7 +17,7 @@ const openSeed = (seed: Record<string, any>, opts: Parameters<typeof open>[1] = 
 async function everyTab(page: Page) {
   const out: Record<string, string> = {};
   for (const id of TABS) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     out[id] = (await page.locator("#view").innerText()).trim();
     assert.ok(out[id].length > 0, `${id} is blank`);
   }
@@ -40,7 +40,7 @@ test("criteria that are not valid YAML show an error, not a blank tab", async ()
   seed.meta.criteria = { spec: "sectors: [unclosed\n  weight: : :" };
   const { page, errors } = await openSeed(seed);
   const text = await everyTab(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.ok(await page.locator("#view .err").count() > 0, text.criteria);
   assert.deepEqual(errors, []);
   await page.close();
@@ -74,12 +74,12 @@ test("due dates: past ones are flagged, future ones are not", async () => {
     soon: { name: "Soon Sato (demo)", company: "Futureco", nextStep: "Follow up", nextStepDue: "@d--3" },
   };
   const { page, errors } = await openSeed(seed);
-  await page.click("#tab-people");
+  await openTab(page, "people");
   const late = await page.locator(".rec", { hasText: "Pastco" }).locator(".next").innerText();
   const soon = await page.locator(".rec", { hasText: "Futureco" }).locator(".next").innerText();
   assert.match(late, /due /);
   assert.doesNotMatch(soon, /due /);
-  assert.equal((await page.locator("#tab-people").innerText()).replace(/\D/g, ""), "1");
+  assert.equal((((await page.locator('#moreSheet [data-tab="people"]').textContent()) ?? "")).replace(/\D/g, ""), "1");
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -89,13 +89,13 @@ test("board health copes with missing and junk coverage fields", async () => {
   seed.meta.scan.coverage = { mode: null, attempted: "x", failedList: ["Acme", null, { error: "no name" }], moved: [null, {}], sources: "nope" };
   seed.companies["greenhouse-sunfield"] = { name: "Sunfield Energy", failStreak: "lots", lastOk: "not a date", status: "active" };
   const { page, errors } = await openSeed(seed);
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const t = await page.locator(".health").innerText();
   assert.match(t, /Boards: 0\/0 read/);
   assert.match(t, /Failed\s*Acme/);
   delete seed.meta.scan.coverage;
   const again = await openSeed(seed);
-  await again.page.click("#tab-watch");
+  await openTab(again.page, "watch");
   assert.match(await again.page.locator(".health").innerText(), /after the next scan run/);
   assert.deepEqual(errors, []);
   assert.deepEqual(again.errors, []);

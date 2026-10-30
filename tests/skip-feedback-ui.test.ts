@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab, currentTab } from "../scripts/browser.mjs";
 import type * as SF from "../src/skip-feedback.ts";
 
 let browser: Browser;
@@ -40,7 +40,7 @@ test("a skip needs both a reason chip and a comment, and nothing saves until bot
   await form.locator("textarea[name=skipNote]").fill("Team page says always-on support rotation");
   await form.locator("button[type=submit]").click();
   await page.waitForFunction((t) => ![...document.querySelectorAll("#view article.job h2")].some((h) => h.textContent === t), title);
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   assert.match(await page.locator("#view .row").first().innerText(), /Culture\. Team page says always-on support rotation/);
   assert.deepEqual(errors, []);
   await page.close();
@@ -48,7 +48,7 @@ test("a skip needs both a reason chip and a comment, and nothing saves until bot
 
 test("Ruled out shows what the skips suggest, with the roles behind each one", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   const fb = page.locator("section.fb");
   const text = await fb.innerText();
   assert.match(text, /What your skips are teaching the scan/);
@@ -63,9 +63,9 @@ test("Ruled out shows what the skips suggest, with the roles behind each one", a
 
 test("Add to criteria opens the change in the editor, and only Save applies it", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   await page.locator("section.fb li", { hasText: "Never show Tidewater" }).locator("[data-fbaccept]").click();
-  assert.equal(await page.locator("#tab-criteria").getAttribute("aria-selected"), "true");
+  assert.equal(await currentTab(page), "criteria");
   assert.match(await page.locator("#fromSkips").innerText(), /From your skips: Never show Tidewater Analytics\. .*Nothing changes until you save\./);
   assert.match(await page.locator("#critText").inputValue(), /companies: \[Tidewater Analytics\]/);
   assert.doesNotMatch((await dbDoc(page, "meta/criteria")).spec, /Tidewater/, "not saved yet");
@@ -73,7 +73,7 @@ test("Add to criteria opens the change in the editor, and only Save applies it",
   await page.waitForFunction(() => !document.querySelector("#fromSkips"));
   assert.match((await dbDoc(page, "meta/criteria")).spec, /companies: \[Tidewater Analytics\]/);
   await page.waitForFunction(async () => ((await new Promise<{ accepted?: string[] } | undefined>(async (ok) => (await window.claude.use("db")).doc("meta/skipFeedback").onSnapshot((s) => ok(s.data())))) || {}).accepted?.includes("company:tidewater analytics"));
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   assert.doesNotMatch(await page.locator("section.fb").innerText(), /Never show Tidewater/, "an accepted change stops showing");
   assert.deepEqual(errors, []);
   await page.close();
@@ -81,13 +81,13 @@ test("Add to criteria opens the change in the editor, and only Save applies it",
 
 test("Discard drops a suggested change; Not now sets one aside for good", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   await page.locator("[data-fbaccept='culture:always-on']").click();
   assert.match(await page.locator("#critText").inputValue(), /red_flags: \[.*"?always-on"?\]/);
   await page.click("#critReset");
   assert.equal(await page.locator("#fromSkips").count(), 0);
   assert.doesNotMatch(await page.locator("#critText").inputValue(), /always-on/);
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   await page.locator("[data-fbdismiss='culture:always-on']").click();
   await page.waitForFunction(() => !/always-on" as a culture/.test(document.querySelector("section.fb")!.textContent!));
   const fb = await dbDoc(page, "meta/skipFeedback");
@@ -121,7 +121,7 @@ test("the skip form and suggestions fit a phone with no sideways scroll", async 
   let overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflow <= 0, `skip form scrolls sideways by ${overflow}px`);
   await page.click("[data-skipcancel]");
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflow <= 0, `Ruled out scrolls sideways by ${overflow}px`);
   assert.deepEqual(errors, []);

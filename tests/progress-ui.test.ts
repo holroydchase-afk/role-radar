@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-progress.html" });
@@ -14,7 +14,7 @@ after(async () => { await browser?.close(); });
 
 test("the Progress tab shows today against the bar, the week, the funnel and response rate", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-progress");
+  await openTab(page, "progress");
   const view = page.locator("#view");
   // The demo has one application today and no follow-ups sent.
   assert.match(await view.locator(".pg-today").innerText(), /1 of 3[\s\S]*1 application and 0 follow-ups sent today/);
@@ -31,7 +31,7 @@ test("the Progress tab shows today against the bar, the week, the funnel and res
 
 test("Follow-up sent counts toward today's bar and sets the next follow-up", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-progress");
+  await openTab(page, "progress");
   const due = page.locator("section[aria-labelledby=pg-fu] .row");
   assert.equal(await due.count(), 1);
   await due.locator("button", { hasText: "Follow-up sent" }).click();
@@ -50,7 +50,7 @@ test("a status move is kept in statusHistory, so the funnel keeps a Screen after
   await page.click("#tab-pipeline");
   const sel = page.locator("select[data-setstatus=ashby-1008]");
   await sel.selectOption("rejected");
-  await page.click("#tab-progress");
+  await openTab(page, "progress");
   const funnel = await page.locator("section[aria-labelledby=pg-funnel] .bars li").allInnerTexts();
   assert.match(funnel[1].replace(/\s+/g, " "), /^Screen 2/);
   assert.deepEqual(errors, []);
@@ -59,14 +59,16 @@ test("a status move is kept in statusHistory, so the funnel keeps a Screen after
 
 test("skips made by a screening rule are listed apart and not counted as ruled out", async () => {
   const { page, errors } = await openDemo();
-  const before = await page.locator("#progress").innerText();
+  // RR-M4.1: the Today/This week counts left the header; the Progress tab's This week line is where they live.
+  await openTab(page, "progress");
+  const weekLine = () => page.locator("section[aria-labelledby=pg-week] .line").innerText();
+  const before = await weekLine();
   await page.evaluate(async () => (await window.claude.use("db")).doc("jobs/greenhouse-1005").update({ status: "skipped", statusAt: new Date().toISOString(), skippedAt: new Date().toISOString(), skippedBy: "rule", skipReason: "Hard exclude" }));
-  await page.waitForFunction(() => document.querySelector("#tab-ruled .n")?.textContent === "4");
-  assert.equal(await page.locator("#progress").innerText(), before, "header count is unchanged");
-  await page.click("#tab-ruled");
+  await page.locator("section[aria-labelledby=pg-week]", { hasText: "Plus 1 removed by screening rules" }).waitFor({ timeout: 3000 });
+  assert.equal(await weekLine(), before, "this week's ruled-out count is unchanged");
+  assert.equal(await page.locator('#moreSheet [data-tab="ruled"] .n').textContent(), "4", "Ruled out count is unchanged");
+  await openTab(page, "ruled");
   assert.match(await page.locator(".by-rule summary").innerText(), /Removed by screening rules · 1/);
-  await page.click("#tab-progress");
-  assert.match(await page.locator("section[aria-labelledby=pg-week]").innerText(), /Plus 1 removed by screening rules/);
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -78,7 +80,7 @@ test("skipping a role on the page records it as the owner's call", async () => {
   await page.locator("[data-skipform] textarea[name=skipNote]").fill("Not the right fit");
   await page.click("[data-skipform] button[type=submit]");
   await page.waitForSelector("[data-skipform]", { state: "detached" });
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   const by = await page.evaluate(() => new Promise(async (ok) => {
     const db = await window.claude.use("db");
     db.collection("jobs").onSnapshot((s) => ok(s.docs.map((d) => d.data()).filter((j) => j.status === "skipped" && j.skippedBy).map((j) => j.skippedBy)));
@@ -90,7 +92,7 @@ test("skipping a role on the page records it as the owner's call", async () => {
 
 test("the Progress tab fits a phone with no sideways scroll", async () => {
   const { page, errors } = await openDemo({ width: 390, height: 844 });
-  await page.click("#tab-progress");
+  await openTab(page, "progress");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflow <= 0, `page scrolls sideways by ${overflow}px`);
   assert.deepEqual(errors, []);

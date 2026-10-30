@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 import * as G from "../src/gmail-import.ts";
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -41,7 +41,7 @@ test("RR-H-11 HTML and script in company, title, notes, skip notes, recruiters a
   seed.meta.scan = { ...seed.meta.scan, note: EVIL };
   const { page, errors } = await openSeed(seed);
   for (const id of TABS) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     if (id === "people") { const b = page.locator("#recPrivacy"); if (await b.count()) await b.click(); }
   }
   await page.click("#tab-inbox");
@@ -68,7 +68,7 @@ test("RR-H-12 very long unbroken titles, company names, notes and skip notes don
   });
   const { page, errors } = await openSeed(seed, { width: 390, height: 844 });
   for (const id of ["inbox", "pipeline", "action", "ruled", "progress", "all"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const w = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     assert.ok(w.s <= w.c + 1, `${id}: page is ${w.s}px wide in a ${w.c}px viewport`);
   }
@@ -95,7 +95,7 @@ test("RR-H-13 Add role with whitespace-only company and title adds nothing and s
 
 test("RR-H-14 Add a company with a whitespace-only name doesn't add a nameless company", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const rowsBefore = await page.locator("#view .row").count();
   await page.fill("#coName", "   ");
   await page.selectOption("#coAts", "lever");
@@ -111,7 +111,7 @@ test("RR-H-14 Add a company with a whitespace-only name doesn't add a nameless c
 
 test("RR-H-15 Add a company with a slug of only symbols adds nothing and says why", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const rowsBefore = await page.locator("#view .row").count();
   await page.fill("#coName", "Symbol Slug (demo)");
   await page.fill("#coSlug", "!!! ///");
@@ -144,7 +144,7 @@ test("RR-H-17 a scan role with no url, comp, score, location or dates shows no '
   const jobs = { bare: { company: "Bare Fields (demo)", title: "Senior PM, Bare", status: "new" }, b2: { company: "Bare Pipe (demo)", title: "PM, Bare Applied", status: "applied" } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
   for (const id of ["inbox", "pipeline", "action", "progress", "all"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id} shows junk: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }
@@ -209,7 +209,7 @@ test("RR-H-21 2,000 roles: the page opens, counts are right and tabs and search 
   const { page, errors } = await openSeed(seedWith({ jobs }));
   const openMs = Date.now() - t0;
   assert.match(await page.locator("#tab-inbox").innerText(), /1000/);
-  assert.match(await page.locator("#tab-ruled").innerText(), /500/);
+  assert.match(((await page.locator('#moreSheet [data-tab="ruled"]').textContent()) ?? ""), /500/);
   const t1 = Date.now();
   await page.click("#tab-all");
   await page.waitForFunction(() => document.querySelectorAll("#view article.job").length === 2000);
@@ -242,7 +242,7 @@ test("RR-H-22 status walk: Saved → Applying → 'I submitted it' sets Applied 
   assert.match(dates, /Applied/);
   assert.match(dates, /Follow up/);
   await page.selectOption("#st-w", "screen");
-  await page.click("#tab-action");
+  await openTab(page, "action");
   await page.locator("#view article.job").filter({ hasText: "Add the next step" }).waitFor({ timeout: 3000 });
   const c2 = page.locator("#view article.job").filter({ hasText: "Senior PM, Walk" });
   await c2.locator("summary").click();
@@ -273,8 +273,8 @@ test("RR-H-23 Save details shows the saved tags right away, trimming blanks, and
 
 test("RR-H-24 Never show moves a company to the Never show list and Restore brings it back", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
-  const count = async () => Number((await page.locator("#tab-watch .n").innerText()).trim());
+  await openTab(page, "watch");
+  const count = async () => parseInt((await page.locator('#moreSheet [data-tab="watch"] .n').textContent()) ?? "", 10);
   const n0 = await count();
   const row = () => page.locator("#view .row").filter({ hasText: "Sunfield Energy" });
   await row().getByRole("button", { name: "Never show" }).click();
@@ -289,14 +289,14 @@ test("RR-H-24 Never show moves a company to the Never show list and Restore brin
 
 test("RR-H-25 Scan rules: zero, words and negative numbers for the follow-up and stale days never save as 0 or blank", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   await page.fill("#cFu", "0");
   await page.fill("#cStale", "abc");
   await page.fill("#cSaved", "  ");
   await page.locator("#cfgForm button[type=submit]").click();
   await page.waitForFunction(() => /Settings saved/.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 3000 });
   await page.click("#tab-all"); // re-read what was saved (RR-H-23: the open form isn't redrawn after a save)
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   for (const id of ["#cFu", "#cStale", "#cSaved"]) {
     const v = Number(await page.locator(id).inputValue());
     assert.ok(Number.isInteger(v) && v > 0, `${id} is ${v}`);
@@ -310,7 +310,7 @@ test("RR-H-26 a new user's criteria that are a plain word or a list are refused 
   delete seed.meta.criteria;
   for (const bad of ["hello", "- a\n- b", "   "]) {
     const { page, errors } = await openSeed(seed);
-    await page.click("#tab-criteria");
+    await openTab(page, "criteria");
     await page.fill("#critText", bad);
     await page.getByRole("button", { name: /save criteria/i }).click();
     const shown = await page.locator("#critErr").waitFor({ timeout: 3000 }).then(() => true, () => false);
@@ -331,7 +331,7 @@ test("RR-H-27 Progress tab copes with junk dates and fields: no NaN, no errors",
   };
   const { page, errors } = await openSeed(seedWith({ jobs }));
   for (const id of ["progress", "action", "ruled", "pipeline"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id}: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }

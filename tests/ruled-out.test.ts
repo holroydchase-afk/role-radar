@@ -5,27 +5,31 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-ruled.html" });
-const progress = (page: Page) => page.locator("#progress").innerText();
 
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
-test("the header counts today's and this week's applications and ruled-out roles", async () => {
+test("Progress and Ruled out count today's and this week's applications and ruled-out roles", async () => {
   const { page, errors } = await openDemo();
   // The demo has one role ruled out today (screened out in an intake chat) and one applied today.
-  assert.match(await progress(page), /^Today: applied 1, ruled out 1 · This week: applied \d+, ruled out \d+$/);
+  // RR-M4.1: these counts left the header; the Progress tab and the Ruled out tab carry them.
+  await openTab(page, "progress");
+  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^1 application\b/);
+  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied \d+, ruled out \d+/);
+  await openTab(page, "ruled");
+  assert.equal(await page.locator("#view h3").first().textContent(), "Today · 1 ruled out");
   assert.deepEqual(errors, []);
   await page.close();
 });
 
 test("the Ruled out tab lists skipped roles newest first, with the reason, note and day", async () => {
   const { page, errors } = await openDemo();
-  assert.equal((await page.locator("#tab-ruled").innerText()).replace(/\D/g, ""), "4");
-  await page.click("#tab-ruled");
+  assert.equal((((await page.locator('#moreSheet [data-tab="ruled"]').textContent()) ?? "")).replace(/\D/g, ""), "4");
+  await openTab(page, "ruled");
   const view = page.locator("#view");
   assert.match(await view.locator(".sum").innerText(), /This week you applied to \d+ and ruled out \d+/);
   assert.match(await view.locator(".sum").innerText(), /4 ruled out in all · Culture 2 · .*Location 1/);
@@ -49,8 +53,8 @@ test("skipping with a reason and a note lands on Ruled out and bumps today's cou
   await page.locator("[data-skipform] [data-skipwhy='Location']").click();
   await page.locator("[data-skipform] textarea[name=skipNote]").fill("Needs relocation to Denver");
   await page.click("[data-skipform] button[type=submit]");
-  await page.waitForFunction(() => /ruled out 2 ·/.test(document.querySelector("#progress")!.textContent!));
-  await page.click("#tab-ruled");
+  await page.waitForFunction(() => document.querySelector('#moreSheet [data-tab="ruled"] .n')?.textContent === "5");
+  await openTab(page, "ruled");
   const first = await page.locator("#view .row").first().innerText();
   assert.ok(first.toUpperCase().includes(company.toUpperCase()) || first.includes(company), first);
   assert.match(first, /Location\. Needs relocation to Denver/);
@@ -61,7 +65,7 @@ test("skipping with a reason and a note lands on Ruled out and bumps today's cou
 
 test("Reconsider moves a ruled-out role back to New and clears its reason", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   await page.locator("#view .row", { hasText: "Senior Product Manager, Growth" }).locator("[data-reconsider]").click();
   await page.waitForFunction(() => !/Manager, Growth/.test(document.querySelector("#view .ruled")!.textContent!));
   assert.match(await page.locator("#toast").innerText(), /Moved to Viewed/);
@@ -83,7 +87,7 @@ test("a skipped card says when and why it was ruled out", async () => {
 
 test("public demo: Ruled out works without mentioning intake", async () => {
   const { page, errors } = await openDemo({ html: buildDemo({ publicDemo: true }) });
-  await page.click("#tab-ruled");
+  await openTab(page, "ruled");
   const text = await page.locator("#view").innerText();
   assert.match(text, /Harborline Mutual/);
   assert.doesNotMatch(text, /intake|resume/i);
@@ -92,9 +96,13 @@ test("public demo: Ruled out works without mentioning intake", async () => {
 });
 
 test("an empty tracker shows a plain Ruled out message and a zero count", async () => {
-  const { page } = await openDemo({ html: buildDemo({ seed: { jobs: {}, companies: {}, recruiters: {}, meta: {} } }), ready: "#tab-ruled" });
-  await page.click("#tab-ruled");
+  const { page } = await openDemo({ html: buildDemo({ seed: { jobs: {}, companies: {}, recruiters: {}, meta: {} } }), ready: "#tab-inbox" });
+  await openTab(page, "ruled");
   assert.match(await page.locator("#view").innerText(), /Nothing ruled out yet/);
-  assert.match(await progress(page), /^Today: applied 0, ruled out 0/);
+  assert.equal(((await page.locator('#moreSheet [data-tab="ruled"] .n').textContent()) ?? "").trim(), "0");
+  // RR-M4.1: Today/This week counts moved from the header to the Progress tab.
+  await openTab(page, "progress");
+  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^0 applications\b/);
+  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied 0, ruled out 0/);
   await page.close();
 });

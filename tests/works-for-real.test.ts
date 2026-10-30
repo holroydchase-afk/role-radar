@@ -13,7 +13,7 @@ import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import yaml from "js-yaml";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
@@ -35,7 +35,7 @@ async function openAt(seed: Record<string, any>, now: string | number) {
   await page.route("https://cdnjs.cloudflare.com/**", (r) => r.fulfill({ contentType: "text/javascript", body: read("node_modules/js-yaml/dist/js-yaml.min.js") }));
   await page.route("https://fonts.googleapis.com/**", (r) => r.fulfill({ contentType: "text/css", body: "" }));
   await page.goto("file://" + out);
-  await page.waitForFunction(() => /Last scan/.test(document.querySelector("#scanLine")?.textContent || ""));
+  await page.waitForFunction(() => /^Scan\b/.test(document.querySelector("#scanLine")?.textContent || ""));
   return { page, errors };
 }
 const staleWarning = (page: Page) => page.locator("[role=status], [role=alert]").filter({ hasText: /scan hasn.t run since/i });
@@ -48,7 +48,7 @@ after(async () => { await browser?.close(); });
 
 test("RR-M3.2-1 with no criteria saved, the Criteria tab shows an empty editor and a 'Start from the example' button", async () => {
   const { page, errors } = await openSeed({});
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#critText").waitFor({ state: "visible", timeout: 3000 });
   assert.equal(await page.locator("#critText").inputValue(), "");
   assert.equal(await page.getByRole("button", { name: /start from the example/i }).count(), 1);
@@ -59,7 +59,7 @@ test("RR-M3.2-1 with no criteria saved, the Criteria tab shows an empty editor a
 
 test("RR-M3.2-2 'Start from the example' fills the editor with the repo's example criteria without saving", async () => {
   const { page } = await openSeed({});
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.getByRole("button", { name: /start from the example/i }).click({ timeout: 3000 });
   const filled = await page.locator("#critText").inputValue();
   assert.deepEqual(yaml.load(filled), yaml.load(read("criteria.yaml")), "editor holds criteria.yaml");
@@ -72,12 +72,12 @@ test("RR-M3.2-2 'Start from the example' fills the editor with the repo's exampl
 
 test("RR-M3.2-3 a new user's first Save works and the criteria persist across tabs", async () => {
   const { page, errors } = await openSeed({});
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.getByRole("button", { name: /start from the example/i }).click({ timeout: 3000 });
   await page.getByRole("button", { name: /save criteria/i }).click();
   await toastMatches(page, /criteria saved/);
   await page.click("#tab-inbox");
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.getByRole("heading", { name: /sector weights/i }).waitFor({ timeout: 3000 });
   assert.deepEqual(yaml.load(await page.locator("#critText").inputValue()), yaml.load(read("criteria.yaml")));
   assert.deepEqual(errors, []);
@@ -132,7 +132,7 @@ test("RR-M3.2-8 a failed jobs read shows 'Couldn't load your roles' with Reload,
   await alert.first().waitFor({ state: "visible", timeout: 3000 });
   assert.equal(await page.getByRole("button", { name: /reload/i }).count() > 0, true, "has a Reload button");
   for (const id of ["inbox", "pipeline", "all"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const text = await page.locator("#view").innerText();
     assert.doesNotMatch(text, /Nothing new right now|Nothing in the pipeline|No roles yet/, id);
     assert.match(text, /couldn.t load your roles/i, id);
@@ -181,7 +181,7 @@ test("RR-M3.2-10 adding the same manual role twice keeps the first one's status"
 
 test("RR-M3.2-11 re-adding a vetoed company doesn't silently un-veto it", async () => {
   const { page } = await openSeed(null);
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   await page.fill("#coName", "QuickCash Advance");
   await page.selectOption("#coAts", "greenhouse");
   await page.fill("#coSlug", "quickcash");

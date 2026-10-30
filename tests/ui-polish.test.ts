@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab, currentTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 type Opts = Parameters<typeof open>[1];
@@ -60,7 +60,13 @@ test("RR-UX3-2 on a phone the tabs are one scrollable row and the first title sh
   for (const id of ids) {
     await page.locator("#" + id).scrollIntoViewIfNeeded();
     await page.locator("#" + id).click();
+    if (id === "moreBtn") { await page.locator("#moreSheet").waitFor({ state: "visible", timeout: 2000 }); await page.keyboard.press("Escape"); continue; }
     assert.equal(await page.locator("#" + id).getAttribute("aria-selected"), "true", `${id} opens`);
+  }
+  // RR-M4.1: the other tabs live in the More sheet; each still opens.
+  for (const id of await page.locator("#moreSheet [data-tab]").evaluateAll((els: HTMLElement[]) => els.map((e) => e.dataset.tab!))) {
+    await openTab(page, id);
+    assert.equal(await currentTab(page), id, `${id} opens from More`);
   }
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth) <= 390, "no sideways page scroll after switching");
   await page.close();
@@ -116,7 +122,7 @@ test("RR-UX3-5 the Values/Culture text column lines up across every card", async
 test("RR-UX3-6 links in the page use the accent and the 'see Alerts' link is a phone-sized target", async () => {
   const { page } = await openDemo(PHONE);
   const accent = await accentRgb(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const link = page.locator('#view a[href="#alerts"]');
   await link.waitFor();
   const colors = await page.locator("#view a:not(.btn)").evaluateAll((els: HTMLElement[]) => els.filter((a) => a.offsetParent).map((a) => getComputedStyle(a).color));
@@ -150,7 +156,7 @@ test("RR-UX4-1 filters start collapsed behind the Filters button at every width,
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openPrivate(vp);
     for (const id of ["inbox", "pipeline", "all"]) {
-      await page.click(`#tab-${id}`);
+      await openTab(page, id);
       assert.equal(await filterFieldsShown(page), false, `filter fields hidden by default on ${id} at ${vp.width}`);
       assert.ok(await page.locator("#ftoggle").isVisible(), `#ftoggle visible on ${id} at ${vp.width}`);
       assert.equal(await page.locator("#ftoggle").getAttribute("aria-expanded"), "false");
@@ -206,7 +212,7 @@ test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emph
   const { page } = await openPrivate(LAPTOP);
   const accent = await accentRgb(page);
   for (const id of ["pipeline", "all", "action"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const cards = await page.locator("#view .job").evaluateAll((els, accent) => els.map((c) => {
       const btns = [...c.querySelectorAll<HTMLElement>("button, a.btn")].filter((b) => b.offsetParent && !b.closest("details"));
       const filled = btns.filter((b) => b.matches(".btn.cta, .primary") || getComputedStyle(b).backgroundColor === accent);
@@ -225,7 +231,7 @@ test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emph
 test("RR-UX4-5 on an empty criteria editor 'Start from the example' is the primary; once there's text, Save is", async () => {
   const { page } = await openEmpty(LAPTOP);
   const accent = await accentRgb(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#critText").waitFor({ state: "visible", timeout: 3000 });
   const bg = (name: string | RegExp) => page.getByRole("button", { name }).evaluate((b) => getComputedStyle(b).backgroundColor);
   assert.equal(await bg(/start from the example/i), accent, "example is solid primary on an empty editor");
@@ -244,7 +250,7 @@ test("RR-UX4-6 first run with no criteria: New's empty state points to Criteria"
   const btn = page.locator("#view").getByRole("button", { name: /open criteria/i });
   assert.equal(await btn.count(), 1, "'Open Criteria' button in the empty state");
   await btn.click();
-  assert.equal(await page.locator("#tab-criteria").getAttribute("aria-selected"), "true");
+  assert.equal(await currentTab(page), "criteria");
   await page.close();
 });
 
@@ -300,7 +306,13 @@ test("RR-UX5-1 at 1280 the tabs are one row and every tab still opens (public, ?
     const ids = await page.locator("#tabs button").evaluateAll((els: HTMLElement[]) => els.filter((e) => e.offsetParent).map((e) => e.id));
     for (const id of ids) {
       await page.locator("#" + id).click();
+      if (id === "moreBtn") { await page.locator("#moreSheet").waitFor({ state: "visible", timeout: 2000 }); await page.keyboard.press("Escape"); continue; }
       assert.equal(await page.locator("#" + id).getAttribute("aria-selected"), "true", `${name}: ${id} opens`);
+    }
+    // RR-M4.1: the other tabs live in the More sheet; each still opens.
+    for (const id of await page.locator("#moreSheet [data-tab]").evaluateAll((els: HTMLElement[]) => els.map((e) => e.dataset.tab!))) {
+      await openTab(page, id);
+      assert.equal(await currentTab(page), id, `${name}: ${id} opens from More`);
     }
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth) <= 1280, `${name}: no sideways page scroll`);
     await page.close();
@@ -313,7 +325,7 @@ test("RR-UX5-2 at 1280 the header meta is at most 2 lines and New's first role t
   for (const [name, go] of [["public", () => openPublic(LAPTOP)], ["private", () => openPrivate(LAPTOP)]] as [string, () => ReturnType<typeof open>][]) {
     const { page } = await go();
     await page.click("#tab-inbox");
-    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #demoNote, header #demoTry, header #progress, header #scanLine")]), String(lineRows));
+    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #demoNote, header #demoTry, header #scanLine")]), String(lineRows));
     const dig = await page.locator("#digestCard").evaluate((d: HTMLDetailsElement) => d.open).catch(() => null);
     assert.notEqual(dig, false, `${name}: digest card is open by default at 1280`);
     const t = await page.locator("#view article.job h2").first().boundingBox();
@@ -328,7 +340,7 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
   const { page } = await openPrivate(LAPTOP);
   const seen = new Set();
   for (const id of ["pipeline", "all"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const cards = await page.locator("#view article.job").evaluateAll((els: HTMLElement[]) => els.map((c) => ({
       title: c.querySelector("h2")?.textContent.trim(),
       status: c.querySelector<HTMLSelectElement>("select[data-setstatus]")?.value,
@@ -349,7 +361,7 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
 
 test("RR-UX5-5 on a phone Progress's 'Follow-up sent' button text stays on one line", async () => {
   const { page } = await openPrivate(PHONE);
-  await page.click("#tab-progress");
+  await openTab(page, "progress");
   const b = page.locator("section[aria-labelledby=pg-fu] button", { hasText: "Follow-up sent" }).first();
   await b.waitFor();
   const rows = await b.evaluate((el, src) => (0, eval)(`(${src})`)([el]), String(lineRows));
@@ -419,11 +431,11 @@ test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score ma
 test("RR-UX6-3 the digest count matches the header's new count (or labels its set); a tab with zero roles hides #fbar", async () => {
   const { page } = await openPublic(LAPTOP);
   await page.click("#tab-inbox");
-  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
-  assert.ok(head, "header shows 'N new matches'");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
+  assert.ok(head, "header shows 'N new'");
   const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
   const bare = [...sum.matchAll(/\b(\d+) roles?\b/gi)].filter((m) => m[1] !== head[1]).map((m) => m[0]);
-  const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}es'`] : [];
+  const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}'`] : [];
   await page.close();
   const { page: empty } = await openEmpty(LAPTOP);
   for (const id of ["inbox", "pipeline", "all"]) {
@@ -482,17 +494,17 @@ test("RR-UX7-2 Pipeline cards at 390 (private): the visible action-row buttons/l
 test("RR-UX7-3 one story: the digest says 'Top N of M' with M = the header's new count; with ?fail=jobs the header shows no new count", async () => {
   const { page } = await openPublic(LAPTOP);
   await page.click("#tab-inbox");
-  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
-  assert.ok(head, "header shows 'N new matches'");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
+  assert.ok(head, "header shows 'N new'");
   const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
   const bad = [];
   const top = sum.match(/Top (\d+) of (\d+)/i);
-  if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}es')`);
-  else if (top[2] !== head[1]) bad.push(`digest '${top[0]}' vs header '${head[0]}es'`);
+  if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}')`);
+  else if (top[2] !== head[1]) bad.push(`digest '${top[0]}' vs header '${head[0]}'`);
   await page.close();
   const { page: failed } = await openPrivate({ ...LAPTOP, query: "?fail=jobs", ready: "#tab-inbox" });
   const fh = (await failed.locator("header").innerText()).replace(/\s+/g, " ");
-  const n = fh.match(/\d+ new match\w*/);
+  const n = fh.match(/\d+ new\b/);
   if (n) bad.push(`?fail=jobs header still shows '${n[0]}'`);
   await failed.close();
   assert.deepEqual(bad, []);

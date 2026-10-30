@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-demo.html" });
@@ -16,7 +16,7 @@ after(async () => { await browser?.close(); });
 test("every tab renders on demo data without errors", async () => {
   const { page, errors } = await openDemo();
   for (const id of ["inbox", "pipeline", "action", "all", "people", "criteria", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     assert.ok((await page.locator("#view").innerText()).trim().length > 0, id);
   }
   assert.deepEqual(errors, []);
@@ -49,7 +49,7 @@ test("cards explain their score with the criteria rules", async () => {
 
 test("digest preview re-ranks live as the criteria are edited", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const first = () => page.locator("#digestPreview li").first().innerText();
   assert.match(await first(), /Gridlark.*\n.*dream role/, "a dream-role anchor tops the digest");
   const text = await page.locator("#critText").inputValue();
@@ -64,7 +64,7 @@ test("digest preview re-ranks live as the criteria are edited", async () => {
 
 test("alerts preview lists the rules and updates live as the criteria are edited", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const preview = () => page.locator("#alertsPreview").innerText();
   assert.match(await preview(), /recruiter or hiring manager emails or replies: alert right away/);
   assert.match(await preview(), /scoring 85\+: alert right away/);
@@ -87,7 +87,7 @@ test("non-http links from scan data are not clickable", async () => {
 
 test("criteria tab explains itself when the YAML reader can't load", async () => {
   const { page } = await openDemo({ blockYaml: true });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.match(await page.locator("#view").innerText(), /YAML reader didn't load/);
   await page.close();
 });
@@ -95,7 +95,7 @@ test("criteria tab explains itself when the YAML reader can't load", async () =>
 test("no horizontal scroll at phone width", async () => {
   const { page } = await openDemo({ width: 390 });
   for (const id of ["inbox", "people", "criteria"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(over <= 0, `${id} overflows by ${over}px`);
   }
@@ -115,7 +115,7 @@ test("recruiter details are hidden until the viewer shows them", async () => {
   const { page, errors } = await openDemo();
   // Rendered markup and text only: the demo build also embeds the seed in a script tag.
   const shown = () => page.evaluate(() => document.querySelector<HTMLElement>("#app, main, body")!.innerText + document.querySelector("#view")!.innerHTML);
-  await page.click("#tab-people");
+  await openTab(page, "people");
   let html = await shown();
   for (const r of recs) {
     assert.ok(!html.includes(r.name), `name visible: ${r.name}`);
@@ -131,7 +131,7 @@ test("recruiter details are hidden until the viewer shows them", async () => {
   // The choice is remembered for this viewer.
   await page.reload();
   await page.waitForSelector(".job");
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.ok((await shown()).includes(recs[0].name));
   await page.click("#recPrivacy");
   assert.ok(!(await shown()).includes(recs[0].name));
@@ -189,7 +189,7 @@ test("Values and Culture filters narrow the list", async () => {
 
 test("the Criteria tab explains the fit ratings", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const card = page.locator("div.ccard", { has: page.locator("h2", { hasText: "Fit ratings" }) });
   assert.match(await card.innerText(), /\+2\s+calm pace/);
   assert.match(await card.innerText(), /−1\s+launch crunch risk/);
@@ -226,7 +226,7 @@ test("clicking a role opens its description in a side panel on wide screens", as
 
 test("Gmail import: finds recruiters, skips known ones and job boards, adds only the picked", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   await page.locator("details.gmail summary").click();
   await page.click("#gmFind");
@@ -294,7 +294,7 @@ test("Gmail import explains a missing connector instead of failing silently", as
   const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? readFileSync(new URL("../" + v.slice(6), import.meta.url), "utf8") : v));
   seed.gmail.error = "server_not_connected";
   const { page } = await openDemo({ html: buildDemo({ seed }) });
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   await page.locator("details.gmail summary").click();
   await page.click("#gmFind");
@@ -303,7 +303,7 @@ test("Gmail import explains a missing connector instead of failing silently", as
 
   delete seed.gmail;
   const { page: p2 } = await openDemo({ html: buildDemo({ seed }) });
-  await p2.click("#tab-people");
+  await openTab(p2, "people");
   await p2.click("#recPrivacy");
   await p2.locator("details.gmail summary").click();
   assert.match(await p2.locator("details.gmail").innerText(), /works when this page is open in Claude/);
@@ -357,14 +357,14 @@ test("Gmail status check is not on the public demo", async () => {
 
 test("Gmail import is hidden while recruiter details are hidden", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.equal(await page.locator("details.gmail").count(), 0);
   await page.close();
 });
 
 test("the Watchlist shows board health from the last scan", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const strip = page.locator(".health");
   const t = await strip.innerText();
   assert.match(t, /Boards: 7\/9 read \(solar\/climate 4\/5\)/);
@@ -385,9 +385,9 @@ test("the Watchlist shows board health from the last scan", async () => {
 test("public demo: radar only, no resume or recruiter tools anywhere", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page, errors } = await openDemo({ html });
-  assert.equal(await page.locator("#tab-people").count(), 0, "no Recruiters tab");
+  assert.equal(await page.locator('#moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
   for (const id of ["inbox", "pipeline", "action", "ruled", "all", "criteria", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const text = await page.locator("#view").innerText();
     assert.doesNotMatch(text, /resume|intake/i, `${id} mentions resume tooling`);
     assert.equal(await page.locator("#view .apply").count(), 0, `${id} has an Apply button`);
@@ -395,7 +395,7 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
   await page.click("#tab-all");
   assert.match(await page.locator("#lede").innerText(), /my own call/);
   assert.match(await page.locator(".why-score").first().innerText(), /sector/);
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 0);
   assert.deepEqual(errors, []);
   await page.close();
@@ -404,12 +404,12 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
 test("public demo with ?full shows the resume and recruiter tools", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page, errors } = await openDemo({ html, query: "?full" });
-  assert.equal(await page.locator("#tab-people").count(), 1);
+  assert.equal(await page.locator('#moreSheet [data-tab="people"]').count(), 1);
   await page.click("#tab-all");
   assert.ok((await page.locator("#view .apply").count()) > 0);
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 2);
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.match(await page.locator("#view").innerText(), /Show details/);
   assert.deepEqual(errors, []);
   await page.close();
@@ -418,7 +418,7 @@ test("public demo with ?full shows the resume and recruiter tools", async () => 
 test("a remembered Recruiters tab falls back to New in the public demo", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, query: "?full" });
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.goto(page.url().split("?")[0]);
   await page.waitForSelector("#tab-inbox");
   assert.equal(await page.locator("#tab-inbox").getAttribute("aria-selected"), "true");
@@ -476,7 +476,7 @@ test("a role added on Pipeline shows up right away (RR-P1-1)", async () => {
 
 test("a company added to the watchlist shows up right away (RR-P1-1)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   await page.fill("#coName", "Quillfern Labs");
   await page.fill("#coSlug", "quillfern");
   await page.locator("#addCo button[type=submit]").click();
@@ -486,7 +486,7 @@ test("a company added to the watchlist shows up right away (RR-P1-1)", async () 
 
 test("a recruiter added on ?full shows up right away (RR-P1-1)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   const form = page.locator("#addRec");
   if (!(await form.isVisible())) await page.locator("details:has(#addRec) summary").click();
@@ -542,15 +542,14 @@ test("RR-UX-1 the chip beside the score names what it rates (experience), so 90 
   await page.close();
 });
 
-test("header numbers agree with the Watchlist strip and the New tab (RR-P1-4)", async () => {
+test("header new count agrees with the New tab (RR-P1-4)", async () => {
+  // RR-M4.1: the header is `Scan <time> · N new`; the board count moves to Home (M4.4), so only the New half stays here.
   const { page } = await openDemo();
   const line = await page.locator("#scanLine").innerText();
-  const [, boards, fresh] = /(\d+) boards · (\d+) new/.exec(line) || [];
-  assert.ok(boards, line);
+  const [, fresh] = /· (\d+) new\b/.exec(line) || [];
+  assert.ok(fresh, line);
   const newCount = await page.locator("#tab-inbox .n").innerText();
   assert.equal(fresh, newCount.trim(), "new matches = New tab");
-  await page.click("#tab-watch");
-  assert.match(await page.locator("#view").innerText(), new RegExp(`\\d+/${boards} read`));
   assert.doesNotMatch(line, /demo data/i, "the badge already says demo");
   assert.equal(await page.locator("#scanLine .mono").count(), 0, "one font in the scan line (RR-P2-2)");
   await page.close();
@@ -571,7 +570,7 @@ test("phone controls are at least 44px tall (RR-P1-6)", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, width: 390, height: 844 });
   for (const id of ["inbox", "pipeline", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     if (id === "pipeline") await page.locator("#addRole summary").click();
     const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("button, a.btn, select, input:not([type=checkbox]):not([type=radio]), [role=tab], .showcase a, summary")]
       .filter((el) => el.offsetParent !== null)
@@ -587,7 +586,7 @@ test("public demo works with the CDN blocked: js-yaml is inlined (RR-P2-9)", asy
   assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/js-yaml/);
   assert.match(html, /js-yaml 4\.1\.0 .*@license MIT/);
   const { page, errors } = await openDemo({ html, blockYaml: true });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.ok((await page.locator("#digestPreview li").count()) > 0);
   assert.deepEqual(errors, []);
   await page.close();
@@ -639,7 +638,7 @@ test("public demo on a laptop folds filters so the first role shows (RR-P2-4)", 
 test("page has a main landmark and valid headings (RR-P2-5)", async () => {
   const { page } = await openDemo();
   assert.equal(await page.locator("main").count(), 1);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.equal(await page.locator(".ccard h3").count(), 0);
   assert.equal(await page.locator(".pips:not([role=img])").count(), 0);
   await page.close();
@@ -657,15 +656,15 @@ test("public demo cards show one category chip, the sector (RR-P2-11)", async ()
 
 test("Recruiters tab says its number is next steps due (RR-P2-12)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   const due = await page.locator("#view .rec .next", { hasText: "due" }).count();
-  assert.equal(await page.locator("#tab-people .n").innerText(), `${due} due`);
+  assert.equal(((await page.locator('#moreSheet [data-tab="people"] .n').textContent()) ?? ""), `${due} due`);
   await page.close();
 });
 
 test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const kv = page.locator(".kv b");
   const font = await kv.first().evaluate((el) => getComputedStyle(el).fontFamily);
   assert.doesNotMatch(font, /Plex Mono/);

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-showcase.html" });
@@ -19,14 +19,16 @@ test("RR-N3-2 on a phone, the public demo shows the first role's title on the fi
   const line = await page.locator(".job h2").first().evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
   assert.ok(box.y + line <= 844, `first title line ends at ${Math.round(box.y + line)}px`);
   await page.close();
-  const wide = await openDemo({ html: buildDemo({ publicDemo: true }), width: 1280, height: 800 });
-  assert.ok(await wide.page.locator("#progress").isVisible(), "the progress line stays on laptops");
-  await wide.page.close();
 });
 
-test("RR-N3-3 the demo's progress line shows an application today, not zeros", async () => {
+test("RR-N3-3 the demo's progress shows an application today, not zeros", async () => {
   const { page } = await openDemo();
-  assert.match(await page.locator("#progress").innerText(), /^Today: applied 1, ruled out 1 · This week: applied [1-9]/);
+  // RR-M4.1: the Today/This week line left the header; the Progress tab shows the same counts.
+  await openTab(page, "progress");
+  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^1 application\b/);
+  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied [1-9]/);
+  await openTab(page, "ruled");
+  assert.equal(await page.locator("#view h3").first().textContent(), "Today · 1 ruled out");
   await page.close();
 });
 
@@ -44,7 +46,7 @@ test("RR-N3-4 the demo's Gmail status check has no example.com links and says th
 
 test("RR-N3-5 the Alerts card uses plain words, not rule ids or channel codes", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const text = await page.locator("#alertsPreview").innerText();
   assert.doesNotMatch(text, /\b[a-z]+_[a-z_]+\b/, "a snake_case id is showing");
   assert.doesNotMatch(text, /go to: push/);
@@ -54,14 +56,14 @@ test("RR-N3-5 the Alerts card uses plain words, not rule ids or channel codes", 
 
 test("RR-N3-6 the demo's alert preview reads the same at any hour (demo clock is 9:00 in the spec's time zone)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.doesNotMatch(await page.locator("#alertsPreview").innerText(), /held for quiet hours/);
   await page.close();
 });
 
 test("RR-N3-7 At a glance points to the Alerts card", async () => {
   const { page } = await openDemo({ html: buildDemo({ publicDemo: true }) });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const link = page.locator('.ccard a[href="#alerts"]');
   assert.equal(await link.count(), 1);
   assert.match(await link.innerText(), /Alerts/);
