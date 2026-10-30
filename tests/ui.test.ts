@@ -143,11 +143,11 @@ test("on a phone, filters fold away behind one button", async () => {
   const { page } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-inbox");
   assert.ok(await page.locator("#q").isVisible());
-  assert.ok(!(await page.locator("#fv-status").isVisible()));
+  assert.ok(!(await page.locator("#fv-lane").isVisible()));
   const firstCard = (await page.locator(".job").first().boundingBox())!;
   assert.ok(firstCard.y < 844, `first card starts below the fold at ${firstCard.y}`);
   await page.click("#ftoggle");
-  assert.ok(await page.locator("#fv-status").isVisible());
+  assert.ok(await page.locator("#fv-lane").isVisible());
   await page.close();
 });
 
@@ -155,9 +155,9 @@ test("on a phone, filters fold away behind one button", async () => {
 test("on a wide screen, filters fold behind the toggle and open on demand", async () => {
   const { page } = await openDemo({ width: 1100 });
   assert.ok(await page.locator("#ftoggle").isVisible());
-  assert.ok(!(await page.locator("#fv-status").isVisible()));
+  assert.ok(!(await page.locator("#fv-lane").isVisible()));
   await page.click("#ftoggle");
-  assert.ok(await page.locator("#fv-status").isVisible());
+  assert.ok(await page.locator("#fv-lane").isVisible());
   await page.close();
 });
 
@@ -174,15 +174,15 @@ test("cards show Values and Culture badges with a reason", async () => {
   await page.close();
 });
 
+// Since RR-FS (2026-10-30) Values and Culture are quick chips ("good or better"), not dropdowns.
 test("Values and Culture filters narrow the list", async () => {
   const { page } = await openDemo({ width: 1100 });
   await page.click("#tab-all");
-  await page.click("#ftoggle"); // filters fold behind the toggle at every width (RR-UX4-1)
-  await page.selectOption("#fv-culture", "good+");
+  await page.click('#fbar [data-chip="culture"]');
   await page.waitForFunction(() => document.querySelectorAll<HTMLElement>("article.job").length === 2);
   const cos = await page.locator("article.job .co").allTextContents();
   assert.deepEqual(cos.sort(), ["Ledgerly", "Sunfield Energy"]);
-  await page.selectOption("#fv-values", "great");
+  await page.click('#fbar [data-chip="values"]');
   await page.waitForFunction(() => document.querySelectorAll<HTMLElement>("article.job").length === 1);
   await page.close();
 });
@@ -538,8 +538,7 @@ test("RR-UX-1 the chip beside the score names what it rates (experience), so 90 
   assert.ok(chips.length >= 10);
   for (const c of chips) assert.match(c, /^Experience: (strong|partial|stretch)$/);
   assert.match((await page.locator("#view .score").first().getAttribute("title"))!, /Criteria score, 0.100/);
-  assert.deepEqual(await page.locator("#fv-fit option").allTextContents(), ["Any", "Strong", "Partial", "Stretch"]);
-  assert.match(await page.locator("label[for=fv-fit]").innerText(), /^Experience/);
+  assert.equal(await page.locator('#fbar [data-chip="strong"]').innerText(), "Strong fit");
   await page.close();
 });
 
@@ -676,7 +675,7 @@ test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
   await page.close();
 });
 
-test("'Filters and sort' text is centered in its button", async () => {
+test("the Filters button's text is centered", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, width: 390, height: 844 });
   assert.equal(await page.locator("#ftoggle").evaluate((el) => getComputedStyle(el).alignItems), "center");

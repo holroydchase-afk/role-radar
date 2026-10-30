@@ -116,25 +116,47 @@ dialog textarea{width:100%;box-sizing:border-box;min-height:150px;font:400 .85re
 dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 @media (prefers-reduced-motion: no-preference){.job{transition:border-color .15s}}
 /* Added: filter bar, status select, lanes, tags, dates line, details editor, action reasons */
-.fbar{margin:0 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px}
-.fbar .fields{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
-#ftoggle{display:none;align-items:center}
+.fbar{margin:0 0 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+/* Filters and sorting (RR-FS): one row of search, Sort and Filters; quick chips; the rest in a sheet. */
+.fbar .frow{display:flex;gap:6px;align-items:center}
+.fbar .frow>label[for=q]{flex:1 1 auto;min-width:0}
+.fbar .qlbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#fsort,#ftoggle{flex:none;display:inline-flex;align-items:center;gap:6px}
+#fsort svg,#ftoggle svg{flex:none}
+#ftoggle .fn{background:var(--ink);color:var(--bg);border-radius:999px;padding:0 7px;font-size:.75rem;font-weight:600;line-height:1.5}
+.fbar .chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-inline:-12px;padding-inline:12px}
+.fbar .chips::-webkit-scrollbar{display:none}
+.chipbtn{flex:none;font:500 .85rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 12px;min-height:36px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer}
+.chipbtn:hover{border-color:var(--accent)}
+.chipbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chipbtn.unset{border-color:var(--accent);background:var(--accent-soft)}
+.fbar .sheet{display:none}
+.fbar .sheet.open{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.fbar .sheet h2{font:600 1rem var(--f-body);margin:0}
+.fbar .sheet .fields{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.fbar .sorts{display:grid;gap:4px;border:0;margin:0;padding:0}
+.fbar .sorts label{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid transparent;cursor:pointer;color:var(--ink)}
+.fbar .sorts label:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.fbar .sorts small{display:block;color:var(--muted);font-size:.78rem}
+.fbar .sbar{display:flex;gap:10px;justify-content:flex-end;align-items:center}
+#fscrim{display:none}
+/* Phones: the open sheet slides up from the bottom over a dimmed page, like the mock Chase approved. */
+@media (max-width:600px){
+  .fbar .sheet.open{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border:0;border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto;box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+  #fscrim.on{display:block;position:fixed;inset:0;z-index:29;background:rgba(23,32,29,.42);border:0;padding:0}
+  .fbar .sbar #fdone{flex:1 1 auto}}
+@media (max-width:600px), (pointer:coarse){.chipbtn{min-height:44px}}
 /* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
 @media (max-width:600px){#tabs{position:static;gap:6px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
   /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
   header .hrow:has(#demoNote:not([hidden])){display:block}header .hrow #demoNote{display:inline-block;margin-right:8px}header .hrow #demoTry{display:inline}
-  .fbar{padding:8px 12px;gap:6px}.fbar .qlbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+  .fbar{padding:8px 12px;gap:6px}}
 /* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
-#ftoggle{display:inline-flex}.fbar:not(.open) .fields{display:none}
 /* Touch: every control at least 44px tall. */
 @media (max-width:600px), (pointer:coarse){#tabs button,.btn,button,select,input:not([type=checkbox]):not([type=radio]){min-height:44px}a.btn{display:inline-flex;align-items:center}summary{padding-block:14px}.kv a{display:inline-flex;align-items:center;min-height:44px}.sub .linkbtn,.hint .linkbtn{min-height:44px;display:inline-block;padding-block:12px;margin-block:-12px;line-height:20px;vertical-align:baseline}}
 .fbar .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
-/* Phones (RR-UX7-1): search and the filter toggle share one row; the count shows only once a filter or search hides roles. */
-@media (max-width:600px){.fbar{grid-template-columns:minmax(0,1fr) auto;align-items:center}.fbar>label[for=q]{grid-column:1;grid-row:1}.fbar .foot{display:contents}
-  #ftoggle{grid-column:2;grid-row:1}.fbar .fields{grid-column:1/-1}#fcount{grid-column:1}#fclear{grid-column:2;justify-self:end}
-  #fcount[data-all]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
 .linkbtn{font:500 .82rem var(--f-body);background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
 .dates{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:.8rem;color:var(--muted)}
 .dates b{font-weight:500;color:var(--ink)}
@@ -374,11 +396,17 @@ let LANES=config.lanes, SKIP_REASONS=config.skipReasons;
 function setConfig(c){config={...DEF_CONFIG,...(c||{})}; LANES=config.lanes; SKIP_REASONS=config.skipReasons;}
 const ATS=["greenhouse","ashby","lever"];
 const FIT_LABEL={strong:"strong",maybe:"partial",stretch:"stretch"};
-const DEF_VIEW={q:"",status:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",sort:"fit"};
+const DEF_VIEW={q:"",status:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",sorts:{}};
+// Four sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7).
+const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"]];
+const DEF_SORT={inbox:"fit",pipeline:"updated",action:"followup",all:"fit"};
+// Quick chips: each sets one view key (RR-FS-3). The Filters sheet holds the rest.
+const CHIPS=[["day","Last 24 hrs","found","1"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
+const SHEET_KEYS=["lane","found","source","tag","conflict","status"];
 // Gmail import: the viewer's Gmail connector, read-only (search_threads, batch_get_threads).
 let mcp=null, mcpState="checking", gm={state:"idle",items:[],picked:new Set(),msg:""}, gs={state:"idle",items:[],picked:new Set(),msg:""};
 const GM=window.RoleRadarGmail||null;
-let recruiters=[], editRec=null, filtersOpen=false;
+let recruiters=[], editRec=null, filtersOpen=false, sortOpen=false;
 // Recruiters are private to the page's owner: every read and write goes through this store, and the database
 // rule in app/capabilities.json enforces it. Viewers the page is shared with get no tab and no data.
 const RS=window.RoleRadarRecruiters||null;
@@ -403,8 +431,21 @@ let preview=null, previewFrom=null; const postings=new Map();
 // jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
 let jobsState="loading", dbChecked=false;
 let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), openWhy=new Set(), skipOpen=null;
-try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view={...DEF_VIEW,...v};}catch(e){}
+try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view=migrateView(v);}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
+// Views saved by the old filter bar (one global sort, Experience/Values/Culture dropdowns) load as the nearest new view (RR-FS-6).
+function migrateView(v){
+  const o={...DEF_VIEW,...v}; delete o.sort;
+  o.sorts=o.sorts&&typeof o.sorts==="object"&&!Array.isArray(o.sorts)?Object.fromEntries(Object.entries(o.sorts).filter(([,k])=>SORTS.some(s=>s[0]===k))):{};
+  if(o.fit!=="strong") o.fit="";
+  if(o.values!=="good+") o.values="";
+  if(o.culture!=="good+") o.culture="";
+  if(!["1","7","30"].includes(o.found)) o.found="";
+  if(tab!=="all") o.status="";
+  for(const k of Object.keys(DEF_VIEW)) if(k!=="sorts"&&typeof o[k]!=="string") o[k]="";
+  return o;
+}
+const sortOf=()=>view.sorts[tab]||DEF_SORT[tab]||"fit";
 // Deep links: ?tab=<id> opens a tab (it beats the remembered one), #role-<id> jumps to a role card.
 // A tab this viewer can't see (Recruiters on the public build) or an unknown id never opens; the URL drops it.
 function setUrlTab(t,hash=""){ try{ const u=new URL(location.href); if(t) u.searchParams.set("tab",t); else u.searchParams.delete("tab"); u.hash=hash; history.replaceState(history.state,"",u.href); }catch(_){} }
@@ -658,33 +699,57 @@ function cardEls(list){
 }
 function opts(list,cur,all){return `<option value="">${all}</option>`+list.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");}
 function filterBar(){
-  const statusList=(tab==="inbox"?STATUSES.filter(([v])=>INBOX.includes(v)):tab==="pipeline"?STATUSES.filter(([v])=>PIPE.includes(v)):STATUSES);
+  const ic=d=>`<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const sources=[...new Set(jobs.map(j=>j.source||j.ats).filter(Boolean))].sort().map(s=>[s,srcName(s)]);
   const tags=[...new Set(jobs.flatMap(tagsOf))].sort().map(t=>[t,t]);
-  const active=["q","status","lane","fit","values","culture","source","tag","found","conflict"].filter(k=>view[k]).length;
-  const nf=active-(view.q?1:0);
-  return `<form class="fbar${filtersOpen?" open":""}" id="fbar">
-    <label for="q"><span class="qlbl">Search company, title or notes</span><input id="q" class="search" value="${esc(view.q)}" placeholder="Search, e.g. solar, payments"></label>
-    <div class="fields">
-      <label for="fv-status">Status<select id="fv-status" data-v="status">${opts(statusList,view.status,"Any")}</select></label>
-      <label for="fv-lane">Lane<select id="fv-lane" data-v="lane">${opts(LANES.map(l=>[l,l]),view.lane,"Any")}</select></label>
-      <label for="fv-fit">Experience<select id="fv-fit" data-v="fit">${opts([["strong","Strong"],["maybe","Partial"],["stretch","Stretch"]],view.fit,"Any")}</select></label>
-      <label for="fv-values">Values<select id="fv-values" data-v="values">${opts([["good+","Good or better"],["great","Great"],["good","Good"],["neutral","Neutral"],["no","No"]],view.values,"Any")}</select></label>
-      <label for="fv-culture">Culture<select id="fv-culture" data-v="culture">${opts([["good+","Good or better"],["great","Great"],["good","Good"],["maybe","Maybe"],["no","No"],["unrated","Unrated"]],view.culture,"Any")}</select></label>
-      <label for="fv-source">Source<select id="fv-source" data-v="source">${opts(sources,view.source,"Any")}</select></label>
-      ${tags.length?`<label for="fv-tag">Tag<select id="fv-tag" data-v="tag">${opts(tags,view.tag,"Any")}</select></label>`:""}
-      <label for="fv-found">Found<select id="fv-found" data-v="found">${opts([["1","Today"],["7","Last 7 days"],["30","Last 30 days"]],view.found,"Any time")}</select></label>
-      <label for="fv-conflict">Product conflict<select id="fv-conflict" data-v="conflict">${opts([["flag","Flagged"],["clear","No conflict"]],view.conflict,"Any")}</select></label>
-      <label for="fv-sort">Sort<select id="fv-sort" data-v="sort">${[["fit","Best match"],["culture","Best culture"],["found","Newest found"],["posted","Newest posted"],["updated","Recently changed"],["followup","Follow-up date"]].map(([v,l])=>`<option value="${v}"${v===view.sort?" selected":""}>${l}</option>`).join("")}</select></label>
+  const set=sheetSet(), any=!!view.q||set.length>0||CHIPS.some(([,,k,v])=>view[k]===v), cur=sortOf();
+  const chips=CHIPS.map(([id,label,k,v])=>`<button class="chipbtn" type="button" data-chip="${id}" aria-pressed="${view[k]===v}">${view[k]===v?ic('<path d="M5 12l5 5L20 7"/>'):""}${label}</button>`).join("")
+    +set.map(([k,label])=>`<button class="chipbtn unset" type="button" data-unset="${k}" aria-label="Remove filter ${esc(label)}">${esc(label)}${ic('<path d="M6 6l12 12M18 6L6 18"/>')}</button>`).join("");
+  return `<form class="fbar" id="fbar">
+    <div class="frow">
+      <label for="q"><span class="qlbl">Search company, title or notes</span><input id="q" class="search" value="${esc(view.q)}" placeholder="Search roles"></label>
+      <button class="btn" type="button" id="fsort" aria-expanded="${sortOpen}" aria-controls="fsortSheet" aria-label="Sort: ${esc(sortName(cur))}">${ic('<path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/>')}Sort</button>
+      <button class="btn" type="button" id="ftoggle" aria-expanded="${filtersOpen}" aria-controls="ffields">${ic('<path d="M4 6h16M7 12h10M10 18h4"/>')}Filters${set.length?`<span class="fn">${set.length}</span>`:""}</button>
     </div>
-    <div class="foot"><span id="fcount" role="status"></span><button class="btn" type="button" id="ftoggle" aria-expanded="${filtersOpen}">${filtersOpen?"Hide filters":"Filters and sort"}${nf?` (${nf})`:""}</button>${active?`<button class="linkbtn" type="button" id="fclear">Clear filters</button>`:""}</div>
+    <div class="chips" role="group" aria-label="Quick filters">${chips}</div>
+    <div class="foot"><span id="fcount" role="status"></span>${any?`<button class="linkbtn" type="button" id="fclear">Clear all</button>`:""}</div>
+    <div class="sheet${sortOpen?" open":""}" id="fsortSheet" role="dialog" aria-label="Sort">
+      <h2>Sort ${esc((TABS.find(t=>t.id===tab)||{}).label||"")}</h2>
+      <fieldset class="sorts"><legend class="qlbl">Sort roles by</legend>${SORTS.map(([v,l,h])=>`<label for="fsort-${v}"><input type="radio" name="fsort" id="fsort-${v}" value="${v}"${v===cur?" checked":""}><span>${l}<small>${h}${v===DEF_SORT[tab]?" · default here":""}</small></span></label>`).join("")}</fieldset>
+    </div>
+    <div class="sheet${filtersOpen?" open":""}" id="ffields" role="dialog" aria-label="More filters">
+      <h2>More filters</h2>
+      <div class="fields">
+        <label for="fv-lane">Lane<select id="fv-lane" data-v="lane">${opts(LANES.map(l=>[l,l]),view.lane,"Any")}</select></label>
+        <label for="fv-found">Found<select id="fv-found" data-v="found">${opts([["7","This week"],["30","Last 30 days"]],view.found==="1"?"":view.found,"Any time")}</select></label>
+        <label for="fv-source">Source<select id="fv-source" data-v="source">${opts(sources,view.source,"Any")}</select></label>
+        ${tags.length?`<label for="fv-tag">Tag<select id="fv-tag" data-v="tag">${opts(tags,view.tag,"Any")}</select></label>`:""}
+        <label for="fv-conflict">Product conflict<select id="fv-conflict" data-v="conflict">${opts([["flag","Flagged"],["clear","No conflict"]],view.conflict,"Any")}</select></label>
+        ${tab==="all"?`<label for="fv-status">Status<select id="fv-status" data-v="status">${opts(STATUSES,view.status,"Any")}</select></label>`:""}
+      </div>
+      <div class="sbar">${set.length?`<button class="btn" type="button" id="freset">Reset</button>`:""}<button class="primary" type="button" id="fdone">Done</button></div>
+    </div>
+    <button type="button" id="fscrim" class="${filtersOpen||sortOpen?"on":""}" aria-label="Close" tabindex="-1"></button>
   </form>`;
 }
+const sortName=k=>(SORTS.find(s=>s[0]===k)||SORTS[0])[1];
+// Filters set in the sheet, as [key, chip label] (RR-FS-4). Status counts only on the All tab.
+function sheetSet(){
+  const out=[];
+  if(view.lane) out.push(["lane","Lane: "+view.lane]);
+  if(view.found==="7"||view.found==="30") out.push(["found",view.found==="7"?"This week":"Last 30 days"]);
+  if(view.source) out.push(["source","Source: "+srcName(view.source)]);
+  if(view.tag) out.push(["tag","Tag: "+view.tag]);
+  if(view.conflict) out.push(["conflict",view.conflict==="flag"?"Conflict flagged":"No conflict"]);
+  if(tab==="all"&&view.status) out.push(["status","Status: "+(STATUS_LABEL[view.status]||view.status)]);
+  return out;
+}
+function closeSheets(focusId){ filtersOpen=false; sortOpen=false; render(); if(focusId) $("#"+focusId)?.focus(); }
 function applyView(list){
   const q=view.q.trim().toLowerCase();
   return list.filter(j=>{
     if(q&&!([j.company,j.title,j.notes,j.fitNote,j.nextStep,j.referral,tagsOf(j).join(" ")].join(" ").toLowerCase().includes(q))) return false;
-    if(view.status&&st(j)!==view.status) return false;
+    if(tab==="all"&&view.status&&st(j)!==view.status) return false;
     if(view.lane&&j.lane!==view.lane) return false;
     if(view.fit&&(j.fit||"").toLowerCase()!==view.fit) return false;
     if(view.values||view.culture){const f=fitsOf(j); if(f&&(!rateMatch(view.values,f.values.rating)||!rateMatch(view.culture,f.culture.rating))) return false;}
@@ -697,14 +762,16 @@ function applyView(list){
 }
 function sortList(list){
   const rank={strong:0,maybe:1,stretch:2};
+  // Culture then values ranks, worked out once per role per sort (sorting 2,000 roles stays quick, RR-H-21).
+  const memo=new Map(), fr=j=>{ if(!memo.has(j)) memo.set(j,fitsOf(j)); return memo.get(j); };
+  const cult=(a,b)=>{const fa=fr(a),fb=fr(b); return fa&&fb?(RATE_RANK[fa.culture.rating]-RATE_RANK[fb.culture.rating])||(RATE_RANK[fa.values.rating]-RATE_RANK[fb.values.rating]):0;};
   const by={
-    fit:(a,b)=>((typeof b.score==="number"?b.score:-1)-(typeof a.score==="number"?a.score:-1))||(rank[(a.fit||"").toLowerCase()]??3)-(rank[(b.fit||"").toLowerCase()]??3)||String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
-    culture:(a,b)=>{const fa=fitsOf(a),fb=fitsOf(b); const c=fa&&fb?(RATE_RANK[fa.culture.rating]-RATE_RANK[fb.culture.rating])||(RATE_RANK[fa.values.rating]-RATE_RANK[fb.values.rating]):0; return c||by.fit(a,b);},
+    // Best match: score, then culture and values (the old "Best culture" sort folded in), then experience, then newest.
+    fit:(a,b)=>((typeof b.score==="number"?b.score:-1)-(typeof a.score==="number"?a.score:-1))||cult(a,b)||(rank[(a.fit||"").toLowerCase()]??3)-(rank[(b.fit||"").toLowerCase()]??3)||String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     found:(a,b)=>String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
-    posted:(a,b)=>String(b.postedAt||"").localeCompare(String(a.postedAt||"")),
     updated:(a,b)=>String(b.statusAt||b.firstSeen||"").localeCompare(String(a.statusAt||a.firstSeen||"")),
     followup:(a,b)=>String(a.followUpDue||"9999").localeCompare(String(b.followUpDue||"9999"))};
-  return list.sort(by[view.sort]||by.fit);
+  return list.sort(by[sortOf()]||by.fit);
 }
 function addRoleForm(){
   return `<details class="more" id="addRole"${openMore.has("_add")?" open":""} data-more="_add"><summary>Add a role found somewhere else</summary>
@@ -1226,7 +1293,7 @@ function render(){
   const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
   const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
   if(keep&&keep.isConnected&&document.activeElement!==keep) keep.focus({preventScroll:true});
-  const c=$("#fcount"); if(c){ c.textContent=r.total?`Showing ${r.shown} of ${r.total}`:""; c.toggleAttribute("data-all",r.shown===r.total); }
+  const c=$("#fcount"); if(c){ const n=r.shown===r.total?`${r.total} ${r.total===1?"role":"roles"}`:`${r.shown} of ${r.total} roles`; c.textContent=r.total?`${n} · ${sortName(sortOf())}`:""; }
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
 function softRender(){ const a=document.activeElement; if(a&&a.closest&&a.closest("form")&&a.closest("form").id!=="fbar"){renderTabs();return;} render(); }
@@ -1345,7 +1412,7 @@ function focusRole(anchor){
   const find=()=>{const el=document.getElementById(anchor); return el&&el.matches("#view article.job")?el:null;};
   let el=find();
   if(!el){ tab="all"; view.status=""; saveView(); setUrlTab(tab,anchor); render(); el=find(); }
-  if(!el){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); el=find(); }
+  if(!el){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); el=find(); }
   if(!el) return false;
   el.classList.add("target"); el.addEventListener("blur",()=>el.classList.remove("target"),{once:true});
   el.focus({preventScroll:true});
@@ -1399,10 +1466,18 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="critReset"){ critDraft=null; critErr=""; critFrom=null; render(); return; }
   if(e.target.id==="critExample"){ critDraft=exampleCriteria(); critErr=""; render(); $("#critText")?.focus({preventScroll:true}); toast("Example loaded. Change it to fit your search, then Save criteria."); return; }
   if(e.target.id==="reloadPage"){ location.reload(); return; }
-  if(e.target.id==="ftoggle"){ filtersOpen=!filtersOpen; render(); return; }
-  if(e.target.id==="fclear"){ view={...DEF_VIEW,sort:view.sort}; saveView(); render(); return; }
+  const fb=e.target.closest("#ftoggle,#fsort");
+  if(fb){ const f=fb.id==="ftoggle", open=!(f?filtersOpen:sortOpen); filtersOpen=f&&open; sortOpen=!f&&open; render();
+    if(open) $(f?"#ffields select":"#fsortSheet input:checked")?.focus(); else $("#"+fb.id)?.focus(); return; }
+  if(e.target.id==="fdone"||e.target.id==="fscrim"){ closeSheets(filtersOpen?"ftoggle":"fsort"); return; }
+  if(e.target.id==="freset"){ for(const k of SHEET_KEYS) if(k!=="found"||view.found!=="1") view[k]=""; saveView(); render(); $("#fdone")?.focus(); return; }
+  const ch=e.target.closest("[data-chip]");
+  if(ch){ const c=CHIPS.find(x=>x[0]===ch.dataset.chip); if(c){ view[c[2]]=view[c[2]]===c[3]?"":c[3]; saveView(); render(); $(`[data-chip="${c[0]}"]`)?.focus(); } return; }
+  const un=e.target.closest("[data-unset]");
+  if(un){ view[un.dataset.unset]=""; saveView(); render(); ($(".fbar [data-unset]")||$("#ftoggle"))?.focus(); return; }
+  if(e.target.id==="fclear"){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); $("#q")?.focus(); return; }
   const t=e.target.closest("[data-tab]");
-  if(t){tab=t.dataset.tab; view.status=""; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); return;}
+  if(t){tab=t.dataset.tab; view.status=""; filtersOpen=false; sortOpen=false; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); return;}
   const fa=e.target.closest("[data-fbaccept]");
   if(fa){ acceptSuggestion(fa.dataset.fbaccept); return; }
   const fd=e.target.closest("[data-fbdismiss]");
@@ -1443,8 +1518,9 @@ document.addEventListener("change",async e=>{
     await setStatus(j,s.value,null,{undo:true}); render();
     // Still listed (All roles): stay on its menu. Moved off this tab: go to the card that took its place.
     requestAnimationFrame(()=>{ const again=document.getElementById("st-"+id); if(again) again.focus(); else focusCardAfter(Math.max(0,i)); }); return; }
+  if(e.target.name==="fsort"&&e.target.closest("#fbar")){ view.sorts={...view.sorts,[tab]:e.target.value}; saveView(); closeSheets("fsort"); return; }
   const f=e.target.closest("#fbar [data-v]");
-  if(f){ view[f.dataset.v]=f.value; saveView(); render(); }
+  if(f){ const id=f.id; view[f.dataset.v]=f.value; saveView(); render(); $("#"+id)?.focus(); }
 });
 document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; const has=!!critDraft.trim(); $("#critSave")?.classList.toggle("cta",has); $("#critExample")?.classList.toggle("cta",!has); clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
 document.addEventListener("submit",async e=>{
@@ -1524,6 +1600,7 @@ document.addEventListener("submit",async e=>{
 });
 
 document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&(filtersOpen||sortOpen)){ closeSheets(filtersOpen?"ftoggle":"fsort"); return; }
   if(e.key==="Escape"&&preview&&!$("#applyDlg").open){ closePreview(); return; }
   if(e.target.id!=="critText"||e.key!=="Tab"||e.shiftKey) return;
   e.preventDefault(); const t=e.target, a=t.selectionStart; t.setRangeText("  ",a,t.selectionEnd,"end"); critDraft=t.value;

@@ -146,7 +146,7 @@ const openPrivate = (opts: Opts = {}) => openDemo({ html: buildDemo(), ...opts }
 const openEmpty = (opts = {}) => openDemo({ html: buildDemo({ seed: {} }), ready: "#tab-inbox", ...opts });
 const filterFieldsShown = (page: Page) => page.locator("#fbar .fields").evaluate((el: HTMLElement) => !!el.offsetParent && el.getBoundingClientRect().height > 0);
 
-test("RR-UX4-1 filters start collapsed behind 'Filters and sort' at every width, so Pipeline's first role shows on a laptop screen", async () => {
+test("RR-UX4-1 filters start collapsed behind the Filters button at every width, so Pipeline's first role shows on a laptop screen", async () => {
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openPrivate(vp);
     for (const id of ["inbox", "pipeline", "all"]) {
