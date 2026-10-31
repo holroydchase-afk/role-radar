@@ -48,8 +48,9 @@ test("Follow-up sent counts toward today's bar and sets the next follow-up", asy
 test("a status move is kept in statusHistory, so the funnel keeps a Screen after a rejection", async () => {
   const { page, errors } = await openDemo();
   await page.click("#tab-pipeline");
-  const sel = page.locator("select[data-setstatus=ashby-1008]");
-  await sel.selectOption("rejected");
+  await page.locator("#role-ashby-1008 button[data-details]").click();
+  await page.locator("#detailsSheet").getByLabel("Status", { exact: true }).selectOption("rejected");
+  await page.keyboard.press("Escape");
   await openTab(page, "progress");
   const funnel = await page.locator("section[aria-labelledby=pg-funnel] .bars li").allInnerTexts();
   assert.match(funnel[1].replace(/\s+/g, " "), /^Screen 2/);

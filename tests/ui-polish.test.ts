@@ -19,8 +19,18 @@ const accentRgb = (page: Page) => page.evaluate(() => {
   const c = getComputedStyle(s).color; s.remove(); return c;
 });
 
-// On a phone Values/Culture and the score math sit behind each card's "Why <score>?" (RR-UX6-2): open them to measure.
-const openWhys = (page: Page) => page.evaluate(() => document.querySelectorAll<HTMLElement>('.job .whybtn[aria-expanded="false"]').forEach((b) => b.offsetParent && b.click()));
+// RR-M4.3: Values/Culture and the score math live in each role's Details sheet. Opens it for the first n cards on the
+// open tab and returns fn's result for each sheet, in card order.
+async function inDetails<T>(page: Page, n: number, fn: (sheet: HTMLElement) => T): Promise<T[]> {
+  const out: T[] = [], cards = page.locator("#view article.job"), k = Math.min(n, await cards.count());
+  for (let i = 0; i < k; i++) {
+    await cards.nth(i).locator("button[data-details]").click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    out.push(await page.locator("#detailsSheet").evaluate(fn as any) as T);
+    await page.keyboard.press("Escape");
+  }
+  return out;
+}
 
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
@@ -106,12 +116,11 @@ test("RR-UX3-4 each New card has one primary action and laptop-sized targets", a
   await phone.page.close();
 });
 
-test("RR-UX3-5 the Values/Culture text column lines up across every card", async () => {
+test("RR-UX3-5 the Values/Culture text column lines up across every role's Details", async () => {
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openDemo({ ...vp, query: "" });
     await page.click("#tab-all");
-    await openWhys(page);
-    const xs = await page.locator(".job .fitr .r").evaluateAll((els: HTMLElement[]) => els.map((e) => e.getBoundingClientRect().left));
+    const xs = (await inDetails(page, 4, (el) => [...el.querySelectorAll<HTMLElement>(".fitr .r")].map((e) => e.getBoundingClientRect().left))).flat();
     assert.ok(xs.length >= 4, "fit rows on several cards");
     const spread = Math.max(...xs) - Math.min(...xs);
     assert.ok(spread <= 1, `text column x varies by ${Math.round(spread)}px at ${vp.width}`);
@@ -189,17 +198,16 @@ test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targ
   await page.close();
 });
 
-test("RR-UX4-3 on a phone each Values/Culture reason sits under its label and uses the card's width", async () => {
+test("RR-UX4-3 on a phone each Values/Culture reason in Details sits under its label and uses the sheet's width", async () => {
   const { page } = await openPrivate(PHONE);
   await page.click("#tab-all");
-  await openWhys(page);
-  const rows = await page.locator(".job .fitr").evaluateAll((els: HTMLElement[]) => els.flatMap((f) => {
+  const rows = (await inDetails(page, 3, (el) => [...el.querySelectorAll<HTMLElement>(".fitr")].flatMap((f) => {
     const fw = f.getBoundingClientRect().width, ks = [...f.querySelectorAll<HTMLElement>(".k")];
     return [...f.querySelectorAll<HTMLElement>(".r")].map((r, i) => {
       const rb = r.getBoundingClientRect(), kb = ks[i]?.getBoundingClientRect();
       return { below: kb ? rb.top >= kb.bottom - 1 : false, ratio: rb.width / fw };
     });
-  }));
+  }))).flat();
   assert.ok(rows.length >= 4);
   for (const r of rows) {
     assert.ok(r.below, "reason starts below its label row");
@@ -254,15 +262,14 @@ test("RR-UX4-6 first run with no criteria: New's empty state points to Criteria"
   await page.close();
 });
 
-test("RR-UX4-7 on a phone the score math is small and at most two lines", async () => {
+test("RR-UX4-7 on a phone the score math in Details is small and at most two lines", async () => {
   const { page } = await openPublic(PHONE);
-  await openWhys(page);
-  const m = await page.locator(".job .score-math, .job .why-score").evaluateAll((els: HTMLElement[]) => els.map((e) => {
+  const m = (await inDetails(page, 3, (el) => [...el.querySelectorAll<HTMLElement>(".score-math, .why-score")].map((e) => {
     const cs = getComputedStyle(e), fs = parseFloat(cs.fontSize);
     const lh = cs.lineHeight === "normal" ? fs * 1.2 : parseFloat(cs.lineHeight);
     return { fs, h: e.getBoundingClientRect().height, lh };
-  }));
-  assert.ok(m.length >= 3, "score math on several New cards");
+  }))).flat();
+  assert.ok(m.length >= 3, "score math for several New roles");
   for (const x of m) {
     assert.ok(x.fs <= 13.5, `score math ${x.fs}px`);
     assert.ok(x.h <= 2.6 * x.lh, `score math ${Math.round(x.h)}px tall = ${(x.h / x.lh).toFixed(1)} lines`);
@@ -341,17 +348,28 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
   const seen = new Set();
   for (const id of ["pipeline", "all"]) {
     await openTab(page, id);
-    const cards = await page.locator("#view article.job").evaluateAll((els: HTMLElement[]) => els.map((c) => ({
-      title: c.querySelector("h2")?.textContent.trim(),
-      status: c.querySelector<HTMLSelectElement>("select[data-setstatus]")?.value,
-      apply: [...c.querySelectorAll<HTMLElement>("button, a")].filter((b) => b.offsetParent && (b.matches("[data-apply]") || /^\s*apply\b/i.test(b.textContent))).map((b) => b.textContent.trim()),
-    })));
-    for (const c of cards) {
+    // RR-M4.3: Apply is the card's primary on new/viewed/saved; on Applying the card leads with "I submitted it" and
+    // Apply (Re-run intake) sits in Details. Status comes from the role, since the status menu moved to Details.
+    const applyIn = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>("button, a")].filter((b) => b.offsetParent && (b.matches("[data-apply]") || /^\s*apply\b/i.test(b.textContent!))).map((b) => b.textContent!.trim());
+    const cards = await page.locator("#view article.job").evaluateAll((els: HTMLElement[], src) => { const applyIn = (0, eval)(src); const list = (0, eval)("jobs"); return els.map((c) => ({
+      title: c.querySelector("h2")?.textContent!.trim(),
+      status: list.find((j: any) => "role-" + String(j._id).replace(/[^A-Za-z0-9_-]/g, "_") === c.id)?.status || "new",
+      apply: applyIn(c) as string[],
+    })); }, applyIn.toString());
+    for (const [i, c] of cards.entries()) {
       seen.add(c.status);
-      if (["applied", "screen", "interviewing", "offer"].includes(c.status!))
-        assert.deepEqual(c.apply, [], `${id}: '${c.title}' (${c.status}) still shows ${c.apply.join(", ")}`);
-      if (["new", "viewed", "saved", "applying"].includes(c.status!))
+      let sheet: string[] = [];
+      if (["applying", "applied", "screen", "interviewing", "offer"].includes(c.status)) {
+        await page.locator("#view article.job").nth(i).locator("button[data-details]").click();
+        sheet = await page.locator("#detailsSheet").evaluate(applyIn);
+        await page.keyboard.press("Escape");
+      }
+      if (["applied", "screen", "interviewing", "offer"].includes(c.status))
+        assert.deepEqual([...c.apply, ...sheet], [], `${id}: '${c.title}' (${c.status}) still shows ${[...c.apply, ...sheet].join(", ")}`);
+      if (["new", "viewed", "saved"].includes(c.status))
         assert.ok(c.apply.length >= 1, `${id}: '${c.title}' (${c.status}) lost its Apply`);
+      if (c.status === "applying")
+        assert.ok(sheet.length >= 1, `${id}: '${c.title}' (applying) has no Apply in Details`);
     }
   }
   assert.ok(["applied", "screen", "interviewing"].some((s) => seen.has(s)), `demo covers applied-or-later cards (saw ${[...seen].join(", ")})`);
@@ -397,7 +415,8 @@ test("RR-UX6-1 at >=900px every tab is fully visible with no sideways tab scroll
   assert.deepEqual(bad, []);
 });
 
-test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score math behind a 'why' disclosure, <=4 actions, Save the only primary", async () => {
+// RR-M4.3: the 'why' disclosure became the Details sheet (tests/card.test.ts holds the tighter 240px limit).
+test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score math in Details, <=4 actions, Save the only primary", async () => {
   const { page } = await openPublic(PHONE);
   await page.click("#tab-inbox");
   const accent = await accentRgb(page);
@@ -418,11 +437,12 @@ test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score ma
     if (m.fitr || m.why) bad.push(`${tag}: Values/Culture (.fitr ${m.fitr}) or score math (.why-score ${m.why}) visible by default`);
     if (m.ctl.length > 4) bad.push(`${tag}: ${m.ctl.length} action controls (${m.ctl.join(", ")})`);
     if (m.filled.length !== 1 || !/^save$/i.test(m.filled[0] || "")) bad.push(`${tag}: filled primaries [${m.filled.join(", ")}]`);
-    const why = c.locator("summary, button[aria-expanded]").filter({ hasText: /why/i }).first();
-    if (!(await why.count())) { bad.push(`${tag}: no 'why' disclosure`); continue; }
+    const why = c.locator("button[data-details]");
+    if (!(await why.count())) { bad.push(`${tag}: no Details button`); continue; }
     await why.click();
-    const open = await c.evaluate((el) => ["fitr", "why-score"].map((k) => [...el.querySelectorAll<HTMLElement>("." + k)].some((x) => !!x.offsetParent && x.getBoundingClientRect().height > 2)));
-    if (!open.every(Boolean)) bad.push(`${tag}: opening 'why' shows .fitr ${open[0]}, .why-score ${open[1]}`);
+    const open = await page.locator("#detailsSheet").evaluate((el) => ["fitr", "why-score"].map((k) => [...el.querySelectorAll<HTMLElement>("." + k)].some((x) => !!x.offsetParent && x.getBoundingClientRect().height > 2)));
+    if (!open.every(Boolean)) bad.push(`${tag}: Details shows .fitr ${open[0]}, .why-score ${open[1]}`);
+    await page.keyboard.press("Escape");
   }
   await page.close();
   assert.deepEqual(bad, []);

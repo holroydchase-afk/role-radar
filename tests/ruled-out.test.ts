@@ -81,7 +81,10 @@ test("a skipped card says when and why it was ruled out", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
   const card = page.locator("article.job", { hasText: "Copperleaf" });
-  assert.match(await card.innerText(), /Ruled out \w{3} \d{1,2}: Not remote/);
+  // RR-M4.3: the card shows when (its one date); Details shows when and why.
+  assert.match(await card.locator(".meta").innerText(), /Ruled out \w{3} \d{1,2}/);
+  await card.locator("button[data-details]").click();
+  assert.match(await page.locator("#detailsSheet").innerText(), /Ruled out \w{3} \d{1,2}: Not remote/);
   await page.close();
 });
 

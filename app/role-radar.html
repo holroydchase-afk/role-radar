@@ -76,9 +76,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .meta{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.85rem}
 .note{margin:0;font-size:.92rem;max-width:65ch}
 .chip{font:600 .8rem/1.3 var(--f-body);padding:3px 10px;border-radius:999px;white-space:nowrap}
-.fit-strong{background:var(--good-soft);color:var(--good)}
-.fit-maybe{background:var(--warn-soft);color:var(--warn)}
-.fit-stretch{background:var(--bad-soft);color:var(--bad)}
 .st{background:var(--accent-soft);color:var(--accent)}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
 /* Buttons: one solid-accent primary per card or form (.cta / .primary), the rest outlined. 36px on desktop, 44px on touch. */
@@ -115,7 +112,7 @@ textarea{min-height:64px;resize:vertical}
 .primary:hover{filter:brightness(1.08)}
 .primary:disabled{opacity:.55;cursor:default;filter:none}
 .toast-act{background:none;border:0;color:inherit;font:inherit;font-weight:600;text-decoration:underline;padding:4px 6px;margin-left:6px;cursor:pointer}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem}
+.toast{position:fixed;z-index:40;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem}
 .search{width:100%;box-sizing:border-box}
 .apply-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:2px}
 .resume{font:500 .86rem var(--f-body);color:var(--accent);text-decoration:none;min-width:0;overflow-wrap:anywhere}
@@ -177,10 +174,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 .lane{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .tag{font:500 .76rem var(--f-body);padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--ink)}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
-.why{font:600 .8rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;justify-self:start}
-.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.ctl .acts{display:contents}
-.ctl select{padding:0 8px;min-height:36px;font-size:.875rem}
-@media (max-width:600px), (pointer:coarse){.ctl select,.primary{min-height:44px}}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media (max-width:600px), (pointer:coarse){.primary{min-height:44px}}
 .skipwhy{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
 .skipwhy input{flex:1 1 100%;font:inherit;font-size:.88rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 9px;min-width:0}
 .gmlist a{color:var(--accent)}
@@ -232,7 +227,6 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .st-applying{background:var(--warn-soft);color:var(--warn)}
 .st-skipped,.st-rejected,.st-closed{background:var(--bad-soft);color:var(--bad)}
 .count{font-size:.85rem;color:var(--muted);margin:0}
-.conflict{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)}
 .crit{display:grid;gap:14px}
 .ccard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px;min-width:0}
 .main{display:grid;gap:18px}
@@ -274,15 +268,27 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .rec .next{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.9rem}
 .rec .next b{font-weight:600}
 .why-score{font:400 .72rem/1.45 var(--f-mono);color:var(--muted)}
-/* "Why <score>?": Values/Culture and the score math, open on wide screens, one tap away on a phone (RR-UX6-2). */
-.whybox{display:grid;gap:6px}.whybtn{display:none}
-@media (max-width:600px){.whybtn{display:inline-flex;align-items:center;gap:4px;min-height:44px;margin-block:-12px}.whybtn::after{content:"\25BE";font-size:.8em}.whybtn[aria-expanded="true"]::after{content:"\25B4"}
-  .whybox:not(.open){display:none}.ctl .wide-only{display:none}
-  /* One row of actions: status picker takes the spare width, its visible "Status" word stays for screen readers. */
-  .ctl label.sr{flex:1 1 96px;min-width:0}.ctl label.sr select{width:100%;min-width:0}.ctl>.btn,.ctl .acts>.btn{flex:none;padding-inline:12px}
-  /* The card's actions wrap as one group under Status, never one by one (RR-UX7-2). */
-  .ctl .acts{display:flex;flex:none;flex-wrap:nowrap;gap:6px;max-width:100%}
-  .ctl .stl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+/* RR-M4.3 card: Fit · Values · Culture under the title, one meta line, one reason line (2 lines on a phone, 1 from 900px). */
+.job .subscores{margin:-2px 0 0;font-size:.8125rem;line-height:1.35;color:var(--muted)}
+.job .subscores .mono{color:var(--ink)}
+.job .meta{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+.job .reason{margin:0;font-size:.9375rem;max-width:65ch;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+@media (min-width:900px){.job .reason{-webkit-line-clamp:1}}
+@media (max-width:600px){.job{padding:12px 14px;gap:6px}.job .reason{line-height:1.4}
+  /* Up to 4 actions in one row from 380px: buttons shrink and a two-word label wraps between its words (RR-UX7-2). */
+  .job .ctl{flex-wrap:nowrap}.job .ctl .btn{flex:0 1 auto;min-width:min-content;padding-inline:9px;white-space:normal;overflow-wrap:normal;line-height:1.15;text-align:center}}
+@media (max-width:379px){.job .ctl{flex-wrap:wrap}}
+/* Details: the More/Filters sheet pattern. A bottom sheet over a dimmed page on phones, a right-hand panel from 900px. */
+#detailsSheet{position:fixed;z-index:31;left:0;right:0;bottom:0;max-height:85vh;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;background:var(--surface);color:var(--ink);border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+#dscrim{position:fixed;inset:0;z-index:30;background:rgba(23,32,29,.42);border:0;padding:0}
+#detailsSheet[hidden],#dscrim[hidden]{display:none}
+@media (min-width:900px){#detailsSheet{top:0;left:auto;width:min(460px,40vw);max-height:none;border-radius:0;border-left:1px solid var(--line);padding:18px 20px;box-shadow:-8px 0 24px rgba(0,0,0,.14)}#dscrim{background:rgba(23,32,29,.18)}}
+#detailsSheet form{display:grid;gap:14px}
+.ds-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ds-head .co{font:600 .8rem var(--f-body);color:var(--muted)}
+.ds-head h2{font-family:var(--f-display);font-weight:500;font-size:1.2rem;line-height:1.25;margin:2px 0 0;text-wrap:balance}
+.ds-sec{display:grid;gap:6px}.ds-sec h3{font:600 .9rem var(--f-body);margin:0}.ds-sec .hint{margin:0}
+#detailsSheet .sbar{display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:-16px;background:var(--surface);padding-block:8px}
 .why-score span{white-space:nowrap}
 .dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
 /* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
@@ -368,6 +374,8 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   </main>
 </div>
 <aside id="preview" role="region" aria-labelledby="pvTitle" hidden></aside>
+<button type="button" id="dscrim" aria-label="Close details" tabindex="-1" hidden></button>
+<div id="detailsSheet" role="dialog" aria-modal="true" aria-labelledby="dsTitle" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <dialog id="applyDlg" aria-labelledby="applyTitle">
   <h3 id="applyTitle">Start intake</h3>
@@ -404,7 +412,6 @@ let config={...DEF_CONFIG};
 let LANES=config.lanes, SKIP_REASONS=config.skipReasons;
 function setConfig(c){config={...DEF_CONFIG,...(c||{})}; LANES=config.lanes; SKIP_REASONS=config.skipReasons;}
 const ATS=["greenhouse","ashby","lever"];
-const FIT_LABEL={strong:"strong",maybe:"partial",stretch:"stretch"};
 const DEF_VIEW={q:"",status:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",sorts:{}};
 // Four sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7).
 const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"]];
@@ -438,10 +445,10 @@ const PG=window.RoleRadarProgress||null;
 const SF=window.RoleRadarSkipFeedback||null;
 let skipFb=null, critFrom=null;
 // Preview panel: which role is open, and descriptions loaded this visit (never saved).
-let preview=null, previewFrom=null; const postings=new Map();
+let preview=null, previewFrom=null;
 // jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
 let jobsState="loading", dbChecked=false;
-let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), openWhy=new Set(), skipOpen=null;
+let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view=migrateView(v);}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
 // Views saved by the old filter bar (one global sort, Experience/Values/Culture dropdowns) load as the nearest new view (RR-FS-6).
@@ -592,7 +599,7 @@ function datesLine(j){
   if(j.followUpDue&&st(j)==="applied"){const due=j.followUpDue<=today(); p.push(`<span class="${due?"due":""}">Follow up <b>${fmtDate(j.followUpDue)}</b></span>`);}
   const shownAt={viewed:j.viewedAt,applied:j.appliedAt}[st(j)];
   if(j.statusAt&&!INBOX.includes(st(j))&&!(shownAt&&fmtDate(shownAt)===fmtDate(j.statusAt))) p.push(`${esc(STATUS_LABEL[st(j)]||st(j))} since <b>${fmtDate(j.statusAt)}</b>`);
-  return p.length?`<div class="dates">${p.join("")}</div>`:"";
+  return p.length?`<div class="dates">${p.map(x=>`<span>${x}</span>`).join("")}</div>`:"";
 }
 // How the criteria arrive at this role's score, using the same rules as the scan.
 function scoreLine(j){
@@ -620,29 +627,51 @@ function rateMatch(want,got){ if(!want) return true; if(want==="good+") return g
 const SRC_NAMES={greenhouse:"Greenhouse",ashby:"Ashby",lever:"Lever",ziprecruiter:"ZipRecruiter",himalayas:"Himalayas",climatebase:"Climatebase",alert:"Job alert",gmail:"Gmail",manual:"Added by hand",intake:TOOLS?"Intake chat":"Added by hand"};
 const srcName=s=>SRC_NAMES[s]||s;
 function isSampleUrl(u){ if(!window.__RR_DEMO__||!u) return false; try{ return /(^|\.)example\.(com|org|net)$/.test(new URL(u).hostname); }catch(_){ return false; } }
+// RR-M4.3: the tile, the sub-scores and "Best match" all read the computed score (scoreJob over the loaded criteria),
+// worked out once per role per criteria object. A snapshot replaces the job objects, so the memo never goes stale.
+let scoreMemo=new WeakMap(), scoreSpec=null;
+function scoreOf(j){
+  if(!SC||!specData) return null;
+  if(scoreSpec!==specData){ scoreMemo=new WeakMap(); scoreSpec=specData; }
+  let r=scoreMemo.get(j); if(!r){ r=SC.scoreJob(j,specData); scoreMemo.set(j,r); } return r;
+}
+const scoreNum=j=>{const r=scoreOf(j); return r?r.score:typeof j.score==="number"?j.score:null;};
+const firstSentence=s=>(String(s||"").trim().match(/^.*?[.!?](?=\s|$)/)||[String(s||"").trim()])[0];
+const descOf=j=>j.descriptionHtml?String(j.descriptionHtml):j.descriptionPlain?String(j.descriptionPlain).split(/\n\s*\n/).map(p=>`<p>${esc(p.trim())}</p>`).join(""):"";
+const FIT_WORD={strong:"Strong",maybe:"Partial",partial:"Partial",stretch:"Stretch"};
+// Fit · Values · Culture: the score's own parts, grouped (scoreSplit). Each part's label carries its badge word.
+function subScores(j){
+  const r=scoreOf(j); if(!r||!SC.scoreSplit) return "";
+  const s=SC.scoreSplit(r,j), f=fitsOf(j), n=x=>String(x).replace("-","−");
+  const part=(k,label,v,max,word)=>`<span data-part="${k}" aria-label="${label} ${v} of ${max}${word?", "+esc(word):""}">${label} <span class="mono">${n(v)}/${max}</span></span>`;
+  // Culture reads "not checked" only when nothing was read about it and nothing (a startup penalty) moved its points.
+  const cult=!s.cultureRated&&s.culture===0?`<span data-part="culture" aria-label="Culture not checked">Culture not checked</span>`
+    :part("culture","Culture",s.culture,s.max.culture,s.cultureRated?f&&RATE_LABEL[f.culture.rating]:"not checked");
+  return `<div class="subscores">${part("fit","Fit",s.fit,s.max.fit,FIT_WORD[String(j.fit||"").toLowerCase()])}<span aria-hidden="true"> · </span>${part("values","Values",s.values,s.max.values,f&&RATE_LABEL[f.values.rating])}<span aria-hidden="true"> · </span>${cult}</div>`;
+}
+// The one date a card shows: the one for its status (UX-H-R10). All dates are in Details.
+function statusDate(j){
+  const s=st(j);
+  if(s==="new") return j.firstSeen?"Found "+fmtDate(j.firstSeen):"";
+  if(s==="viewed") return j.viewedAt?"Viewed "+fmtDate(j.viewedAt):j.firstSeen?"Found "+fmtDate(j.firstSeen):"";
+  if(s==="applied"&&j.appliedAt) return "Applied "+fmtDate(j.appliedAt);
+  if(s==="skipped"&&ruledAt(j)) return "Ruled out "+fmtDate(ruledAt(j));
+  const at=j.statusAt||j.firstSeen; return at?`${STATUS_LABEL[s]||sentence(s)} ${fmtDate(at)}`:"";
+}
+const WITHDRAW=["applied","screen","interviewing","offer"];
 function jobCard(j){
-  const id=esc(j._id), s=st(j), fit=(j.fit||"").toLowerCase(), resumeUrl=safeUrl(j.resumeUrl);
-  // Demo roles are made up: their example.com links would be dead ends, so they become a "Sample posting" note.
-  const sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url);
-  const scoreTile=typeof j.score==="number"?`<span class="score${j.score>=70?" hi":""}" title="Criteria score, 0–100">${esc(j.score)}</span>`:"";
-  const fitChip=(fit?`<span class="chip fit-${esc(fit)}" title="How well the candidate's experience matches; one part of the score">Experience: ${esc(FIT_LABEL[fit]||fit)}</span>`:"");
+  const id=esc(j._id), s=st(j), sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url), desc=!!descOf(j);
+  const n=scoreNum(j), scoreTile=n!==null?`<span class="score${n>=70?" hi":""}" title="Criteria score, 0–100">${esc(n)}</span>`:"";
   const title=String(j.title??"").trim()||"Untitled role";
-  // A status this page doesn't know (an older scan, a hand edit) is listed as itself, never shown as New.
-  const stOpts=(STATUS_LABEL[s]?"":`<option value="${esc(s)}" selected>${esc(sentence(s))}</option>`)+STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("");
-  const stChip=s!=="new"?`<span class="chip st st-${esc(s)}">${esc(STATUS_LABEL[s]||s)}</span>`:"";
-  // The public demo shows one category per card (the sector); the lane is Chase's own grouping.
-  const laneChip=j.lane&&!(window.__RR_SHOWCASE__&&j.sector)?`<span class="chip lane">${esc(j.lane)}</span>`:"";
-  const tags=tagsOf(j);
-  const cf=conflictOf(j);
-  const cfChip=cf?`<span class="chip conflict" title="Overlaps a product you're building">Conflict</span>`:"";
-  const why=tab==="action"?actionReason(j):null;
-  // Values/Culture and the score math: always shown on wide screens, behind "Why <score>?" on a phone (RR-UX6-2).
-  const whyBody=fitRows(j)+scoreLine(j), whyOpen=openWhy.has(j._id);
+  // The reason line: what to do next on Needs action, otherwise the first sentence of the fit note.
+  const reason=(tab==="action"&&actionReason(j))||firstSentence(j.fitNote);
   // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
   const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
-  const cta=INBOX.includes(s)?"save":s==="saved"&&TOOLS?"apply":s==="applying"?"applied":fupDue?"fup":"";
-  const btn=k=>`btn${cta===k?" cta":""}`;
-  const preApply=TOOLS&&(INBOX.includes(s)||s==="saved"||s==="applying"); // Apply (or Re-run intake) only until you apply
+  const primary=TOOLS&&(INBOX.includes(s)||s==="saved")?`<button class="btn cta apply" type="button" data-apply="${id}">${safeUrl(j.resumeUrl)?"Re-run intake":"Apply"}</button>`
+    :INBOX.includes(s)?`<button class="btn cta" type="button" data-quick="saved" data-job="${id}">Save</button>`
+    :s==="applying"?`<button class="btn cta" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`
+    :fupDue?`<button class="btn cta" type="button" data-fupsent="${id}">Follow-up sent</button>`:"";
+  const meta=[j.location&&esc(j.location),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
@@ -654,62 +683,64 @@ function jobCard(j){
   return `<article class="job${preview===j._id?" sel":""}" id="${roleAnchor(j._id)}" tabindex="-1">
     <div class="top"><div class="head">
       <div class="co">${esc(j.company)}</div>
-      <h2>${url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}" data-preview="${id}">${esc(title)}</a>`:sample?`<a href="#preview" role="button" data-preview="${id}">${esc(title)}</a>`:esc(title)}</h2>
+      <h2>${desc?`<a href="${url?esc(url):"#preview"}"${url?` target="_blank" rel="noopener"`:` role="button"`} data-preview="${id}">${esc(title)}</a>`:url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}">${esc(title)}</a>`:esc(title)}</h2>
     </div>${scoreTile}</div>
-    ${fitChip||cfChip||stChip?`<div class="chips">${fitChip}${cfChip}${stChip}</div>`:""}
-    ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}
-    ${why?`<div class="why">${esc(why)}</div>`:""}
-    <div class="meta">
-      ${j.location?`<span>${esc(j.location)}</span>`:""}
-      ${j.comp?`<span class="mono">${esc(j.comp)}</span>`:""}
-      <span>${esc(srcName(j.source||j.ats||""))}</span>
-      ${laneChip}
-      ${j.sector?`<span class="chip lane">${esc(j.sector)}</span>`:""}
-      ${whyBody?`<button class="linkbtn whybtn" type="button" data-why="${id}" aria-expanded="${whyOpen}" aria-controls="why-${id}">Why ${typeof j.score==="number"?esc(j.score):"this score"}?</button>`:""}
-    </div>
-    ${datesLine(j)}
-    ${whyBody?`<div class="whybox${whyOpen?" open":""}" id="why-${id}">${whyBody}</div>`:""}
-    ${tags.length?`<div class="tags">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
-    ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
-    ${j.nextStep?`<p class="note"><b>Next:</b> ${esc(j.nextStep)}</p>`:""}
-    ${j.emailNote?`<p class="note" style="color:var(--muted)">Inbox: ${esc(j.emailNote)}</p>`:""}
-    ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="note" style="color:var(--muted)">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}
-    ${TOOLS&&(preApply||resumeUrl||j.resumeName)?`<div class="apply-row">
-      ${preApply?`<button class="btn apply${cta==="apply"?" cta":""}" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
-      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:(j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:preApply?`<span class="hint">Copies an intake prompt for a new chat</span>`:"")}
-    </div>`:""}
-    <div class="ctl">
-      <label class="sr" style="display:flex;gap:6px;align-items:center"><span class="stl">Status</span>
-        <select id="st-${id}" data-setstatus="${id}">${stOpts}</select></label>
-      <span class="acts">${INBOX.includes(s)?`<button class="${btn("save")}" type="button" data-quick="saved" data-job="${id}">Save</button>`:""}
-      ${s==="applying"?`<button class="${btn("applied")}" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`:""}
-      ${fupDue?`<button class="${btn("fup")}" type="button" data-fupsent="${id}">Follow-up sent</button>`:""}
-      ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">Skip</button>`:""}
-      <button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>
-      ${url?`<a class="btn wide-only" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting</a>`:sample?`<button class="btn wide-only" type="button" data-sample="${id}">Sample posting</button>`:""}</span>
+    ${subScores(j)}
+    ${meta?`<p class="meta">${meta}</p>`:""}
+    ${reason?`<p class="reason">${esc(reason)}</p>`:""}
+    <div class="ctl">${primary}
+      ${!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">${WITHDRAW.includes(s)?"Withdraw":"Skip"}</button>`:""}
+      ${desc?`<button class="btn" type="button" data-preview="${id}" aria-expanded="${preview===j._id}">Preview</button>`:""}
+      <button class="btn" type="button" data-details="${id}" aria-haspopup="dialog" aria-controls="detailsSheet">Details</button>
     </div>
     ${skipRow}
-    <details class="more" data-more="${id}"${openMore.has(j._id)?" open":""}>
-      <summary>Lane, tags, referral, notes</summary>
-      ${openMore.has(j._id)?editForm(j):""}
-    </details>
   </article>`;
 }
 
-// The details form is built when its section opens (see the toggle listener), so a long list stays quick to draw.
-function editForm(j){
-  const id=esc(j._id), tags=tagsOf(j);
+// Details: one sheet for every role (UX-H-R4). Why this score, Status (saves on change, with Undo), dates, and
+// the fields that save together with one Save. Escape or Cancel discards; the form is rebuilt from the role on open.
+let detailsId=null;
+function detailsBody(j){
+  const id=esc(j._id), s=st(j), tags=tagsOf(j), sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url), resumeUrl=safeUrl(j.resumeUrl);
+  const preApply=TOOLS&&(INBOX.includes(s)||s==="saved"||s==="applying");
+  const cf=conflictOf(j), src=srcName(j.source||j.ats||"");
+  // A status this page doesn't know (an older scan, a hand edit) is listed as itself, never shown as New.
+  const stOpts=(STATUS_LABEL[s]?"":`<option value="${esc(s)}" selected>${esc(sentence(s))}</option>`)+STATUSES.map(([v,l])=>`<option value="${v}"${v===s?" selected":""}>${l}</option>`).join("");
   return `<form data-edit="${id}">
-        <div class="fields">
-          <label for="ln-${id}">Lane<select id="ln-${id}" name="lane"><option value="">None</option>${LANES.map(l=>`<option${l===j.lane?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
-          <label for="tg-${id}">Tags (comma separated)<input id="tg-${id}" name="tags" value="${esc(tags.join(", "))}" placeholder="priority, referral"></label>
-          <label for="rf-${id}">Referral / contact<input id="rf-${id}" name="referral" value="${esc(j.referral||"")}"></label>
-          <label for="fu-${id}">Follow up on<input id="fu-${id}" name="followUpDue" type="date" value="${esc(j.followUpDue||"")}"></label>
-        </div>
-        <label for="nx-${id}">Next step<input id="nx-${id}" name="nextStep" value="${esc(j.nextStep||"")}"></label>
-        <label for="nt-${id}">Notes<textarea id="nt-${id}" name="notes">${esc(j.notes||"")}</textarea></label>
-        <button class="primary" type="submit">Save details</button>
-      </form>`;
+    <div class="ds-head"><div style="min-width:0"><div class="co">${esc(j.company)}</div><h2 id="dsTitle">${esc(String(j.title??"").trim()||"Untitled role")}</h2></div>
+      <button class="btn" type="button" data-dclose="1">Close</button></div>
+    <section class="ds-sec" aria-labelledby="dsWhy"><h3 id="dsWhy">Why this score</h3>
+      ${fitRows(j)}${scoreLine(j)}
+      ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
+      ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}</section>
+    <section class="ds-sec"><label for="ds-st">Status</label><select id="ds-st" data-setstatus="${id}">${stOpts}</select>
+      ${datesLine(j)}${src?`<p class="hint">Found via ${esc(src)}</p>`:""}
+      ${j.emailNote?`<p class="hint">Inbox: ${esc(j.emailNote)}</p>`:""}
+      ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="hint">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}</section>
+    <div class="fields">
+      <label for="ln-${id}">Lane<select id="ln-${id}" name="lane"><option value="">None</option>${LANES.map(l=>`<option${l===j.lane?" selected":""}>${esc(l)}</option>`).join("")}</select></label>
+      <label for="tg-${id}">Tags (comma separated)<input id="tg-${id}" name="tags" value="${esc(tags.join(", "))}" placeholder="priority, referral"></label>
+      <label for="rf-${id}">Referral / contact<input id="rf-${id}" name="referral" value="${esc(j.referral||"")}"></label>
+      <label for="fu-${id}">Follow up on<input id="fu-${id}" name="followUpDue" type="date" value="${esc(j.followUpDue||"")}"></label>
+    </div>
+    <label for="nx-${id}">Next step<input id="nx-${id}" name="nextStep" value="${esc(j.nextStep||"")}"></label>
+    <label for="nt-${id}">Notes<textarea id="nt-${id}" name="notes">${esc(j.notes||"")}</textarea></label>
+    <div class="apply-row">
+      ${url?`<a class="btn" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none" data-view="${id}">Open posting ↗</a>`:sample?`<button class="btn" type="button" data-sample="${id}">Sample posting</button>`:""}
+      ${preApply?`<button class="btn apply" type="button" data-apply="${id}">${resumeUrl?"Re-run intake":"Apply"}</button>`:""}
+      ${!TOOLS?"":resumeUrl?`<a class="resume" href="${esc(resumeUrl)}" target="_blank" rel="noopener">${esc(j.resumeName||"Tailored resume")} ↗</a>`:j.resumeName?`<span class="hint">Resume: ${esc(j.resumeName)}</span>`:preApply?`<span class="hint">Copies an intake prompt for a new chat</span>`:""}
+    </div>
+    <div class="sbar"><button class="btn" type="button" data-dclose="1">Cancel</button><button class="primary" type="submit">Save</button></div>
+  </form>`;
+}
+function openDetails(id){
+  const j=jobs.find(x=>x._id===id); if(!j) return;
+  detailsId=id; const el=$("#detailsSheet"); el.innerHTML=detailsBody(j); el.hidden=false; $("#dscrim").hidden=false;
+  el.scrollTop=0; $("#ds-st")?.focus({preventScroll:true});
+}
+function closeDetails(focus=true){
+  const id=detailsId; detailsId=null; const el=$("#detailsSheet"); el.hidden=true; el.innerHTML=""; $("#dscrim").hidden=true;
+  const back=focus&&id&&document.querySelector(`#view button[data-details="${CSS.escape(id)}"]`); if(back) back.focus({preventScroll:true});
 }
 // Cards are reused between redraws while nothing they show has changed, so search and tab switches move
 // existing cards instead of rebuilding thousands of them (RR-H-21).
@@ -717,7 +748,7 @@ const cardCache=new Map(); let cardCtx=null;
 function cardEls(list){
   const ctx=[tab==="action",specData,config,filters,LANES,today()];
   if(!cardCtx||ctx.some((x,i)=>x!==cardCtx[i])){ cardCache.clear(); cardCtx=ctx; }
-  const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id)+openMore.has(j._id);
+  const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id);
   const keys=list.map(keyOf), miss=list.filter((j,i)=>{const c=cardCache.get(j._id); return !c||c.key!==keys[i];});
   if(miss.length){ const t=document.createElement("template"); t.innerHTML=miss.map(jobCard).join(""); [...t.content.children].forEach((el,i)=>cardCache.set(miss[i]._id,{key:keyOf(miss[i]),el})); }
   return list.map(j=>cardCache.get(j._id).el);
@@ -788,11 +819,11 @@ function applyView(list){
 function sortList(list){
   const rank={strong:0,maybe:1,stretch:2};
   // Culture then values ranks, worked out once per role per sort (sorting 2,000 roles stays quick, RR-H-21).
-  const memo=new Map(), fr=j=>{ if(!memo.has(j)) memo.set(j,fitsOf(j)); return memo.get(j); };
+  const memo=new Map(), fr=j=>{ if(!memo.has(j)) memo.set(j,fitsOf(j)); return memo.get(j); }, sc=scoreNum;
   const cult=(a,b)=>{const fa=fr(a),fb=fr(b); return fa&&fb?(RATE_RANK[fa.culture.rating]-RATE_RANK[fb.culture.rating])||(RATE_RANK[fa.values.rating]-RATE_RANK[fb.values.rating]):0;};
   const by={
-    // Best match: score, then culture and values (the old "Best culture" sort folded in), then experience, then newest.
-    fit:(a,b)=>((typeof b.score==="number"?b.score:-1)-(typeof a.score==="number"?a.score:-1))||cult(a,b)||(rank[(a.fit||"").toLowerCase()]??3)-(rank[(b.fit||"").toLowerCase()]??3)||String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
+    // Best match: the computed score (the number on the tile), then culture and values (the old "Best culture" sort folded in), then experience, then newest.
+    fit:(a,b)=>((sc(b)??-1)-(sc(a)??-1))||cult(a,b)||(rank[(a.fit||"").toLowerCase()]??3)-(rank[(b.fit||"").toLowerCase()]??3)||String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     found:(a,b)=>String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     updated:(a,b)=>String(b.statusAt||b.firstSeen||"").localeCompare(String(a.statusAt||a.firstSeen||"")),
     followup:(a,b)=>String(a.followUpDue||"9999").localeCompare(String(b.followUpDue||"9999"))};
@@ -1337,7 +1368,7 @@ async function setStatus(j,next,extra,opts){
   try{await db.doc("jobs/"+j._id).update(patch);}
   catch(err){cardCache.delete(j._id); toast("Couldn't save that change. Try again in a moment.");return;}
   if(!(opts&&opts.undo)){ toast("Marked "+(STATUS_LABEL[next]||next).toLowerCase()); return; }
-  toast("Moved to "+(STATUS_LABEL[next]||next),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Back in "+(STATUS_LABEL[prev.status]||prev.status)); render(); focusCard(j._id);}catch(_){toast("Couldn't undo that.");}}});
+  toast("Moved to "+(STATUS_LABEL[next]||next),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); if(detailsId===j._id) closeDetails(false); toast("Back in "+(STATUS_LABEL[prev.status]||prev.status)); render(); focusCard(j._id);}catch(_){toast("Couldn't undo that.");}}});
 }
 // A follow-up counts toward the daily bar; the next one is due a few business days later.
 async function followUpSent(j){
@@ -1348,60 +1379,33 @@ async function followUpSent(j){
   toast("Follow-up counted. Next one "+fmtDate(patch.followUpDue),{label:"Undo",run:async()=>{try{await db.doc("jobs/"+j._id).update(prev); toast("Undone"); render();}catch(_){toast("Couldn't undo that.");}}});
 }
 // After a card leaves the list, put focus on the card that took its place so keyboard users don't land at the top.
-function focusCard(id){ requestAnimationFrame(()=>{ const sel=document.getElementById("st-"+id); const c=sel&&sel.closest("article.job"); const h=c&&c.querySelector("h2 a, h2"); if(h){ if(!h.matches("a")) h.tabIndex=-1; h.focus(); } }); }
+function focusCard(id){ requestAnimationFrame(()=>{ const c=document.getElementById(roleAnchor(id)); const h=c&&c.querySelector("h2 a, h2"); if(h){ if(!h.matches("a")) h.tabIndex=-1; h.focus(); } }); }
 function focusCardAfter(i){ requestAnimationFrame(()=>{ const cards=[...document.querySelectorAll("#view article.job")]; const c=cards[Math.min(i,cards.length-1)]; const h=c&&(c.querySelector("h2 a, h2")); if(h){ if(!h.matches("a")) h.tabIndex=-1; h.focus({preventScroll:false}); } }); }
 async function markViewed(j){
   if(!db||!j||st(j)!=="new") return;
   try{await db.doc("jobs/"+j._id).update(patchFor(j,"viewed"));}catch(_){}
 }
 
-// Preview: load the posting's own description from the company's public job board on open.
-const SOURCE_LABEL={ziprecruiter:"ZipRecruiter",himalayas:"Himalayas",alert:"job alert",gmail:"email",manual:"manually added",climatebase:"Climatebase"};
-async function loadPosting(j){
-  const src=PV&&PV.postingSource(j,companies);
-  if(!src){ postings.set(j._id,{state:"none"}); return; }
-  const prev=postings.get(j._id); if(prev&&(prev.state==="ok"||prev.state==="loading")) return;
-  postings.set(j._id,{state:"loading",src});
-  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),12000);
-  let next;
-  try{
-    const r=await fetch(PV.apiUrl(src),{signal:ctl.signal,credentials:"omit",referrerPolicy:"no-referrer"});
-    if(r.status===404) next={state:"gone",src};
-    else if(!r.ok) next={state:"error",src};
-    else{ const html=PV.extractHtml(src,await r.json()); next=html.trim()?{state:"ok",src,html}:{state:"gone",src}; }
-  }catch(_){ next={state:"error",src}; }
-  finally{ clearTimeout(t); }
-  postings.set(j._id,next);
-  if(preview===j._id) renderPreview(true);
-}
-function renderPreview(bodyOnly){
+// Preview: the description the scan stored with the role (descriptionHtml or descriptionPlain). Nothing is fetched,
+// so Preview shows only on roles that have one (UX-H-R7); every other role has Open posting in Details.
+function renderPreview(){
   const el=$("#preview"), j=preview&&jobs.find(x=>x._id===preview);
   document.body.classList.toggle("previewing",!!j);
   if(!j){ el.hidden=true; el.innerHTML=""; return; }
-  const sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url), p=postings.get(j._id)||{state:"loading"};
-  const ats=p.src&&PV?PV.ATS_LABEL[p.src.ats]:"";
-  const open=url?`<a class="pv-open" href="${esc(url)}" target="_blank" rel="noopener">Open posting ↗</a>`:"";
-  const msg=(h,t)=>`<div class="pv-msg"><strong>${h}</strong><span>${t}</span>${open||`<span>${sample?"This is a made-up role, so there's no real posting.":"No posting link is saved for this role."}</span>`}</div>`;
-  const srcName=SOURCE_LABEL[String(j.source||j.ats||"").toLowerCase()]||esc(j.source||j.ats||"this source");
-  const body=p.state==="ok"?`<p class="pv-src">${window.__RR_DEMO__?`Sample description written for this demo. On the live page this loads word for word from ${esc(ats||"the company")}'s public job board.`:`Word for word from ${esc(ats)}'s public job board. Nothing is saved.`}</p><div class="pv-body" id="pvBody"></div>`
-    :p.state==="loading"?`<p class="pv-src" role="status">Loading the description from ${esc(ats||"the job board")}…</p>`
-    :p.state==="gone"?msg("This posting isn't on the board anymore",`${esc(ats)} no longer lists it, so it may be closed. The original link might still work.`)
-    :p.state==="error"?msg("Couldn't load the description",`${esc(ats)} didn't answer from this page. Open the posting to read it there.`)
-    :msg("No preview for this source",`Roles found via ${srcName} have no public job-board feed to read from.`);
-  if(bodyOnly&&el.querySelector(".pv-scroll")){ el.querySelector(".pv-scroll").innerHTML=body; }
-  else el.innerHTML=`<div class="pv-head"><div style="min-width:0"><div class="co">${esc(j.company)}</div><h2 id="pvTitle">${esc(j.title)}</h2>
+  const url=isSampleUrl(j.url)?"":safeUrl(j.url);
+  const open=url?`<div><a class="pv-open" href="${esc(url)}" target="_blank" rel="noopener">Open posting ↗</a></div>`:"";
+  el.innerHTML=`<div class="pv-head"><div style="min-width:0"><div class="co">${esc(j.company)}</div><h2 id="pvTitle">${esc(j.title)}</h2>
       <div class="meta">${j.location?`<span>${esc(j.location)}</span>`:""}${j.comp?`<span class="mono">${esc(j.comp)}</span>`:""}</div></div>
       <button class="btn" type="button" id="pvClose" aria-label="Close preview">Close</button></div>
-    <div class="pv-scroll">${p.state==="ok"&&open?`<div>${open}</div>`:""}${body}</div>`;
-  if(bodyOnly&&p.state==="ok"&&open) el.querySelector(".pv-scroll").insertAdjacentHTML("afterbegin",`<div>${open}</div>`);
-  // Sanitized nodes, never raw board HTML.
-  const b=el.querySelector("#pvBody"); if(b&&p.state==="ok") b.appendChild(PV.sanitizeHtml(p.html,document));
+    <div class="pv-scroll">${open}<p class="pv-src">${window.__RR_DEMO__?"Sample description written for this demo. On the live page it is the text the scan saved from the posting.":"The text the scan saved from the posting. It may have changed since."}</p><div class="pv-body" id="pvBody"></div></div>`;
+  // Sanitized nodes, never raw stored HTML.
+  if(PV) el.querySelector("#pvBody").appendChild(PV.sanitizeHtml(descOf(j),document));
   el.hidden=false;
 }
 function openPreview(j,from){
   if(!j) return;
   preview=j._id; previewFrom=from||null;
-  markViewed(j); loadPosting(j);
+  markViewed(j);
   render(); renderPreview();
   const sc=$("#preview .pv-scroll"); if(sc) sc.scrollTop=0;
   $("#pvClose")?.focus({preventScroll:true});
@@ -1444,14 +1448,14 @@ document.addEventListener("click",async e=>{
   const dl=e.target.closest&&e.target.closest("#digestCard a[data-role]");
   if(dl){ e.preventDefault(); focusRole(dl.dataset.role); return; }
   if(e.target.closest("#pvClose")){ closePreview(); return; }
-  const wb=e.target.closest("[data-why]");
-  if(wb){ const id=wb.dataset.why, on=!openWhy.has(id); on?openWhy.add(id):openWhy.delete(id);
-    wb.setAttribute("aria-expanded",String(on)); document.getElementById(wb.getAttribute("aria-controls"))?.classList.toggle("open",on); return; }
+  const dt=e.target.closest("button[data-details]");
+  if(dt){ openDetails(dt.dataset.details); return; }
+  if(e.target.closest("[data-dclose]")||e.target.id==="dscrim"){ closeDetails(); return; }
   const pv=e.target.closest("[data-preview]");
   // A plain click on the title previews; Cmd/Ctrl/Shift/middle click still opens the posting in a new tab.
   if(pv&&!(pv.tagName==="A"&&(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0))){
     e.preventDefault(); const j=jobs.find(x=>x._id===pv.dataset.preview);
-    if(preview===j?._id&&pv.tagName!=="A") closePreview(); else openPreview(j);
+    if(preview===j?._id&&pv.tagName!=="A") closePreview(); else if(j&&descOf(j)) openPreview(j);
     return;
   }
   const sp=e.target.closest("[data-sample]");
@@ -1528,17 +1532,14 @@ document.addEventListener("click",async e=>{
 document.addEventListener("toggle",e=>{
   const d=e.target; if(!d.matches||!d.matches("details[data-more]")) return;
   const id=d.dataset.more;
-  if(d.open&&!d.querySelector("form")&&!d.id){ const j=jobs.find(x=>x._id===id); if(j) d.insertAdjacentHTML("beforeend",editForm(j)); }
-  if(d.open){ openMore.add(id); openMore.delete(id+"-closed"); markViewed(jobs.find(x=>x._id===id)); } else { openMore.delete(id); openMore.add(id+"-closed"); }
+  if(d.open){ openMore.add(id); openMore.delete(id+"-closed"); } else { openMore.delete(id); openMore.add(id+"-closed"); }
 },true);
 document.addEventListener("change",async e=>{
   const s=e.target.closest("[data-setstatus]");
   if(s){ const j=jobs.find(x=>x._id===s.dataset.setstatus); if(!j) return;
-    if(s.value==="skipped"){ skipOpen=j._id; render(); return; }
-    const i=[...document.querySelectorAll("#view article.job")].indexOf(s.closest("article.job")), id=j._id;
-    await setStatus(j,s.value,null,{undo:true}); render();
-    // Still listed (All roles): stay on its menu. Moved off this tab: go to the card that took its place.
-    requestAnimationFrame(()=>{ const again=document.getElementById("st-"+id); if(again) again.focus(); else focusCardAfter(Math.max(0,i)); }); return; }
+    // Skipping asks why on the card, so the sheet closes onto it.
+    if(s.value==="skipped"){ skipOpen=j._id; closeDetails(); render(); requestAnimationFrame(()=>document.querySelector("[data-skipform] [data-skipwhy]")?.focus()); return; }
+    await setStatus(j,s.value,null,{undo:true}); render(); return; }
   if(e.target.name==="fsort"&&e.target.closest("#fbar")){ view.sorts={...view.sorts,[tab]:e.target.value}; saveView(); closeSheets("fsort"); return; }
   const f=e.target.closest("#fbar [data-v]");
   if(f){ const id=f.id; view[f.dataset.v]=f.value; saveView(); render(); $("#"+id)?.focus(); }
@@ -1560,7 +1561,7 @@ document.addEventListener("submit",async e=>{
     const j=jobs.find(x=>x._id===ed.dataset.edit); if(!j) return;
     const g=n=>ed.elements[n].value.trim();
     const body={lane:g("lane"),tags:g("tags").split(",").map(s=>s.trim()).filter(Boolean),referral:g("referral"),followUpDue:g("followUpDue"),nextStep:g("nextStep"),notes:ed.elements.notes.value.trim()};
-    try{await db.doc("jobs/"+j._id).update(body); document.activeElement?.blur?.(); toast("Saved"); render();}catch(err){toast("Couldn't save. Try again in a moment.");}
+    try{await db.doc("jobs/"+j._id).update(body); closeDetails(); toast("Saved"); render();}catch(err){toast("Couldn't save. Try again in a moment.");}
     return;
   }
   const rf=e.target.closest("form[data-recform]");
@@ -1621,6 +1622,10 @@ document.addEventListener("submit",async e=>{
 });
 
 document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&detailsId&&!$("#applyDlg").open){ e.preventDefault(); closeDetails(); return; }
+  // Keep keyboard focus inside the open Details sheet.
+  if(e.key==="Tab"&&detailsId){ const fs=[...document.querySelectorAll("#detailsSheet button, #detailsSheet a[href], #detailsSheet input, #detailsSheet select, #detailsSheet textarea")].filter(x=>x.offsetParent), i=fs.indexOf(document.activeElement);
+    if(fs.length&&(i<0||(e.shiftKey&&i===0)||(!e.shiftKey&&i===fs.length-1))){ e.preventDefault(); fs[e.shiftKey?fs.length-1:0].focus(); } return; }
   if(e.key==="Escape"&&moreOpen){ closeMoreSheet(); return; }
   // Keep keyboard focus inside the open More sheet.
   if(e.key==="Tab"&&moreOpen){ const rs=[...document.querySelectorAll("#moreSheet .mrow")], i=rs.indexOf(document.activeElement);

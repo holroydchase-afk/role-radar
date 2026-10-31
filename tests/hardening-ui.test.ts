@@ -89,8 +89,9 @@ test("RR-UX-6/7 the demo label says what's made up and that changes reset on rel
   await page.close();
 });
 
+// RR-M4.3: Save is the New card's primary on the public build (the owner's build leads with Apply), so these use it.
 test("RR-UX-9 moving a role out of New offers Undo and keeps focus on the list", async () => {
-  const { page } = await openDemo();
+  const { page } = await openPublic();
   const first = page.locator("article.job").first();
   const title = await first.locator("h2").innerText();
   await first.locator("button[data-quick=saved]").click();
@@ -159,12 +160,12 @@ test("RR-H-8 Undo after Skip with a reason puts the role back with no skip reaso
   await page.click("[data-skipform] button[type=submit]");
   await page.click("#toast button", { timeout: 2000 });
   await page.waitForFunction((t) => [...document.querySelectorAll("article.job h2")].some((h) => h.textContent === t), title);
-  // Skip it again from the status menu: an old reason left on the record would show up as "Skipped: …".
+  // No old reason left on the record: Details would show it as "Ruled out …: <reason>" (RR-M4.3: status lives there).
   await page.click("#tab-all");
-  const card = page.locator("article.job", { hasText: title });
-  await card.locator("select[id^=st-]").selectOption("skipped");
-  await page.waitForTimeout(200);
-  assert.doesNotMatch(await page.locator("article.job", { hasText: title }).innerText(), /Skipped:/);
+  await page.locator("article.job", { hasText: title }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").waitFor({ state: "visible" });
+  assert.doesNotMatch(await page.locator("#detailsSheet").innerText(), /Ruled out|Not the right fit/);
+  assert.equal(await page.evaluate((t) => { const j = (0, eval)("jobs").find((x: any) => x.title === t); return [j.skipReason || "", j.skipNote || ""].join(""); }, title), "");
   await page.close();
 });
 
@@ -172,16 +173,17 @@ test("RR-R2-1/2 the Status menu also offers Undo, and Undo puts focus back on th
   const { page } = await openDemo();
   const first = page.locator("article.job").first();
   const title = await first.locator("h2").innerText();
-  await first.locator("select[id^=st-]").selectOption("applying");
+  await first.locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByLabel("Status", { exact: true }).selectOption("applying");
   assert.match(await toastText(page), /Moved to Applying/);
-  assert.equal(await page.evaluate(() => !!document.activeElement!.closest("article.job")), true, "focus stays in the list");
+  assert.equal(await page.evaluate(() => document.activeElement!.id), "ds-st", "focus stays on the Status menu in Details");
   await page.click("#toast button", { timeout: 2000 });
   await page.waitForFunction((t) => document.activeElement && document.activeElement.closest("article.job")?.querySelector("h2")?.textContent === t, title);
   await page.close();
 });
 
 test("RR-R2-2 the Undo toast stays while the pointer or focus is on it", async () => {
-  const { page } = await openDemo();
+  const { page } = await openPublic();
   await page.locator("article.job").first().locator("button[data-quick=saved]").click();
   await page.hover("#toast button");
   await page.waitForTimeout(6500);

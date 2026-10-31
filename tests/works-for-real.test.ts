@@ -150,6 +150,7 @@ async function addRole(page: Page, company: string, title: string, status: strin
   await page.selectOption("#aj-st", status);
   await page.locator("#addJob button[type=submit]").click();
 }
+// RR-M4.3: the card has no status chip; its one date says the status ("Applied Oct 28").
 const cardsFor = (page: Page, title: string) => page.locator("#view .job").filter({ hasText: title });
 
 test("RR-M3.2-9 adding a role the scan already found says it's tracked and adds no duplicate", async () => {
@@ -161,7 +162,7 @@ test("RR-M3.2-9 adding a role the scan already found says it's tracked and adds 
   await page.click("#tab-all");
   await cardsFor(page, title).first().waitFor();
   assert.equal(await cardsFor(page, title).count(), 1, "one card, no duplicate");
-  assert.equal(await cardsFor(page, title).locator(".st-applied").count(), 1, "still Applied");
+  assert.equal(await cardsFor(page, title).locator(".meta", { hasText: /^Applied |· Applied / }).count(), 1, "still Applied");
   await page.close();
 });
 
@@ -175,7 +176,7 @@ test("RR-M3.2-10 adding the same manual role twice keeps the first one's status"
   await toastMatches(page, /already/);
   await page.click("#tab-all");
   assert.equal(await cardsFor(page, title).count(), 1);
-  assert.equal(await cardsFor(page, title).locator(".st-applied").count(), 1, "status not overwritten to Saved");
+  assert.equal(await cardsFor(page, title).locator(".meta", { hasText: /^Applied |· Applied / }).count(), 1, "status not overwritten to Saved");
   await page.close();
 });
 

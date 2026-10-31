@@ -9,6 +9,19 @@ import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-demo.html" });
+// RR-M4.3: Values/Culture, the score math, dates and the source moved from the card into its Details sheet.
+// Opens Details for the first card matching `has` (or every card on the tab) and returns each sheet's text.
+async function detailsText(page: import("playwright").Page, has?: string, sel = "#detailsSheet"): Promise<string[]> {
+  const cards = has ? page.locator("#view article.job", { hasText: has }).first() : page.locator("#view article.job");
+  const n = has ? 1 : await cards.count(), out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    await (has ? cards : cards.nth(i)).locator("button[data-details]").click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    out.push(...(await page.locator(sel).allInnerTexts()));
+    await page.keyboard.press("Escape");
+  }
+  return out;
+}
 
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
@@ -37,16 +50,15 @@ test("the filter bar keeps its styles (stray <style> tag fixed)", async () => {
   await page.close();
 });
 
-test("cards explain their score with the criteria rules", async () => {
+test("Details explains each score with the criteria rules", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const lines = await page.locator(".why-score").allInnerTexts();
+  const lines = await detailsText(page, undefined, "#detailsSheet .why-score");
   assert.ok(lines.length >= 10);
   assert.ok(lines.some((l) => /^45 sector \+ 35 experience \+ 10 comp = 90/.test(l)), lines.join("\n"));
   assert.ok(!lines.some((l) => /scan said/.test(l)), "demo scores match the rules");
   await page.close();
 });
-
 test("digest preview re-ranks live as the criteria are edited", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
@@ -161,19 +173,18 @@ test("on a wide screen, filters fold behind the toggle and open on demand", asyn
   await page.close();
 });
 
-test("cards show Values and Culture badges with a reason", async () => {
+test("Details shows Values and Culture badges with a reason", async () => {
   const { page, errors } = await openDemo();
   await page.click("#tab-all");
-  const card = (co: string) => page.locator("article.job", { hasText: co }).first().locator(".fitr");
-  assert.match(await card("Sunfield Energy").innerText(), /Values\s+Great[\s\S]*Culture\s+Great/i);
-  assert.match(await card("Ledgerly").innerText(), /Values\s+Neutral[\s\S]*Culture\s+Good[\s\S]*but launch crunch risk/i);
-  assert.match(await card("Pebblepay").innerText(), /Culture\s+No/i);
-  assert.match(await card("Orbitline").innerText(), /rated up after research/);
-  assert.match(await card("Gridlark").innerText(), /Unrated[\s\S]*Not checked yet/i);
+  const card = async (co: string) => (await detailsText(page, co, "#detailsSheet .fitr"))[0];
+  assert.match(await card("Sunfield Energy"), /Values\s+Great[\s\S]*Culture\s+Great/i);
+  assert.match(await card("Ledgerly"), /Values\s+Neutral[\s\S]*Culture\s+Good[\s\S]*but launch crunch risk/i);
+  assert.match(await card("Pebblepay"), /Culture\s+No/i);
+  assert.match(await card("Orbitline"), /rated up after research/);
+  assert.match(await card("Gridlark"), /Unrated[\s\S]*Not checked yet/i);
   assert.deepEqual(errors, []);
   await page.close();
 });
-
 // Since RR-FS (2026-10-30) Values and Culture are quick chips ("good or better"), not dropdowns.
 test("Values and Culture filters narrow the list", async () => {
   const { page } = await openDemo({ width: 1100 });
@@ -197,33 +208,30 @@ test("the Criteria tab explains the fit ratings", async () => {
   await page.close();
 });
 
-// Preview panel: the posting's own text, loaded from the board's public API on click.
+// Preview panel: the description the scan stored with the role (RR-M4.3: nothing is fetched from the board).
 test("clicking a role opens its description in a side panel on wide screens", async () => {
   const { page, errors } = await openDemo({ width: 1300, height: 900 });
   await page.click("#tab-all");
-  const card = page.locator(".job", { hasText: "Sunfield Energy" });
+  const card = page.locator(".job", { hasText: "Ledgerly" });
   await card.locator("h2 a").click();
   const panel = page.locator("#preview");
   await panel.locator("#pvBody li").first().waitFor();
-  assert.match(await panel.locator("#pvTitle").innerText(), /Utility Data/);
-  assert.match(await panel.innerText(), /Own the roadmap for utility data ingestion/);
-  assert.match(await panel.innerText(), /Greenhouse's public job board/);
+  assert.match(await panel.locator("#pvTitle").innerText(), /Checkout/);
+  assert.match(await panel.innerText(), /Own checkout conversion end to end/);
+  assert.match(await panel.innerText(), /Sample description written for this demo/);
   const pb = (await panel.boundingBox())!, cb = (await card.boundingBox())!;
   assert.ok(pb.x > cb.x + cb.width - 1, "panel sits to the right of the list");
   assert.equal(Math.round(pb.y), 0);
   assert.ok(await card.evaluate((el) => el.classList.contains("sel")));
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 0);
-  // Ashby and Lever shapes render too.
+  // Another stored description replaces it.
   await page.locator(".job", { hasText: "Gridlark" }).getByRole("button", { name: "Preview" }).click();
   await page.waitForFunction(() => /Virtual Power Plants/.test(document.querySelector("#pvTitle")?.textContent!) && /three product teams/.test(document.querySelector("#pvBody")?.textContent || ""));
-  await page.locator(".job", { hasText: "Orbitline" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /What we're looking for/.test(document.querySelector("#pvBody")?.textContent || ""));
   await page.keyboard.press("Escape");
   assert.ok(await panel.isHidden());
   assert.deepEqual(errors, []);
   await page.close();
 });
-
 test("Gmail import: finds recruiters, skips known ones and job boards, adds only the picked", async () => {
   const { page, errors } = await openDemo();
   await openTab(page, "people");
@@ -256,22 +264,21 @@ test("Gmail import: finds recruiters, skips known ones and job boards, adds only
   await page.close();
 });
 
-test("roles without a board feed show an Open posting link instead", async () => {
+test("roles without a stored description have no Preview; Details offers the posting instead (UX-H-R7)", async () => {
   const { page } = await openDemo({ width: 1300 });
   await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Carbonmark" }).getByRole("button", { name: "Preview" }).click();
-  const panel = page.locator("#preview");
-  assert.match(await panel.innerText(), /No preview for this source/);
-  assert.match(await panel.innerText(), /ZipRecruiter/);
-  // Demo roles are made up, so the panel says so instead of linking to example.com (RR-P1-2).
-  assert.equal(await panel.locator('a[href*="example.com"]').count(), 0);
-  assert.match(await panel.innerText(), /made-up role/);
-  // A board that no longer lists the role says so.
-  await page.locator(".job", { hasText: "Watermark Climate" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /isn't on the board anymore/.test(document.querySelector("#preview")?.textContent || ""));
+  for (const co of ["Carbonmark", "Watermark Climate"]) {
+    const card = page.locator(".job", { hasText: co });
+    assert.equal(await card.getByRole("button", { name: "Preview" }).count(), 0, `${co}: no Preview`);
+    await card.locator("button[data-details]").click();
+    // Demo roles are made up, so Details offers "Sample posting" instead of linking to example.com (RR-P1-2).
+    const sheet = page.locator("#detailsSheet");
+    assert.equal(await sheet.locator('a[href*="example.com"]').count(), 0);
+    assert.equal(await sheet.getByRole("button", { name: "Sample posting" }).count(), 1);
+    await page.keyboard.press("Escape");
+  }
   await page.close();
 });
-
 test("on a phone the preview is a full-screen sheet that closes back to the card", async () => {
   const { page, errors } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-all");
@@ -394,7 +401,8 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
   }
   await page.click("#tab-all");
   assert.match(await page.locator("#lede").innerText(), /my own call/);
-  assert.match(await page.locator(".why-score").first().innerText(), /sector/);
+  for (const t of await detailsText(page)) assert.doesNotMatch(t, /resume|intake/i, "Details mentions resume tooling");
+  assert.match((await detailsText(page, "Sunfield", "#detailsSheet .why-score"))[0], /sector/);
   await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 0);
   assert.deepEqual(errors, []);
@@ -501,25 +509,23 @@ test("demo roles have no example.com links; 'Sample posting' explains itself (RR
   const { page, errors } = await openDemo();
   await page.click("#tab-all");
   assert.equal(await page.locator('a[href*="example.com"]').count(), 0);
-  const btn = page.locator("#view button", { hasText: "Sample posting" }).first();
+  await page.locator("#view article.job").first().locator("button[data-details]").click();
+  assert.equal(await page.locator('#detailsSheet a[href*="example.com"]').count(), 0);
+  const btn = page.locator("#detailsSheet button", { hasText: "Sample posting" });
   await btn.click();
   assert.match(await page.locator("#toast").innerText(), /made-up role/);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("board HTML is sanitized before it is shown", async () => {
+test("a stored description's HTML is sanitized before it is shown", async () => {
   const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"));
-  seed.jobs["greenhouse-777"] = { company: "Acme", title: "Senior Product Manager", ats: "greenhouse", source: "greenhouse", status: "new", firstSeen: "@t-1", url: "https://job-boards.greenhouse.io/acmetest/jobs/777" };
   const evil = `<p onclick="window.__x=1">Real words <b>stay</b>.</p><script>window.__x=2<\/script><img src=x onerror="window.__x=3"><a href="javascript:window.__x=4">bad link</a><a href="https://example.com/benefits">good link</a><style>body{display:none}</style><iframe src="https://example.com"></iframe>`;
-  const esc = (h: string) => h.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  seed.jobs["greenhouse-777"] = { company: "Acme", title: "Senior Product Manager", ats: "greenhouse", source: "greenhouse", status: "new", firstSeen: "@t-1", url: "https://job-boards.greenhouse.io/acmetest/jobs/777", descriptionHtml: evil };
   const { page, errors } = await openDemo({ html: buildDemo({ seed }), width: 1300, ready: "#view" });
-  let asked = "";
-  await page.route("https://boards-api.greenhouse.io/**", (route) => { asked = route.request().url(); route.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ id: 777, content: esc(evil) }) }); });
   await page.click("#tab-all");
   await page.locator(".job", { hasText: "Acme" }).getByRole("button", { name: "Preview" }).click();
   await page.locator("#pvBody b").waitFor();
-  assert.equal(asked, "https://boards-api.greenhouse.io/v1/boards/acmetest/jobs/777");
   const body = page.locator("#pvBody");
   assert.match(await body.innerText(), /Real words stay\./);
   assert.equal(await body.locator("script, img, style, iframe, [onclick]").count(), 0);
@@ -531,17 +537,18 @@ test("board HTML is sanitized before it is shown", async () => {
   await page.close();
 });
 
-test("RR-UX-1 the chip beside the score names what it rates (experience), so 90 + chip never reads as a contradiction", async () => {
+// RR-M4.3: the Experience chip became the Fit sub-score under the title; its label still names what it rates.
+test("RR-UX-1 the Fit part beside the score names what it rates (experience), so 90 + Fit never reads as a contradiction", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const chips = await page.locator("#view .chip[class*=fit-]").allTextContents();
-  assert.ok(chips.length >= 10);
-  for (const c of chips) assert.match(c, /^Experience: (strong|partial|stretch)$/);
+  const labels = await page.locator('#view .subscores [data-part="fit"]').evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || ""));
+  assert.ok(labels.length >= 10);
+  for (const l of labels) assert.match(l, /^Fit -?\d+ of 60(, (Strong|Partial|Stretch))?$/);
+  assert.ok(labels.some((l) => /Strong$/.test(l)) && labels.some((l) => /Partial$/.test(l)));
   assert.match((await page.locator("#view .score").first().getAttribute("title"))!, /Criteria score, 0.100/);
   assert.equal(await page.locator('#fbar [data-chip="strong"]').innerText(), "Strong fit");
   await page.close();
 });
-
 test("header new count agrees with the New tab (RR-P1-4)", async () => {
   // RR-M4.1: the header is `Scan <time> · N new`; the board count moves to Home (M4.4), so only the New half stays here.
   const { page } = await openDemo();
@@ -560,7 +567,8 @@ test("light theme chips meet 4.5:1 contrast (RR-P1-5)", async () => {
   const ratio = await page.evaluate(() => {
     const lum = (c: string) => { const v = c.match(/\d+/g)!.slice(0, 3).map((x: any) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
     const r = (el: Element | null) => { const s = getComputedStyle(el!); const a = lum(s.color), b = lum(s.backgroundColor); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
-    return { demo: r(document.querySelector("#demoNote")), fit: r(document.querySelector(".fit-strong")), score: r(document.querySelector(".score.hi")) };
+    // RR-M4.3: the Experience chip (.fit-strong) is gone; its Fit sub-score is checked in tests/card.test.ts CARD-4.
+    return { demo: r(document.querySelector("#demoNote")), score: r(document.querySelector(".score.hi")) };
   });
   for (const [k, v] of Object.entries(ratio)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}`);
   await page.close();
@@ -592,38 +600,29 @@ test("public demo works with the CDN blocked: js-yaml is inlined (RR-P2-9)", asy
   await page.close();
 });
 
-test("a board that can't be reached falls back to the posting link", async () => {
-  const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"));
-  seed.jobs["lever-9"] = { company: "Acme", title: "Senior Product Manager", ats: "lever", source: "lever", status: "new", firstSeen: "@t-1", url: `https://jobs.lever.co/acmetest/0c2f6d1e-8a7b-4c3d-9e1f-2a3b4c5d6e7f` };
-  const { page } = await openDemo({ html: buildDemo({ seed }), width: 1300, ready: "#view" });
-  await page.route("https://api.lever.co/**", (route) => route.abort());
-  await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Acme" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /Couldn't load the description/.test(document.querySelector("#preview")?.textContent || ""));
-  assert.ok(await page.locator("#preview").getByRole("link", { name: /Open posting/ }).isVisible());
-  await page.close();
-});
-
-test("cards name sources in plain words (RR-P2-3)", async () => {
+// RR-M4.3 (UX-H-R7): Preview no longer fetches from the board, so "a board that can't be reached falls back to the
+// posting link" was dropped with that feature. Details always offers Open posting.
+// RR-M4.3: the source moved from the card's meta line into Details ("Found via Greenhouse").
+test("Details names sources in plain words (RR-P2-3)", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const text = await page.locator("#view").innerText();
+  const text = (await detailsText(page)).join("\n");
   assert.match(text, /Greenhouse/);
   assert.match(text, /ZipRecruiter/);
   assert.doesNotMatch(text, /\b(greenhouse|ziprecruiter|himalayas)\b/);
   await page.close();
 });
-
-test("no date repeats as '<status> since' on the same card (RR-P2-7)", async () => {
+test("no date repeats as '<status> since' in a role's Details (RR-P2-7)", async () => {
   const { page } = await openDemo();
   await page.click("#tab-pipeline");
-  for (const d of await page.locator(".dates").allInnerTexts()) {
+  const all = await detailsText(page, undefined, "#detailsSheet .dates");
+  assert.ok(all.length >= 3);
+  for (const d of all) {
     const m = /Applied\s+(\w+ \d+).*Applied since\s+(\w+ \d+)/s.exec(d);
     assert.ok(!m || m[1] !== m[2], d);
   }
   await page.close();
 });
-
 test("public demo on a laptop folds filters so the first role shows (RR-P2-4)", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, width: 1280, height: 800 });
@@ -644,16 +643,17 @@ test("page has a main landmark and valid headings (RR-P2-5)", async () => {
   await page.close();
 });
 
-test("public demo cards show one category chip, the sector (RR-P2-11)", async () => {
+// RR-M4.3 (UX-H-R3): sector and lane pills are cut from the card; the sector shows in Details' Values reason.
+test("public demo cards show no category pills; the sector is in Details (RR-P2-11)", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html });
   await page.click("#tab-all");
   const first = page.locator(".job").first();
-  const chips = await first.locator(".chip.lane").allTextContents();
-  assert.deepEqual(chips.map((c) => c.toLowerCase()), ["solar, storage & distributed energy"]);
+  assert.equal(await first.locator(".chip").count(), 0);
+  const fitr = (await detailsText(page, (await first.locator("h2").innerText()).trim(), "#detailsSheet .fitr"))[0];
+  assert.match(fitr.toLowerCase(), /solar, storage & distributed energy/);
   await page.close();
 });
-
 test("Recruiters tab says its number is next steps due (RR-P2-12)", async () => {
   const { page } = await openDemo();
   await openTab(page, "people");
