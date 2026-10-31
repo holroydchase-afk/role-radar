@@ -12,7 +12,7 @@ waiting_on_chase:
 blockers: []
 -->
 
-Updated: 2026-10-31 (HANDOFF status header for the Studio Console, intake #64; intakes #59 MCP server and #62 demo bar merged as PRs #61 and #65)
+Updated: 2026-10-31 (intake #63: qa-tdd refreshed from studio-agents, check-qa-report.mjs added, relay rule in CLAUDE.md; earlier today #59, #62, #64 merged)
 
 ## Planning IDs (Oct 21, 2026)
 The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1.1.1`; product code `RR` across products). Old labels stay in git history and branch names. New work uses the new IDs.
@@ -142,7 +142,7 @@ _Updated 2026-10-31._
 
 ## Exact next step
 - RR intake #62 demo bar: merged (PR #65, 2026-10-31). Optional polish UX-DB-R1..R3 under Decisions to review.
-- RR intake #63 (qa-tdd refresh from studio-agents): waits on studio-agents #33 merging; the Intake check picks it up after that.
+- RR intake #63 (qa-tdd refresh from studio-agents): done 2026-10-31. qa-tdd reports now end with a ```qa block (green | red | flaky | blocked); check one with `node scripts/check-qa-report.mjs <report>`. CLAUDE.md says to relay that block verbatim. Open: QA-R1 (P2), check-qa-report.mjs has no tests in this repo.
 - Keep the status header at the top of this file current with every HANDOFF update (intake #64).
 - RR intake #59 MCP server: merged (PR #61, 2026-10-31). The one done-when item not run yet: a manual Claude Code run (`claude mcp add role-radar -- node <path-to-repo>/mcp/server.ts`, then "score this posting for me"); it needs a Claude client, so it can't run in the cloud sandbox.
 - RR-M4.5 review fixes built (uncommitted): next qa-tdd runs all suites 3x, then ux-reviewer round 3 and privacy-security, then commit and the M4.5 ready gate.
