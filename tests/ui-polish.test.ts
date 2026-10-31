@@ -183,19 +183,19 @@ test("RR-UX4-1 filters start collapsed behind the Filters button at every width,
   await page.close();
 });
 
-test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targets with room before the first card", async () => {
+test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targets with room after the last card (UX-H2-R9 moved them below)", async () => {
   const { page } = await openPrivate(LAPTOP);
   await page.click("#tab-pipeline");
   const m = await page.evaluate(() => {
     const sums = [...document.querySelectorAll<HTMLElement>("#view > details > summary, #view details:not(.job details) > summary")]
       .filter((s) => !s.closest(".job") && s.offsetParent).map((s) => ({ text: s.textContent.trim(), h: s.getBoundingClientRect().height }));
     const dets = [...document.querySelectorAll<HTMLElement>("#view details")].filter((d) => !d.closest(".job") && d.offsetParent);
-    const last = dets[dets.length - 1], job = document.querySelector("#view .job");
-    return { sums, gap: last && job ? job.getBoundingClientRect().top - last.getBoundingClientRect().bottom : null };
+    const first = dets[0], jobs = document.querySelectorAll("#view .job"), job = jobs[jobs.length - 1];
+    return { sums, gap: first && job ? first.getBoundingClientRect().top - job.getBoundingClientRect().bottom : null };
   });
   assert.ok(m.sums.length >= 2, `found ${m.sums.length} section rows`);
   for (const s of m.sums) assert.ok(s.h >= 44, `'${s.text}' row is ${Math.round(s.h)}px tall at 1280`);
-  assert.ok(m.gap !== null && m.gap >= 12, `gap from last section row to first card is ${m.gap === null ? "n/a" : Math.round(m.gap)}px`);
+  assert.ok(m.gap !== null && m.gap >= 12, `gap from the last card to the first section row is ${m.gap === null ? "n/a" : Math.round(m.gap)}px`);
   await page.close();
 });
 

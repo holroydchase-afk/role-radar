@@ -70,7 +70,9 @@ test("RR-UX-4 a YAML error names the line, says nothing was saved and puts focus
 
 test("RR-UX-5 the demo's preview says its description is a sample, not word for word from a board", async () => {
   const { page } = await openPublic();
-  await page.locator(".job button[data-preview]").first().click();
+  await page.click("#tab-all");
+  await page.locator(".job", { hasText: "Gridlark" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForSelector("#pvBody");
   const foot = await page.locator(".pv-src").innerText();
   assert.match(foot, /Sample description written for this demo/);

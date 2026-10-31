@@ -55,7 +55,10 @@ test("Details explains each score with the criteria rules", async () => {
   await page.click("#tab-all");
   const lines = await detailsText(page, undefined, "#detailsSheet .why-score");
   assert.ok(lines.length >= 10);
-  assert.ok(lines.some((l) => /^45 sector \+ 35 experience \+ 10 comp = 90/.test(l)), lines.join("\n"));
+  // UX-H2-R2: the groups add up to the tile, then one line per group with its parts.
+  assert.ok(lines.some((l) => /^Fit 45 \+ Values 45 \+ Culture 0 = 90$/.test(l)), lines.join("\n"));
+  assert.ok(lines.some((l) => /^Fit: experience 35 \+ pay 10\b/.test(l)), lines.join("\n"));
+  assert.ok(lines.some((l) => /^Values: sector 45\b/.test(l)), lines.join("\n"));
   assert.ok(!lines.some((l) => /scan said/.test(l)), "demo scores match the rules");
   await page.close();
 });
@@ -225,7 +228,8 @@ test("clicking a role opens its description in a side panel on wide screens", as
   assert.ok(await card.evaluate((el) => el.classList.contains("sel")));
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 0);
   // Another stored description replaces it.
-  await page.locator(".job", { hasText: "Gridlark" }).getByRole("button", { name: "Preview" }).click();
+  await page.locator(".job", { hasText: "Gridlark" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForFunction(() => /Virtual Power Plants/.test(document.querySelector("#pvTitle")?.textContent!) && /three product teams/.test(document.querySelector("#pvBody")?.textContent || ""));
   await page.keyboard.press("Escape");
   assert.ok(await panel.isHidden());
@@ -275,6 +279,7 @@ test("roles without a stored description have no Preview; Details offers the pos
     const sheet = page.locator("#detailsSheet");
     assert.equal(await sheet.locator('a[href*="example.com"]').count(), 0);
     assert.equal(await sheet.getByRole("button", { name: "Sample posting" }).count(), 1);
+    assert.equal(await sheet.getByRole("button", { name: "Preview posting" }).count(), 0, `${co}: no Preview posting without a stored description`);
     await page.keyboard.press("Escape");
   }
   await page.close();
@@ -282,8 +287,8 @@ test("roles without a stored description have no Preview; Details offers the pos
 test("on a phone the preview is a full-screen sheet that closes back to the card", async () => {
   const { page, errors } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-all");
-  const btn = page.locator(".job", { hasText: "Ledgerly" }).getByRole("button", { name: "Preview" });
-  await btn.click();
+  await page.locator(".job", { hasText: "Ledgerly" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   const panel = page.locator("#preview");
   await panel.locator("#pvBody").waitFor();
   const b = (await panel.boundingBox())!;
@@ -292,7 +297,7 @@ test("on a phone the preview is a full-screen sheet that closes back to the card
   assert.ok(await panel.locator("#pvBody").evaluate((el) => el.scrollWidth <= el.clientWidth));
   await page.click("#pvClose");
   assert.ok(await panel.isHidden());
-  assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.preview), "greenhouse-1005");
+  assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.details), "greenhouse-1005", "focus is back on the card's Details button");
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -402,7 +407,7 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
   await page.click("#tab-all");
   assert.match(await page.locator("#lede").innerText(), /my own call/);
   for (const t of await detailsText(page)) assert.doesNotMatch(t, /resume|intake/i, "Details mentions resume tooling");
-  assert.match((await detailsText(page, "Sunfield", "#detailsSheet .why-score"))[0], /sector/);
+  assert.match((await detailsText(page, "Sunfield", "#detailsSheet .why-score")).join("\n"), /Values: sector/);
   await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 0);
   assert.deepEqual(errors, []);
@@ -525,7 +530,8 @@ test("a stored description's HTML is sanitized before it is shown", async () => 
   seed.jobs["greenhouse-777"] = { company: "Acme", title: "Senior Product Manager", ats: "greenhouse", source: "greenhouse", status: "new", firstSeen: "@t-1", url: "https://job-boards.greenhouse.io/acmetest/jobs/777", descriptionHtml: evil };
   const { page, errors } = await openDemo({ html: buildDemo({ seed }), width: 1300, ready: "#view" });
   await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Acme" }).getByRole("button", { name: "Preview" }).click();
+  await page.locator(".job", { hasText: "Acme" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.locator("#pvBody b").waitFor();
   const body = page.locator("#pvBody");
   assert.match(await body.innerText(), /Real words stay\./);

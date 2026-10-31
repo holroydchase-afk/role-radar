@@ -1,6 +1,6 @@
 // RR-M4.3 calmer card (ux-reviewer UX-H-R3, R4, R7, R9, R10; architect §2 and §4; ACs UX-H-AC9b on the card, AC10-AC14).
 // The tile shows the computed score with Fit · Values · Culture under the title, the closed card keeps one meta line,
-// one reason line and at most 4 buttons, and everything else moves into a Details sheet with a single Save.
+// one reason line and at most 3 buttons, and everything else moves into a Details sheet with a single Save.
 // Demo data only: the base demo seed plus three made-up roles below. Red first.
 //
 // Contract the engineer builds to (stable selectors):
@@ -8,29 +8,32 @@
 //   - `.score` tile: the COMPUTED total, String(scoreJob(job, specData).score), memoized per (jobs, specData); not the
 //     stored job.score. `.hi` when the computed total is >= 70.
 //   - `.subscores`: exactly one, under the title. Three parts `[data-part="fit"]`, `[data-part="values"]`,
-//     `[data-part="culture"]`, reading `Fit 45/60 · Values 45/45 · Culture 10/10` from scoreSplit(scoreJob(job), job).
-//     When split.cultureRated is false the culture part reads `Culture not checked` (no number).
-//     Each part's aria-label names the part, its points and its badge word: Fit from job.fit (Strong/Partial/Stretch),
-//     Values from valuesFitOf (Great/Good/Neutral/No), Culture from cultureFitOf (Great/Good/Maybe/No/Unrated), or
-//     "not checked". Fit + Values + Culture shown = the tile unless split.capped (AC9b). Dark mode contrast >= 4.5:1.
+//     `[data-part="culture"]`, reading `Fit 45 Strong · Values 45 Great · Culture 10 Good` from
+//     scoreSplit(scoreJob(job), job): points with no denominator, then the badge word (UX-H2-R1, R2; review-fixes.test.ts).
+//     Fit's word from job.fit (Strong/Partial/Stretch), Values from valuesFitOf, Culture from cultureFitOf (no word
+//     when Unrated). With no culture points, signals or checks the culture part reads `Culture –`; never "not checked".
+//     Each part's aria-label names the part, its points "of" its max and its badge word (`Fit 45 of 60, Strong`).
+//     Fit + Values + Culture shown = the tile unless split.capped (AC9b). Dark mode contrast >= 4.5:1.
 //   - `.reason`: at most one. The first sentence of fitNote, or on Needs action the action reason
 //     (`Follow-up due Oct 28`). CSS -webkit-line-clamp 2 below 900px, 1 at 900px+.
-//   - `.meta`: exactly one visible line, `location · pay · <one date for the status>` (Found for new, Viewed or Found
+//   - `.meta`: exactly one, one line on a laptop (it wraps on a phone rather than cut off, UX-H2-R11), `location · pay · <one date for the status>` (Found for new, Viewed or Found
 //     for viewed, Applied for applied...). No chips in it.
-//   - Buttons (button, a.btn, select, [role=button] outside the h2), at most 4, no select:
+//   - Buttons (button, a.btn, select, [role=button] outside the h2), at most 3, no select (UX-H2-R3):
 //       one filled primary `.btn.cta` for the status (private build): Apply (`[data-apply]`) on new/viewed/saved,
 //       `I submitted it` on applying, `Follow-up sent` on applied with a follow-up due; none on other statuses;
 //       then `[data-quick="skipped"]` reading `Skip` (new..applying) or `Withdraw` (applied, screen, interviewing,
-//       offer); then `button[data-details="<id>"]` named "Details" (aria-haspopup="dialog").
-//       `button[data-preview]` ("Preview") only when job.descriptionHtml or job.descriptionPlain is stored; it shows
-//       that stored text in #preview. No `Open posting` / `Sample posting` on the closed card.
+//       offer); then `button[data-details="<id>"]` named "Details" (aria-haspopup="dialog"). With no primary the
+//       order is Details, then Withdraw (UX-H2-R12). No Preview button on the card: Details has "Preview posting" only
+//       when job.descriptionHtml or job.descriptionPlain is stored; it shows that stored text in #preview.
+//       No `Open posting` / `Sample posting` on the closed card.
 //   - Not on the closed card: Experience chip, status chip (.chip.st), tags, sector/lane pills, score math
 //     (.why-score), Values/Culture rows (.fitr), dates row (.dates), "Copies an intake prompt", the
 //     "Lane, tags, referral, notes" disclosure.
 //   - Status changes (the primary button, or the sheet's Status select) save at once with the existing Undo toast.
 //   Details sheet `#detailsSheet`, role="dialog", one per page, opened by the card's Details button
 //   - Bottom sheet below 900px (full width, flush with the bottom), right-hand panel at 900px+ (flush right, not full width).
-//   - Holds: a "Why this score" section (.fitr Values and Culture with reasons, score math .why-score, the full
+//   - Holds: a "Why this score" section (.fitr Values and Culture with reasons, score math .why-score: first
+//     `Fit N + Values N + Culture N = total`, then one line per group like `Values: sector 45`, the full
 //     fitNote), a select labeled "Status" (saves on change, Undo toast), the date history, fields labeled Lane, Tags,
 //     Referral, Follow up on, Next step, Notes, an "Open posting" link (or Sample posting on demo links) and the Apply
 //     hint "Copies an intake prompt for a new chat" (private build, before applying).
@@ -173,32 +176,31 @@ test("CARD-2 under the title, Fit · Values · Culture points from scoreSplit, e
     if (!m.subBelowTitle) bad.push(`${id}: .subscores is not under the title`);
     const f = m.parts.fit, v = m.parts.values, c = m.parts.culture;
     if (!f || !v || !c) { bad.push(`${id}: missing [data-part] fit/values/culture in '${m.subText}'`); continue; }
-    const fm = f.text.match(/^Fit ([−-]?\d+)\/60$/), vm = v.text.match(/^Values ([−-]?\d+)\/45$/);
-    if (!fm || num(fm[1]) !== e.fit) bad.push(`${id}: fit '${f.text}', want 'Fit ${e.fit}/60'`);
-    if (!vm || num(vm[1]) !== e.values) bad.push(`${id}: values '${v.text}', want 'Values ${e.values}/45'`);
+    // UX-H2-R1/R2: `<Name> <points>` then the badge word, no denominators; the aria-label keeps "of 60".
+    const word = (w: string) => (w && w !== "Unrated" ? " " + w : "");
+    const fm = f.text.match(/^Fit ([−-]?\d+)( \w+)?$/), vm = v.text.match(/^Values ([−-]?\d+)( \w+)?$/);
+    if (!fm || num(fm[1]) !== e.fit || f.text !== `Fit ${f.text.split(" ")[1]}${word(e.fitWord)}`) bad.push(`${id}: fit '${f.text}', want 'Fit ${e.fit}${word(e.fitWord)}'`);
+    if (!vm || num(vm[1]) !== e.values || v.text !== `Values ${v.text.split(" ")[1]}${word(e.valuesWord)}`) bad.push(`${id}: values '${v.text}', want 'Values ${e.values}${word(e.valuesWord)}'`);
     if (!new RegExp(`\\bFit\\b[\\s\\S]*\\b${e.fit}\\b[\\s\\S]*\\b60\\b[\\s\\S]*\\b${e.fitWord}\\b`, "i").test(f.label)) bad.push(`${id}: fit aria-label '${f.label}' lacks points and '${e.fitWord}'`);
     if (!new RegExp(`\\bValues\\b[\\s\\S]*${e.values}\\b[\\s\\S]*\\b45\\b[\\s\\S]*\\b${e.valuesWord}\\b`, "i").test(v.label)) bad.push(`${id}: values aria-label '${v.label}' lacks points and '${e.valuesWord}'`);
-    if (e.rated) {
-      const cm = c.text.match(/^Culture ([−-]?\d+)\/10$/);
-      if (!cm || num(cm[1]) !== e.culture) bad.push(`${id}: culture '${c.text}', want 'Culture ${e.culture}/10'`);
-      if (!new RegExp(`\\bCulture\\b[\\s\\S]*${e.culture}\\b[\\s\\S]*\\b10\\b[\\s\\S]*\\b${e.cultureWord}\\b`, "i").test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks points and '${e.cultureWord}'`);
+    if (!e.rated && e.cultureWord === "Unrated" && e.culture === 0) {
+      // Nothing known about culture: `Culture –`, never "not checked".
+      if (c.text !== "Culture –") bad.push(`${id}: unrated culture reads '${c.text}', want 'Culture –'`);
+      if (!/culture/i.test(c.label) || /not checked/i.test(c.label)) bad.push(`${id}: culture aria-label '${c.label}'`);
+    } else {
+      // Points, then the Culture badge word when Details has one (UX-H2-R1: `Culture 0 Great`, never a contradiction).
+      const cm = c.text.match(/^Culture ([−-]?\d+)( \w+)?$/);
+      if (!cm || num(cm[1]) !== e.culture || c.text !== `Culture ${c.text.split(" ")[1]}${word(e.cultureWord)}`) bad.push(`${id}: culture '${c.text}', want 'Culture ${e.culture}${word(e.cultureWord)}'`);
+      if (!new RegExp(`\\bCulture\\b[\\s\\S]*${e.culture}\\b[\\s\\S]*\\b10\\b`, "i").test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks points of 10`);
+      if (e.cultureWord !== "Unrated" && !new RegExp(`\\b${e.cultureWord}\\b`).test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks '${e.cultureWord}'`);
       // AC9b: what the card shows adds up to its tile.
       if (!e.capped && fm && vm && cm && num(fm[1]) + num(vm[1]) + num(cm[1]) !== Number(m.tile)) bad.push(`${id}: ${m.subText} doesn't add up to the tile ${m.tile}`);
-    } else if (e.cultureWord === "Unrated" && e.culture === 0) {
-      if (c.text !== "Culture not checked") bad.push(`${id}: unrated culture reads '${c.text}', want 'Culture not checked'`);
-      if (!/culture/i.test(c.label) || !/not checked/i.test(c.label)) bad.push(`${id}: culture aria-label '${c.label}'`);
-    } else {
-      // RR-M4.4 review fix: no culture signals, but culture checks gave a badge (or a startup penalty moved the points).
-      // The card then shows the points with the badge word, so it never says "not checked" while Details says "Great".
-      const cm = c.text.match(/^Culture ([−-]?\d+)\/10$/);
-      if (!cm || num(cm[1]) !== e.culture) bad.push(`${id}: culture '${c.text}', want 'Culture ${e.culture}/10'`);
-      if (e.cultureWord !== "Unrated" && !new RegExp(`\\b${e.cultureWord}\\b`).test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks '${e.cultureWord}'`);
-      if (/not checked/i.test(c.label) && e.cultureWord !== "Unrated") bad.push(`${id}: says 'not checked' though Details rates culture '${e.cultureWord}'`);
     }
-    if (!/^Fit [−-]?\d+\/60 · Values [−-]?\d+\/45 · Culture ([−-]?\d+\/10|not checked)$/.test(m.subText)) bad.push(`${id}: line reads '${m.subText}'`);
+    if (/not checked|\//.test(m.subText)) bad.push(`${id}: line reads '${m.subText}'`);
+    if (!/^Fit [−-]?\d+( \w+)? · Values [−-]?\d+( \w+)? · Culture ([−-]?\d+( \w+)?|–)$/.test(m.subText)) bad.push(`${id}: line reads '${m.subText}'`);
   }
   assert.ok(exp["card-cult"].rated && !exp["greenhouse-1001"].rated, "fixtures: one role with culture signals, one without");
-  assert.ok(exp["card-hi"].cultureWord === "Unrated" && exp["card-hi"].culture === 0, "fixtures: card-hi reads 'Culture not checked'");
+  assert.ok(exp["card-hi"].cultureWord === "Unrated" && exp["card-hi"].culture === 0, "fixtures: card-hi reads 'Culture –'");
   assert.ok(exp["greenhouse-1001"].cultureWord !== "Unrated", "fixtures: greenhouse-1001 has checks but no signals (the review fix)");
   assert.deepEqual(bad, []);
   assert.deepEqual(errors, []);
@@ -334,7 +336,7 @@ test("CARD-9 one meta line: location · pay · one date for the status, no chips
   await page.close();
 });
 
-test("CARD-10 the button row: one primary for the status, then Skip (Withdraw from Applied on), then Details", async () => {
+test("CARD-10 the button row (UX-H2-R3, R12): primary, Skip (Withdraw from Applied on), Details; with no primary, Details then Withdraw; at most 3", async () => {
   const { page, errors } = await openDemo({ ...LAPTOP });
   const bad: string[] = [];
   const row = async (id: string, primary: RegExp | null, skip: string | null) => {
@@ -350,8 +352,9 @@ test("CARD-10 the button row: one primary for the status, then Skip (Withdraw fr
       if (m.controls[iD].haspopup !== "dialog") bad.push(`${id}: Details has aria-haspopup='${m.controls[iD].haspopup}'`);
     }
     if (primary && iP >= 0 && skip && !(iP < iS)) bad.push(`${id}: primary is not before ${skip} [${names}]`);
-    if (iS >= 0 && iD >= 0 && !(iS < iD)) bad.push(`${id}: ${skip} is not before Details [${names}]`);
-    if (m.controls.length > 4) bad.push(`${id}: ${m.controls.length} buttons [${names}]`);
+    if (primary && iS >= 0 && iD >= 0 && !(iS < iD)) bad.push(`${id}: ${skip} is not before Details [${names}]`);
+    if (!primary && iS >= 0 && iD >= 0 && !(iD < iS)) bad.push(`${id}: Details is not before ${skip} [${names}]`);
+    if (m.controls.length > 3) bad.push(`${id}: ${m.controls.length} buttons [${names}]`);
   };
   await row("greenhouse-1001", /^Apply$/, "Skip"); // new
   await row("lever-1004", /^Apply$/, "Skip"); // viewed
@@ -381,22 +384,35 @@ test("CARD-11 Saved roles get Apply as the primary", async () => {
 });
 
 // ── Preview only with a stored description (AC12, R7) ─────────────────────────────────────────────────────────
-test("CARD-12 Preview shows only when a description is stored, and opens that stored text; no Open posting on the card", async () => {
+test("CARD-12 Preview posting is in Details only when a description is stored, and opens that stored text; no Preview or Open posting on the card", async () => {
   const { page, errors } = await openDemo({ ...LAPTOP });
-  const has = async (id: string) => (await card(page, id).locator("button[data-preview]").count()) > 0;
-  assert.ok(await has("card-hi"), "card-hi (descriptionPlain) has Preview");
-  assert.ok(await has("card-cult"), "card-cult (descriptionHtml) has Preview");
-  assert.ok(!(await has("card-lo")), "card-lo (no description) has no Preview");
-  assert.ok(!(await has("greenhouse-1001")), "a demo role with no stored description has no Preview");
+  const has = async (id: string) => {
+    assert.equal(await card(page, id).locator(".ctl [data-preview]").count(), 0, `${id}: Preview is on the card (UX-H2-R3 moved it into Details)`);
+    await card(page, id).locator("button[data-details]").click();
+    const sheet = page.locator("#detailsSheet");
+    await sheet.waitFor({ state: "visible", timeout: 3000 });
+    const n = await sheet.getByRole("button", { name: "Preview posting" }).count();
+    await page.keyboard.press("Escape");
+    await sheet.waitFor({ state: "hidden", timeout: 3000 });
+    return n > 0;
+  };
+  assert.ok(await has("card-hi"), "card-hi (descriptionPlain) has Preview posting");
+  assert.ok(await has("card-cult"), "card-cult (descriptionHtml) has Preview posting");
+  assert.ok(!(await has("card-lo")), "card-lo (no description) has no Preview posting");
+  assert.ok(!(await has("greenhouse-1001")), "a demo role with no stored description has no Preview posting");
   for (const id of ["card-hi", "card-lo", "greenhouse-1001"]) {
     const n = await card(page, id).getByRole("link", { name: /Open posting/ }).count() + await card(page, id).getByRole("button", { name: /Open posting|Sample posting/ }).count();
     assert.equal(n, 0, `${id}: Open/Sample posting is on the closed card`);
   }
-  await card(page, "card-hi").locator("button[data-preview]").click();
-  await page.locator("#preview").waitFor({ state: "visible", timeout: 3000 });
+  const preview = async (id: string) => {
+    await card(page, id).locator("button[data-details]").click();
+    await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click();
+    await page.locator("#preview").waitFor({ state: "visible", timeout: 3000 });
+  };
+  await preview("card-hi");
   await page.waitForFunction(() => /own the storage roadmap/.test(document.querySelector("#preview")?.textContent || ""), null, { timeout: 3000 });
   await page.keyboard.press("Escape");
-  await card(page, "card-cult").locator("button[data-preview]").click();
+  await preview("card-cult");
   await page.waitForFunction(() => /measures emissions for mid-size manufacturers/.test(document.querySelector("#preview")?.textContent || ""), null, { timeout: 3000 });
   assert.deepEqual(errors, []);
   await page.close();
@@ -450,7 +466,7 @@ test("CARD-15 Details holds Why this score, Status, dates, Lane, Tags, Referral,
   const text = await sheet.innerText();
   assert.match(text, /Why this score/);
   assert.match(await sheet.locator(".fitr").innerText(), /Values[\s\S]*Culture/);
-  assert.match(await sheet.locator(".why-score").innerText(), /45 sector/);
+  assert.match((await sheet.locator(".why-score").allInnerTexts()).join("\n"), /^Fit \d+ \+ Values \d+ \+ Culture \d+ = \d+[\s\S]*Values: sector 45/);
   assert.ok(text.includes(exp["card-hi"].fitNote), "the full fit paragraph");
   assert.equal(await sheet.getByLabel("Status", { exact: true }).inputValue(), "new");
   assert.match(text, /Found (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}/, "date history");

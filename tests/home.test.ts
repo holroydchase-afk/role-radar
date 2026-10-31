@@ -33,18 +33,20 @@
 //   #home-after
 //   - Stepper `[data-stage]` in order applied, screen, interviewing, offer, labeled Waiting, Screen, Interviews, Offer,
 //     number in `.num` = homeStats().stages (demo 2, 1, 1, 0).
-//   - #homeClosed, one grey (muted, never red) line: `N closed · P% heard back`, N = homeStats().closed and
-//     P = dashboard().response.pct (demo `0 closed · 100% heard back`).
+//   - #homeClosed, one grey (muted, never red) line: `N closed · H of E heard back (sent 14+ days ago)`,
+//     N = homeStats().closed, H and E = dashboard().response.heard / .eligible, never a bare % (UX-H2-R7;
+//     demo `0 closed · 2 of 2 heard back (sent 14+ days ago)`). With nothing eligible yet it reads `N closed`.
 //   - `details#moreStats` (summary "More stats"), closed by default, holding the old Funnel, Response rate and
 //     Sector mix cards (headings "Funnel", "Response rate", "Sector mix...").
 //   - The visible text of Home never contains "Rejected" (AC6), More stats open or not.
 //   #home-ready (AC8)
-//   - Up to 5 rows `[data-ready="<kind>"]` (>= 48px), most urgent first, kinds in this order:
-//       followup   `Follow up · <Company>`     button "Follow-up sent"  (applied, followUpDue <= today)
-//       submit     `Send it · <Company>`       button "I submitted it"  (applying 2+ days)
-//       nextstep   `Add next step · <Company>` button "Add step"        (screen/interviewing, no nextStep)
-//       decide     `Decide · <Company>`        button "Open"            (saved 7+ days)
-//       recruiters `Recruiter · N due`         button "Open"            (owner's build only; opens Recruiters)
+//   - Up to 5 rows `[data-ready="<kind>"]` (>= 56px), most urgent first. Two lines (UX-H2-R5): the company, then what
+//     to do in muted text. Kinds in this order:
+//       followup   `<Company>` / `Follow up · due Oct 29`     button "Follow-up sent"  (applied, followUpDue <= today)
+//       submit     `<Company>` / `Send it`                    button "I submitted it"  (applying 2+ days)
+//       nextstep   `<Company>` / `Add next step`              button "Add step"        (screen/interviewing, no nextStep)
+//       decide     `<Company>` / `Decide · saved N days ago`  button "Open"            (saved 7+ days)
+//       recruiters `Recruiter · N due` (one line)             button "Open"            (owner's build only; opens Recruiters)
 //     Each row's button is >= 44px tall. More than 5 due: a `See all N` link. None: `Nothing due. Nice.`
 //   - Public build: no recruiters row, no "Recruiter" and no "<N> due" text anywhere on Home.
 //   #home-pipeline
@@ -329,7 +331,7 @@ test("HOME-13 Applications shows the week bar (7 days) and 'Today X of Y' with a
 
 // ── After you apply (UX-H-R5 §3, R6; AC5, AC6) ───────────────────────────────────────────────────────────────────
 
-test("HOME-14 AC5 the stepper is Waiting 2 → Screen 1 → Interviews 1 → Offer 0 on the demo, plus '0 closed · 100% heard back'", async () => {
+test("HOME-14 AC5 the stepper is Waiting 2 → Screen 1 → Interviews 1 → Offer 0 on the demo, plus '0 closed · 2 of 2 heard back'", async () => {
   const { page, errors } = await openDemo({ ...PHONE });
   await waitHome(page);
   const { h, d } = await statsInPage(page);
@@ -340,7 +342,7 @@ test("HOME-14 AC5 the stepper is Waiting 2 → Screen 1 → Interviews 1 → Off
   const texts = await steps.allInnerTexts();
   ["Waiting", "Screen", "Interviews", "Offer"].forEach((w, i) => assert.match(texts[i] ?? "", new RegExp(`\\b${w}\\b`), `step ${i + 1} label`));
   assert.equal(d.response.pct, 100, "demo response rate");
-  assert.equal((await page.locator("#homeClosed").innerText()).replace(/\s+/g, " ").trim(), `${h.closed} closed · ${d.response.pct}% heard back`);
+  assert.equal((await page.locator("#homeClosed").innerText()).replace(/\s+/g, " ").trim(), `${h.closed} closed · ${d.response.heard} of ${d.response.eligible} heard back (sent ${d.response.afterDays}+ days ago)`);
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -354,7 +356,7 @@ test("HOME-15 AC6 a rejection after applying shows as a grey '1 closed', and Hom
   const { h, d } = await statsInPage(page);
   assert.equal(h.closed, 1);
   const closed = page.locator("#homeClosed");
-  assert.match((await closed.innerText()).replace(/\s+/g, " "), new RegExp(`^1 closed · ${d.response.pct}% heard back$`));
+  assert.match((await closed.innerText()).replace(/\s+/g, " "), new RegExp(`^1 closed · ${d.response.heard} of ${d.response.eligible} heard back \\(sent ${d.response.afterDays}\\+ days ago\\)$`));
   const [r, g] = await closed.evaluate((e) => (getComputedStyle(e).color.match(/[\d.]+/g) || []).map(Number));
   assert.ok(!(r > 150 && r - g > 60), `closed line is grey, not red (rgb ${r},${g})`);
   assert.doesNotMatch(await visibleText(page, "#view"), /Rejected/i, "closed More stats");
@@ -383,7 +385,7 @@ test("HOME-16 R6 'More stats' is closed by default and holds the old Funnel, Res
 
 // ── Get ready (UX-H-R5 §4, R6; AC8) ──────────────────────────────────────────────────────────────────────────────
 
-test("HOME-17 AC8 Get ready on the demo: Follow up, Send it, Add next step, then Recruiter · 2 due (owner), each with its one verb", async () => {
+test("HOME-17 AC8 Get ready on the demo: Follow up, Send it, Add next step, then Recruiter · 2 due (owner), company first, each with its one verb", async () => {
   const { page, errors } = await openDemo({ ...PHONE });
   await waitHome(page);
   const rows = page.locator("#home-ready [data-ready]");
@@ -393,11 +395,11 @@ test("HOME-17 AC8 Get ready on the demo: Follow up, Send it, Add next step, then
       btns: b.map((x) => x.innerText.trim()), bh: Math.min(...b.map((x) => x.getBoundingClientRect().height)) };
   }));
   assert.deepEqual(got.map((r) => r.kind), ["followup", "submit", "nextstep", "recruiters"]);
-  const want = [["Follow up · Brightwell Solar", "Follow-up sent"], ["Send it · HelioHome", "I submitted it"], ["Add next step · Pebblepay", "Add step"], ["Recruiter · 2 due", "Open"]];
+  const want = [["Brightwell Solar Follow up · due ", "Follow-up sent"], ["HelioHome Send it", "I submitted it"], ["Pebblepay Add next step", "Add step"], ["Recruiter · 2 due", "Open"]];
   for (const [i, [label, verb]] of want.entries()) {
     assert.ok(got[i].text.startsWith(label), `row ${i + 1}: want '${label}', got '${got[i].text}'`);
     assert.deepEqual(got[i].btns, [verb], `row ${i + 1}: one button '${verb}'`);
-    assert.ok(got[i].h >= 48, `row ${i + 1} is ${Math.round(got[i].h)}px`);
+    assert.ok(got[i].h >= 56, `row ${i + 1} is ${Math.round(got[i].h)}px`);
     assert.ok(got[i].bh >= 44, `row ${i + 1} button is ${Math.round(got[i].bh)}px`);
   }
   assert.deepEqual(errors, []);
@@ -417,7 +419,7 @@ test("HOME-18 AC8 Get ready's buttons act: Follow-up sent clears the row, I subm
   await page.close();
 });
 
-test("HOME-19 AC8 saved 7+ days shows 'Decide · <Company>' → Open; more than 5 due shows 5 rows and 'See all N'", async () => {
+test("HOME-19 AC8 saved 7+ days shows '<Company>' / 'Decide · saved N days ago' → Open; more than 5 due shows 5 rows and 'See all N'", async () => {
   const s = baseSeed();
   s.jobs["demo-saved-old"] = { company: "Saltmarsh Grid (demo)", title: "Senior PM, Saved Long Ago", status: "saved", statusAt: "@t-8", firstSeen: "@t-9", score: 70 };
   for (let i = 1; i <= 3; i++) s.jobs[`demo-fup-${i}`] = { company: `Followup Co ${i} (demo)`, title: `Senior PM ${i}`, status: "applied", statusAt: `@t-${10 + i}`, appliedAt: `@t-${10 + i}`, followUpDue: `@d-${3 + i}`, firstSeen: `@t-${12 + i}`, score: 60 };
@@ -436,7 +438,7 @@ test("HOME-19 AC8 saved 7+ days shows 'Decide · <Company>' → Open; more than 
   await waitHome(p2.page);
   const row = p2.page.locator('#home-ready [data-ready="decide"]');
   assert.equal(await row.count(), 1);
-  assert.match((await row.innerText()).replace(/\s+/g, " "), /^Decide · Saltmarsh Grid \(demo\)/);
+  assert.match((await row.innerText()).replace(/\s+/g, " "), /^Saltmarsh Grid \(demo\) Decide · saved 8 days ago/);
   assert.deepEqual(await row.locator("button, a").allInnerTexts(), ["Open"]);
   assert.deepEqual([...errors, ...p2.errors], []);
   await p2.page.close();

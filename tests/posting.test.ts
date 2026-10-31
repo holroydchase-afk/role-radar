@@ -64,3 +64,71 @@ test("lever joins description, lists and closing text", () => {
   assert.equal(html, "<div>Intro</div><h3>You &lt;will&gt;</h3><ul><li>Ship</li></ul><div>Pay</div>");
   assert.equal(P.extractHtml({ ats: "lever", id: "x" }, { ok: false }), "");
 });
+
+// ── PS-M4-R1 sanitizer guards (privacy-security, OWASP ASVS 5.3.3) ──────────────────────────────────────────────
+// sanitizeHtml needs a real DOM, so these run src/posting.ts (bundled as is) in Chromium. Each attack is sanitized,
+// then attached to the live document (so any surviving handler would fire), and the output is checked:
+// no script/style/svg/math/img/iframe/form/base/meta/object/video/noscript/details/input elements, no attribute on
+// any element except href/target/rel on <a>, every href matching ^https?://, and window.__x never set.
+// privacy-security found every case below inert at 342bef4, so these are guards: they pass today and lock it in.
+import { buildSync } from "esbuild";
+import { chromium } from "playwright";
+const ATTACKS: [string, string][] = [
+  ["svg + script", `<svg><script>window.__x=1</script><a href="https://ok.invalid/">x</a></svg><svg onload="window.__x=1"></svg>`],
+  ["MathML style mXSS", `<math><mtext><table><mglyph><style><img src=x onerror="window.__x=2"></style></mglyph></table></mtext></math>`],
+  ["MathML mi style", `<math><mi><style><img src=x onerror=window.__x=2></style></mi></math>`],
+  ["noscript title trick", `<noscript><p title="</noscript><img src=x onerror=window.__x=3>">x</p></noscript>`],
+  ["mixed-case javascript: with spaces", `<a href="  JaVaScRiPt:window.__x=4">a</a><a href="java\tscript:window.__x=4">b</a><a href="&#106;avascript:window.__x=4">c</a>`],
+  ["data: and // links", `<a href="data:text/html,<script>window.__x=5</script>">d</a><a href="//evil.invalid/x">e</a><a href="/relative">f</a>`],
+  ["style attributes", `<p style="background:url(javascript:window.__x=6)">s</p><div style="position:fixed;inset:0">cover</div>`],
+  ["form, base, meta refresh", `<form action="https://evil.invalid"><input name="q" autofocus onfocus="window.__x=7"><button>go</button></form><base href="https://evil.invalid/"><meta http-equiv="refresh" content="0;url=https://evil.invalid">`],
+  ["details ontoggle", `<details open ontoggle="window.__x=8"><summary>s</summary>x</details>`],
+  ["video onerror", `<video><source onerror="window.__x=9"></video><video src=x onerror="window.__x=9"></video>`],
+  ["object", `<object data="javascript:window.__x=10"></object><embed src="javascript:window.__x=10">`],
+  ["id/class clobbering", `<p id="moreBtn" class="btn cta" name="tabs">clobber</p><a id="tabs" class="x" name="y" href="https://ok.invalid/">ok</a><form id="detailsSheet"></form>`],
+  ["event handlers on kept tags", `<p onclick="window.__x=11" onmouseover="window.__x=11">p</p><a href="https://ok.invalid/" onclick="window.__x=11" style="color:red" title="t" data-x="1">a</a>`],
+];
+const BANNED = "script, style, svg, math, img, iframe, form, base, meta, object, embed, video, audio, source, noscript, details, input, button, link, template";
+let sanitizerJs: string | null = null;
+const bundle = () => sanitizerJs ??= buildSync({ entryPoints: [new URL("../src/posting.ts", import.meta.url).pathname], bundle: true, format: "iife", globalName: "PostingUnderTest", write: false, platform: "browser" }).outputFiles[0].text;
+
+test("PS-M4-R1 sanitizeHtml leaves every known attack inert: no dangerous elements, only href/target/rel on links, http(s) hrefs only", async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(String(e)));
+    await page.setContent("<!doctype html><html><body><main id=host></main></body></html>");
+    await page.addScriptTag({ content: bundle() });
+    const bad: string[] = [];
+    for (const [name, html] of ATTACKS) {
+      const r = await page.evaluate(async ({ html, BANNED }) => {
+        const w = window as any; w.__x = undefined;
+        const host = document.getElementById("host")!; host.textContent = "";
+        const box = document.createElement("div"); host.appendChild(box);
+        box.appendChild(w.PostingUnderTest.sanitizeHtml(html, document));
+        await new Promise((res) => setTimeout(res, 150));
+        const els = [...box.querySelectorAll<HTMLElement>("*")];
+        return {
+          banned: [...box.querySelectorAll(BANNED)].map((e) => e.tagName.toLowerCase()),
+          attrs: els.flatMap((e) => [...e.attributes].filter((a) => !(e.tagName === "A" && ["href", "target", "rel"].includes(a.name))).map((a) => `${e.tagName.toLowerCase()}[${a.name}]`)),
+          hrefs: [...box.querySelectorAll("a[href]")].map((a) => a.getAttribute("href") || ""),
+          rels: [...box.querySelectorAll("a[href]")].map((a) => a.getAttribute("rel") || ""),
+          x: w.__x, base: document.baseURI, clobbered: (document.getElementById("moreBtn") || document.getElementById("tabs")) !== null,
+        };
+      }, { html, BANNED });
+      if (r.banned.length) bad.push(`${name}: kept <${r.banned.join(">, <")}>`);
+      if (r.attrs.length) bad.push(`${name}: kept attributes ${r.attrs.join(", ")}`);
+      for (const h of r.hrefs) if (!/^https?:\/\//.test(h)) bad.push(`${name}: href '${h}'`);
+      for (const rel of r.rels) if (rel !== "noopener noreferrer") bad.push(`${name}: rel '${rel}'`);
+      if (r.x !== undefined) bad.push(`${name}: ran (window.__x = ${r.x})`);
+      if (/evil/.test(r.base)) bad.push(`${name}: base URL changed to ${r.base}`);
+      if (r.clobbered) bad.push(`${name}: an id survived (DOM clobbering)`);
+    }
+    // Words survive: the sanitizer keeps text, not just nothing.
+    const kept = await page.evaluate(() => { const d = document.createElement("div"); d.appendChild((window as any).PostingUnderTest.sanitizeHtml(`<p onclick="x()">Real <b>words</b> <a href="https://ok.invalid/">stay</a></p>`, document)); return d.innerHTML; });
+    assert.equal(kept, `<p>Real <b>words</b> <a href="https://ok.invalid/" target="_blank" rel="noopener noreferrer">stay</a></p>`);
+    assert.deepEqual(bad, []);
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); }
+});

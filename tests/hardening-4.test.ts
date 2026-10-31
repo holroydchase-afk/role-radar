@@ -46,8 +46,9 @@ test("RR-H-11 HTML and script in company, title, notes, skip notes, recruiters a
     await openTab(page, id);
     if (id === "people") { const b = page.locator("#recPrivacy"); if (await b.count()) await b.click(); }
   }
-  await page.click("#tab-inbox");
-  await page.locator("button[data-preview]").first().click();
+  await openTab(page, "all");
+  await page.locator("#role-e1").locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForTimeout(300);
   await page.keyboard.press("Escape");
   // RR-M4.3: notes, referral, next step and the inbox note live in the Details sheet now.
@@ -166,7 +167,8 @@ test("RR-H-17 a scan role with no url, comp, score, location or dates shows no '
   }
   await page.click("#tab-inbox");
   assert.equal(await page.locator("#view article.job").getByRole("link", { name: /open posting/i }).count(), 0, "no dead posting link");
-  await page.locator("button[data-preview]").first().click();
+  await page.locator("#role-bare").locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.locator("#preview").waitFor({ state: "visible" });
   assert.ok(noJunkText(await page.locator("#preview").innerText()));
   await page.keyboard.press("Escape");
@@ -277,9 +279,9 @@ test("RR-H-22 status walk: Saved → Applying → 'I submitted it' sets Applied 
   assert.match(dates, /Follow up/);
   await sheet.getByLabel("Status", { exact: true }).selectOption("screen");
   await page.keyboard.press("Escape");
-  // RR-M4.4: Needs action became Home's Get ready: "Add next step · <Company>" with an Add step button.
+  // RR-M4.4: Needs action became Home's Get ready: "<Company>" over "Add next step" (UX-H2-R5) with an Add step button.
   await openTab(page, "home");
-  const row = page.locator('#home-ready [data-ready="nextstep"]', { hasText: "Add next step · Walkthrough Co (demo)" });
+  const row = page.locator('#home-ready [data-ready="nextstep"]', { hasText: "Walkthrough Co (demo)" });
   await row.waitFor({ timeout: 3000 });
   await row.getByRole("button", { name: "Add step" }).click();
   sheet = page.locator("#detailsSheet"); await sheet.waitFor({ state: "visible", timeout: 3000 });

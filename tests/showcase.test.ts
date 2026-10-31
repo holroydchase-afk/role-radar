@@ -79,7 +79,8 @@ test("RR-N3-7 At a glance points to the Alerts card", async () => {
 test("RR-N3-8 the demo's preview says it's a sample above the description", async () => {
   const { page } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-all");
-  await page.click('.job:has-text("Gridlark") button[data-preview]');
+  await page.locator('.job:has-text("Gridlark")').locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForSelector("#pvBody li");
   const order = await page.evaluate(() => {
     const src = document.querySelector(".pv-src")!, body = document.querySelector("#pvBody")!;
