@@ -5,7 +5,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 type Opts = Parameters<typeof open>[1];
@@ -20,8 +20,9 @@ after(async () => { await browser?.close(); });
 
 test("RR-FS-1 on a phone, search, Sort and Filters share one row and the first role starts on the first screen", async () => {
   const { page, errors } = await openDemo(PHONE);
-  for (const id of ["inbox", "pipeline", "action", "all"]) {
-    await page.click(`#tab-${id}`);
+  // RR-M4.4: Needs action is gone (Home's Get ready); Home has no filter bar (tests/home.test.ts HOME-2).
+  for (const id of ["inbox", "pipeline", "all"]) {
+    await openTab(page, id);
     const [q, s, f] = await Promise.all(["#q", "#fsort", "#ftoggle"].map((sel) => page.locator(sel).boundingBox()));
     assert.ok(q && s && f, `controls visible on ${id}`);
     const mid = (b: { y: number; height: number }) => b.y + b.height / 2;
@@ -34,18 +35,23 @@ test("RR-FS-1 on a phone, search, Sort and Filters share one row and the first r
   await page.close();
 });
 
-test("RR-FS-2 each tab has its own default sort: New and All by match, Pipeline by recent change, Needs action by follow-up", async () => {
+// RR-M4.4: Needs action left with its follow-up default; the Follow-up date sort is still checked, picked on Pipeline.
+test("RR-FS-2 each tab has its own default sort: New and All by match, Pipeline by recent change; Follow-up date sorts soonest first", async () => {
   const { page } = await openDemo(LAPTOP);
-  const expect: Record<string, string> = { inbox: "Best match", pipeline: "Recently changed", action: "Follow-up date", all: "Best match" };
+  const expect: Record<string, string> = { inbox: "Best match", pipeline: "Recently changed", all: "Best match" };
   for (const [id, label] of Object.entries(expect)) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     assert.match(await page.locator("#fcount").innerText(), new RegExp(label), `${id} sorted by ${label}`);
   }
   await page.click("#tab-pipeline");
   assert.deepEqual(await cos(page), ["Northstar Utilities", "Pebblepay", "HelioHome", "Watermark Climate", "Brightwell Solar"], "Pipeline newest change first");
-  await page.click("#tab-action");
+  await page.click("#fsort");
+  await page.locator("#fsort-followup").check();
+  await page.waitForFunction(() => /Follow-up date/.test(document.querySelector("#fcount")?.textContent || ""), null, { timeout: 3000 });
   const due = await cos(page);
-  assert.deepEqual(due, ["Pebblepay", "Brightwell Solar", "HelioHome"], "oldest follow-up first, none last");
+  // Pipeline adds Watermark Climate (a follow-up date while at Screen) and Northstar (one not yet due) to the old list.
+  assert.deepEqual(due.slice(0, 3), ["Watermark Climate", "Pebblepay", "Brightwell Solar"], "oldest follow-up first");
+  assert.equal(due[due.length - 1], "HelioHome", "a role with no follow-up comes last");
   await page.close();
 });
 
@@ -104,8 +110,8 @@ test("RR-FS-4 a filter set in the sheet shows as a removable chip, and removing 
 
 test("RR-FS-5 the Status filter is only on All; Experience, Values and Culture dropdowns are gone (the chips cover them)", async () => {
   const { page } = await openDemo(LAPTOP);
-  for (const id of ["inbox", "pipeline", "action"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["inbox", "pipeline"]) {
+    await openTab(page, id);
     if ((await page.locator("#ftoggle").getAttribute("aria-expanded")) !== "true") await page.click("#ftoggle");
     assert.equal(await page.locator("#fv-status").count(), 0, `no Status filter on ${id}`);
   }

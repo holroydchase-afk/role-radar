@@ -3,23 +3,25 @@
 //   2. Deep links: ?tab=<id> opens a tab, #role-<id> jumps to a role card, tab changes update the URL.
 // Demo data only (demo/seed.json): every company and role here is made up.
 //
+// RR-M4.4: the digest card moved off New onto Home (the default tab) as #home-morning "This morning": the top 5 of
+// the same ranking. The digest tests below follow it there; tests/home.test.ts holds its full contract.
 // Contract the engineer builds to:
-//   - #digestCard: a <details> (or an element with an [aria-expanded] toggle) on the New tab, before the first
-//     article.job, with a heading "This morning's digest". Open by default at >= 900px wide, collapsed below.
-//   - Its entries are links a[href="#role-<id>"], in the same order and number as the Criteria tab's
-//     #digestPreview list. Each entry shows the role's score. Activating one scrolls to and focuses the card.
+//   - #home-morning on Home, before Home's Pipeline cards, with a heading "This morning". Always open (no toggle).
+//   - Its entries are links a[href="#role-<id>"], the first min(5, N) of the Criteria tab's #digestPreview list, in
+//     the same order. Each entry shows the role's score. Activating one opens the role on its tab (New) and focuses it.
 //   - Every role card is article.job with id="role-<_id>" (e.g. id="role-greenhouse-1001").
 //   - ?tab=<id> beats the remembered tab (localStorage "rr-tab"); an unknown id falls back to the usual default.
-//     Hidden tabs never open by URL: ?tab=people on the public radar-only build stays on New.
+//     Hidden tabs never open by URL: ?tab=people on the public radar-only build stays on the default tab (Home).
 //   - Clicking a tab rewrites the URL (history.replaceState) to ?tab=<id>, so a copied URL reopens that tab.
-//   - #role-<id> scrolls to and focuses that role's card, switching to All roles if the current tab hides it.
+//   - #role-<id> scrolls to and focuses that role's card: from Home on the role's own tab (New or Pipeline);
+//     from another tab, switching to All roles if that tab hides it.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, BrowserContextOptions, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
@@ -36,12 +38,8 @@ const openDemo = ({ publicDemo = true, seed, init = clearStorage, initArg, ...op
   open(withInit(init, initArg), { html: buildDemo({ publicDemo, ...(seed ? { seed } : {}) }), file: "dist/test-enhancements.html", ready: "#tab-inbox .n", ...opts });
 
 const selectedTab = (page: Page) => page.locator("#tabs [role=tab][aria-selected=true]").getAttribute("id");
-const digestCard = (page: Page) => page.locator("#digestCard");
-const isOpen = (page: Page) => page.locator("#digestCard").evaluate((el) =>
-  el.tagName === "DETAILS" ? (el as HTMLDetailsElement).open : el.querySelector("[aria-expanded]")?.getAttribute("aria-expanded") === "true");
-const toggleCard = (page: Page) => page.locator("#digestCard").evaluate((el) =>
-  (el.tagName === "DETAILS" ? el.querySelector("summary") : el.querySelector<HTMLElement>("[aria-expanded]"))!.click());
-const entryIds = (page: Page) => page.locator('#digestCard a[href^="#role-"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.slice(6)));
+const digestCard = (page: Page) => page.locator("#home-morning");
+const entryIds = (page: Page) => page.locator('#home-morning a[href^="#role-"]').evaluateAll((as) => as.map((a) => a.getAttribute("href")!.slice(6)));
 // Waits until the role card with this id holds focus and sits inside the viewport.
 const cardFocusedInView = (page: Page, id: string, timeout = 3000) => page.waitForFunction((id) => {
   const c = document.getElementById("role-" + id);
@@ -65,16 +63,15 @@ test("RR-M3.5-1 every role card carries id=\"role-<id>\" so it can be linked to"
   await page.close();
 });
 
-test("RR-M3.5-2 at 1280px the New tab opens with an expanded 'This morning's digest' card above the first role", async () => {
+test("RR-M3.5-2 at 1280px Home opens with 'This morning' (the digest) above the first role card", async () => {
   const { page, errors } = await openDemo({ width: 1280, height: 800 });
-  assert.equal(await selectedTab(page), "tab-inbox");
-  assert.equal(await digestCard(page).count(), 1, "#digestCard on the New tab");
-  assert.match(await digestCard(page).innerText(), /This morning.s digest/i);
-  assert.equal(await isOpen(page), true, "open by default at >= 900px");
+  assert.equal(await selectedTab(page), "tab-home");
+  assert.equal(await digestCard(page).count(), 1, "#home-morning on Home");
+  assert.match(await digestCard(page).locator("h2").innerText(), /^This morning$/);
   const card = await digestCard(page).boundingBox();
   const first = await page.locator("#view article.job").first().boundingBox();
   assert.ok(card!.y < first!.y, "the digest sits above the first role card");
-  assert.ok(await page.locator('#digestCard a[href^="#role-"]').first().isVisible());
+  assert.ok(await page.locator('#home-morning a[href^="#role-"]').first().isVisible());
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -83,16 +80,16 @@ test("RR-M3.5-3 the card lists the same roles, in the same order, as the Criteri
   const { page } = await openDemo({ width: 1280, height: 800 });
   await digestCard(page).waitFor({ timeout: 3000 });
   const ids = await entryIds(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#digestPreview ol.dig li").first().waitFor({ timeout: 3000 });
   const preview = await page.locator("#digestPreview ol.dig li").evaluateAll((lis: HTMLElement[]) =>
     lis.map((li) => ({ text: li.innerText, score: li.querySelector(".score")?.textContent!.trim() })));
   assert.ok(preview.length > 0, "the demo's digest preview has roles");
-  assert.equal(ids.length, preview.length, "same number of roles as the digest (top N after caps)");
+  assert.equal(ids.length, Math.min(5, preview.length), "the digest's top 5 (after caps)");
   ids.forEach((id, i) => assert.ok(preview[i].text.includes(label(id)), `entry ${i + 1} is ${preview[i].text.split("\n")[0]}, card has ${label(id)}`));
   // Each entry shows the score the digest sends.
-  await page.click("#tab-inbox");
-  const entries = await page.locator('#digestCard a[href^="#role-"]').evaluateAll((as: HTMLElement[]) => as.map((a) => (a.closest("li") || a).innerText));
+  await page.click("#tab-home");
+  const entries = await page.locator('#home-morning a[href^="#role-"]').evaluateAll((as: HTMLElement[]) => as.map((a) => (a.closest("li") || a).innerText));
   entries.forEach((t, i) => assert.ok(t.includes(preview[i].score!), `entry ${i + 1} shows score ${preview[i].score}`));
   await page.close();
 });
@@ -103,50 +100,52 @@ test("RR-M3.5-4 activating a digest entry scrolls to and focuses that role's car
   const ids = await entryIds(page);
   assert.ok(ids.length >= 2, "the demo digest has at least two roles");
   const last = ids[ids.length - 1];
-  await page.locator(`#digestCard a[href="#role-${last}"]`).click();
+  await page.locator(`#home-morning a[href="#role-${last}"]`).click();
   await cardFocusedInView(page, last);
-  assert.equal(await selectedTab(page), "tab-inbox", "stays on New: the role is there");
+  assert.equal(await selectedTab(page), "tab-inbox", "opens on New: the role is there");
   // Keyboard works too.
-  await page.locator(`#digestCard a[href="#role-${ids[0]}"]`).focus();
+  await page.click("#tab-home");
+  await page.locator(`#home-morning a[href="#role-${ids[0]}"]`).focus();
   await page.keyboard.press("Enter");
   await cardFocusedInView(page, ids[0]);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("RR-M3.5-5 on a 390px phone the card starts collapsed and the first role's title still shows on the first screen", async () => {
+test("RR-M3.5-5 on a 390px phone This morning's first pick shows on Home's first screen, and New's first title on New's", async () => {
   const { page, errors } = await openDemo({ width: 390, height: 844 });
   await digestCard(page).waitFor({ timeout: 3000 });
-  assert.match(await digestCard(page).innerText(), /This morning.s digest/i, "heading shows when collapsed");
-  assert.equal(await isOpen(page), false, "collapsed by default below 900px");
+  assert.match(await digestCard(page).locator("h2").innerText(), /^This morning$/);
+  const pick = (await page.locator('#home-morning a[href^="#role-"]').first().boundingBox())!;
+  assert.ok(pick.y + pick.height <= 844, `first pick ends at ${Math.round(pick.y + pick.height)}px`);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll on Home");
+  // New no longer carries the digest, so its first role title still shows on the first screen.
+  await page.click("#tab-inbox");
   const box = (await page.locator("#view article.job h2").first().boundingBox())!;
   const line = await page.locator("#view article.job h2").first().evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
   assert.ok(box.y + line <= 844, `first title line ends at ${Math.round(box.y + line)}px`);
-  // Opens on tap, and the entries fit the phone without sideways scroll.
-  await toggleCard(page);
-  assert.equal(await isOpen(page), true);
-  assert.ok(await page.locator('#digestCard a[href^="#role-"]').first().isVisible());
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "no horizontal scroll on New");
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("RR-M3.5-6 with nothing in New there is no digest card error: no card, or a short empty line", async () => {
+test("RR-M3.5-6 with nothing in New, This morning has no picks and a short empty line, never an error", async () => {
   const seed = baseSeed();
   for (const j of Object.values<{ status: string }>(seed.jobs)) if (["new", "viewed"].includes(j.status)) j.status = "skipped";
   const { page, errors } = await openDemo({ seed, width: 1280, height: 800, ready: "#tab-inbox" });
-  await page.waitForFunction(() => /\d/.test(document.querySelector("#tab-all .n")?.textContent || ""), null, { timeout: 3000 });
-  if (await digestCard(page).count()) {
-    assert.equal(await page.locator('#digestCard a[href^="#role-"]').count(), 0);
-    assert.ok((await digestCard(page).innerText()).length < 200, "a short empty line, not a wall of text");
-  }
+  await page.waitForFunction(() => /\d/.test(document.querySelector("#tab-pipeline .n")?.textContent || ""), null, { timeout: 3000 });
+  await digestCard(page).waitFor({ timeout: 3000 });
+  assert.equal(await page.locator('#home-morning a[href^="#role-"]').count(), 0);
+  assert.ok((await digestCard(page).innerText()).length < 200, "a short empty line, not a wall of text");
   assert.equal(await page.locator("#view [role=alert]").count(), 0);
   assert.deepEqual(errors, []);
-  // And the card only lives on New.
+  // And the digest only lives on Home (RR-M4.4 moved it off New).
   await page.close();
   const full = await openDemo({ width: 1280, height: 800 });
-  await full.page.click("#tab-all");
-  assert.equal(await digestCard(full.page).count(), 0, "no digest card on All roles");
+  for (const t of ["inbox", "all"]) {
+    await full.page.click("#tab-" + t);
+    assert.equal(await full.page.locator("#home-morning, #digestCard").count(), 0, `no digest on ${t}`);
+  }
   await full.page.close();
 });
 
@@ -154,7 +153,7 @@ test("RR-M3.5-6 with nothing in New there is no digest card error: no card, or a
 
 test("RR-M3.5-7 ?tab=criteria opens Criteria on the public demo, overriding the remembered tab", async () => {
   const { page, errors } = await openDemo({ query: "?tab=criteria", init: remember, initArg: "all", width: 1280, height: 800 });
-  await page.waitForFunction(() => document.querySelector("#tab-criteria")?.getAttribute("aria-selected") === "true", null, { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelector("#view")?.getAttribute("data-tab") === "criteria", null, { timeout: 3000 });
   await page.locator("#critText, #digestPreview").first().waitFor({ timeout: 3000 });
   assert.deepEqual(errors, []);
   await page.close();
@@ -171,8 +170,8 @@ test("RR-M3.5-8 ?tab=pipeline and ?tab=all open those tabs on the private build 
 
 test("RR-M3.5-9 an unknown ?tab= falls back to the normal default with no error", async () => {
   const { page, errors } = await openDemo({ query: "?tab=nope%3Cscript%3E" });
-  assert.equal(await selectedTab(page), "tab-inbox");
-  assert.ok(await page.locator("#view article.job").first().isVisible());
+  assert.equal(await selectedTab(page), "tab-home");
+  assert.ok(await page.locator("#view #home-morning").isVisible());
   assert.deepEqual(errors, []);
   await page.close();
   // With a remembered tab, the fallback is the remembered tab.
@@ -183,15 +182,15 @@ test("RR-M3.5-9 an unknown ?tab= falls back to the normal default with no error"
 
 test("RR-M3.5-10 ?tab=people never opens Recruiters on the public radar-only demo; the owner's build does open it", async () => {
   const { page, errors } = await openDemo({ query: "?tab=people" });
-  assert.equal(await page.locator("#tab-people").count(), 0, "no Recruiters tab");
-  assert.equal(await selectedTab(page), "tab-inbox");
+  assert.equal(await page.locator('#tab-people, #moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
+  assert.equal(await selectedTab(page), "tab-home");
   assert.equal(await page.locator("#view article.job.rec").count(), 0, "no recruiter cards");
   assert.doesNotMatch(new URL(page.url()).search, /tab=people/, "the URL is not left pointing at a hidden tab");
   assert.deepEqual(errors, []);
   await page.close();
   // Allowed direction: the private build (owner view) opens Recruiters from the link.
   const own = await openDemo({ publicDemo: false, query: "?tab=people" });
-  await own.page.waitForFunction(() => document.querySelector("#tab-people")?.getAttribute("aria-selected") === "true", null, { timeout: 3000 });
+  await own.page.waitForFunction(() => document.querySelector("#view")?.getAttribute("data-tab") === "people", null, { timeout: 3000 });
   await own.page.close();
 });
 
@@ -219,19 +218,24 @@ test("RR-M3.5-12 #role-<id> scrolls to and focuses that card on New", async () =
   await page.close();
 });
 
-test("RR-M3.5-13 #role-<id> for a role New hides switches to All roles and focuses it", async () => {
+test("RR-M3.5-13 #role-<id> for a role New hides switches to All roles and focuses it; from Home it opens on Pipeline", async () => {
   const id = "greenhouse-1007"; // applied, so not on New
-  const { page, errors } = await openDemo({ query: "#role-" + id, width: 1280, height: 800 });
+  const { page, errors } = await openDemo({ query: "?tab=inbox#role-" + id, width: 1280, height: 800 });
   await cardFocusedInView(page, id);
   assert.equal(await selectedTab(page), "tab-all");
   assert.deepEqual(errors, []);
   await page.close();
+  const home = await openDemo({ query: "#role-" + id, width: 1280, height: 800 });
+  await cardFocusedInView(home.page, id);
+  assert.equal(await selectedTab(home.page), "tab-pipeline");
+  assert.deepEqual(home.errors, []);
+  await home.page.close();
 });
 
 test("RR-M3.5-14 an unknown #role-<id> is ignored: default tab, no error", async () => {
   const { page, errors } = await openDemo({ query: "#role-does-not-exist" });
-  assert.equal(await selectedTab(page), "tab-inbox");
-  assert.ok(await page.locator("#view article.job").first().isVisible());
+  assert.equal(await selectedTab(page), "tab-home");
+  assert.ok(await page.locator("#view #home-morning").isVisible());
   assert.deepEqual(errors, []);
   await page.close();
 });

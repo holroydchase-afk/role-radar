@@ -5,12 +5,13 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab, currentTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 type Opts = Parameters<typeof open>[1];
 const openDemo = (opts: Opts = {}) => open(browser, { ...opts, file: "dist/test-ui-polish.html" });
-const openPublic = (opts: Opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), ...opts });
+// RR-M4.4: Home is the default tab; these public-demo tests start on New, where the role cards are.
+const openPublic = (opts: Opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), query: "?tab=inbox", ...opts });
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1280, height: 800 };
 const accentRgb = (page: Page) => page.evaluate(() => {
@@ -19,8 +20,18 @@ const accentRgb = (page: Page) => page.evaluate(() => {
   const c = getComputedStyle(s).color; s.remove(); return c;
 });
 
-// On a phone Values/Culture and the score math sit behind each card's "Why <score>?" (RR-UX6-2): open them to measure.
-const openWhys = (page: Page) => page.evaluate(() => document.querySelectorAll<HTMLElement>('.job .whybtn[aria-expanded="false"]').forEach((b) => b.offsetParent && b.click()));
+// RR-M4.3: Values/Culture and the score math live in each role's Details sheet. Opens it for the first n cards on the
+// open tab and returns fn's result for each sheet, in card order.
+async function inDetails<T>(page: Page, n: number, fn: (sheet: HTMLElement) => T): Promise<T[]> {
+  const out: T[] = [], cards = page.locator("#view article.job"), k = Math.min(n, await cards.count());
+  for (let i = 0; i < k; i++) {
+    await cards.nth(i).locator("button[data-details]").click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    out.push(await page.locator("#detailsSheet").evaluate(fn as any) as T);
+    await page.keyboard.press("Escape");
+  }
+  return out;
+}
 
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
@@ -60,7 +71,13 @@ test("RR-UX3-2 on a phone the tabs are one scrollable row and the first title sh
   for (const id of ids) {
     await page.locator("#" + id).scrollIntoViewIfNeeded();
     await page.locator("#" + id).click();
+    if (id === "moreBtn") { await page.locator("#moreSheet").waitFor({ state: "visible", timeout: 2000 }); await page.keyboard.press("Escape"); continue; }
     assert.equal(await page.locator("#" + id).getAttribute("aria-selected"), "true", `${id} opens`);
+  }
+  // RR-M4.1: the other tabs live in the More sheet; each still opens.
+  for (const id of await page.locator("#moreSheet [data-tab]").evaluateAll((els: HTMLElement[]) => els.map((e) => e.dataset.tab!))) {
+    await openTab(page, id);
+    assert.equal(await currentTab(page), id, `${id} opens from More`);
   }
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth) <= 390, "no sideways page scroll after switching");
   await page.close();
@@ -100,12 +117,11 @@ test("RR-UX3-4 each New card has one primary action and laptop-sized targets", a
   await phone.page.close();
 });
 
-test("RR-UX3-5 the Values/Culture text column lines up across every card", async () => {
+test("RR-UX3-5 the Values/Culture text column lines up across every role's Details", async () => {
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openDemo({ ...vp, query: "" });
     await page.click("#tab-all");
-    await openWhys(page);
-    const xs = await page.locator(".job .fitr .r").evaluateAll((els: HTMLElement[]) => els.map((e) => e.getBoundingClientRect().left));
+    const xs = (await inDetails(page, 4, (el) => [...el.querySelectorAll<HTMLElement>(".fitr .r")].map((e) => e.getBoundingClientRect().left))).flat();
     assert.ok(xs.length >= 4, "fit rows on several cards");
     const spread = Math.max(...xs) - Math.min(...xs);
     assert.ok(spread <= 1, `text column x varies by ${Math.round(spread)}px at ${vp.width}`);
@@ -116,7 +132,7 @@ test("RR-UX3-5 the Values/Culture text column lines up across every card", async
 test("RR-UX3-6 links in the page use the accent and the 'see Alerts' link is a phone-sized target", async () => {
   const { page } = await openDemo(PHONE);
   const accent = await accentRgb(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const link = page.locator('#view a[href="#alerts"]');
   await link.waitFor();
   const colors = await page.locator("#view a:not(.btn)").evaluateAll((els: HTMLElement[]) => els.filter((a) => a.offsetParent).map((a) => getComputedStyle(a).color));
@@ -150,7 +166,7 @@ test("RR-UX4-1 filters start collapsed behind the Filters button at every width,
   for (const vp of [LAPTOP, PHONE]) {
     const { page } = await openPrivate(vp);
     for (const id of ["inbox", "pipeline", "all"]) {
-      await page.click(`#tab-${id}`);
+      await openTab(page, id);
       assert.equal(await filterFieldsShown(page), false, `filter fields hidden by default on ${id} at ${vp.width}`);
       assert.ok(await page.locator("#ftoggle").isVisible(), `#ftoggle visible on ${id} at ${vp.width}`);
       assert.equal(await page.locator("#ftoggle").getAttribute("aria-expanded"), "false");
@@ -167,33 +183,32 @@ test("RR-UX4-1 filters start collapsed behind the Filters button at every width,
   await page.close();
 });
 
-test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targets with room before the first card", async () => {
+test("RR-UX4-2 Pipeline's 'Check Gmail' and 'Add a role' rows are full-size targets with room after the last card (UX-H2-R9 moved them below)", async () => {
   const { page } = await openPrivate(LAPTOP);
   await page.click("#tab-pipeline");
   const m = await page.evaluate(() => {
     const sums = [...document.querySelectorAll<HTMLElement>("#view > details > summary, #view details:not(.job details) > summary")]
       .filter((s) => !s.closest(".job") && s.offsetParent).map((s) => ({ text: s.textContent.trim(), h: s.getBoundingClientRect().height }));
     const dets = [...document.querySelectorAll<HTMLElement>("#view details")].filter((d) => !d.closest(".job") && d.offsetParent);
-    const last = dets[dets.length - 1], job = document.querySelector("#view .job");
-    return { sums, gap: last && job ? job.getBoundingClientRect().top - last.getBoundingClientRect().bottom : null };
+    const first = dets[0], jobs = document.querySelectorAll("#view .job"), job = jobs[jobs.length - 1];
+    return { sums, gap: first && job ? first.getBoundingClientRect().top - job.getBoundingClientRect().bottom : null };
   });
   assert.ok(m.sums.length >= 2, `found ${m.sums.length} section rows`);
   for (const s of m.sums) assert.ok(s.h >= 44, `'${s.text}' row is ${Math.round(s.h)}px tall at 1280`);
-  assert.ok(m.gap !== null && m.gap >= 12, `gap from last section row to first card is ${m.gap === null ? "n/a" : Math.round(m.gap)}px`);
+  assert.ok(m.gap !== null && m.gap >= 12, `gap from the last card to the first section row is ${m.gap === null ? "n/a" : Math.round(m.gap)}px`);
   await page.close();
 });
 
-test("RR-UX4-3 on a phone each Values/Culture reason sits under its label and uses the card's width", async () => {
+test("RR-UX4-3 on a phone each Values/Culture reason in Details sits under its label and uses the sheet's width", async () => {
   const { page } = await openPrivate(PHONE);
   await page.click("#tab-all");
-  await openWhys(page);
-  const rows = await page.locator(".job .fitr").evaluateAll((els: HTMLElement[]) => els.flatMap((f) => {
+  const rows = (await inDetails(page, 3, (el) => [...el.querySelectorAll<HTMLElement>(".fitr")].flatMap((f) => {
     const fw = f.getBoundingClientRect().width, ks = [...f.querySelectorAll<HTMLElement>(".k")];
     return [...f.querySelectorAll<HTMLElement>(".r")].map((r, i) => {
       const rb = r.getBoundingClientRect(), kb = ks[i]?.getBoundingClientRect();
       return { below: kb ? rb.top >= kb.bottom - 1 : false, ratio: rb.width / fw };
     });
-  }));
+  }))).flat();
   assert.ok(rows.length >= 4);
   for (const r of rows) {
     assert.ok(r.below, "reason starts below its label row");
@@ -202,11 +217,12 @@ test("RR-UX4-3 on a phone each Values/Culture reason sits under its label and us
   await page.close();
 });
 
-test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emphasized (accent) action", async () => {
+// RR-M4.4: Needs action folded into Home, whose Pipeline cards are checked instead.
+test("RR-UX4-4 every card on Pipeline, All and Home has at most one emphasized (accent) action", async () => {
   const { page } = await openPrivate(LAPTOP);
   const accent = await accentRgb(page);
-  for (const id of ["pipeline", "all", "action"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["pipeline", "all", "home"]) {
+    await openTab(page, id);
     const cards = await page.locator("#view .job").evaluateAll((els, accent) => els.map((c) => {
       const btns = [...c.querySelectorAll<HTMLElement>("button, a.btn")].filter((b) => b.offsetParent && !b.closest("details"));
       const filled = btns.filter((b) => b.matches(".btn.cta, .primary") || getComputedStyle(b).backgroundColor === accent);
@@ -225,7 +241,7 @@ test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emph
 test("RR-UX4-5 on an empty criteria editor 'Start from the example' is the primary; once there's text, Save is", async () => {
   const { page } = await openEmpty(LAPTOP);
   const accent = await accentRgb(page);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   await page.locator("#critText").waitFor({ state: "visible", timeout: 3000 });
   const bg = (name: string | RegExp) => page.getByRole("button", { name }).evaluate((b) => getComputedStyle(b).backgroundColor);
   assert.equal(await bg(/start from the example/i), accent, "example is solid primary on an empty editor");
@@ -244,19 +260,18 @@ test("RR-UX4-6 first run with no criteria: New's empty state points to Criteria"
   const btn = page.locator("#view").getByRole("button", { name: /open criteria/i });
   assert.equal(await btn.count(), 1, "'Open Criteria' button in the empty state");
   await btn.click();
-  assert.equal(await page.locator("#tab-criteria").getAttribute("aria-selected"), "true");
+  assert.equal(await currentTab(page), "criteria");
   await page.close();
 });
 
-test("RR-UX4-7 on a phone the score math is small and at most two lines", async () => {
+test("RR-UX4-7 on a phone the score math in Details is small and at most two lines", async () => {
   const { page } = await openPublic(PHONE);
-  await openWhys(page);
-  const m = await page.locator(".job .score-math, .job .why-score").evaluateAll((els: HTMLElement[]) => els.map((e) => {
+  const m = (await inDetails(page, 3, (el) => [...el.querySelectorAll<HTMLElement>(".score-math, .why-score")].map((e) => {
     const cs = getComputedStyle(e), fs = parseFloat(cs.fontSize);
     const lh = cs.lineHeight === "normal" ? fs * 1.2 : parseFloat(cs.lineHeight);
     return { fs, h: e.getBoundingClientRect().height, lh };
-  }));
-  assert.ok(m.length >= 3, "score math on several New cards");
+  }))).flat();
+  assert.ok(m.length >= 3, "score math for several New roles");
   for (const x of m) {
     assert.ok(x.fs <= 13.5, `score math ${x.fs}px`);
     assert.ok(x.h <= 2.6 * x.lh, `score math ${Math.round(x.h)}px tall = ${(x.h / x.lh).toFixed(1)} lines`);
@@ -300,7 +315,13 @@ test("RR-UX5-1 at 1280 the tabs are one row and every tab still opens (public, ?
     const ids = await page.locator("#tabs button").evaluateAll((els: HTMLElement[]) => els.filter((e) => e.offsetParent).map((e) => e.id));
     for (const id of ids) {
       await page.locator("#" + id).click();
+      if (id === "moreBtn") { await page.locator("#moreSheet").waitFor({ state: "visible", timeout: 2000 }); await page.keyboard.press("Escape"); continue; }
       assert.equal(await page.locator("#" + id).getAttribute("aria-selected"), "true", `${name}: ${id} opens`);
+    }
+    // RR-M4.1: the other tabs live in the More sheet; each still opens.
+    for (const id of await page.locator("#moreSheet [data-tab]").evaluateAll((els: HTMLElement[]) => els.map((e) => e.dataset.tab!))) {
+      await openTab(page, id);
+      assert.equal(await currentTab(page), id, `${name}: ${id} opens from More`);
     }
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth) <= 1280, `${name}: no sideways page scroll`);
     await page.close();
@@ -313,7 +334,7 @@ test("RR-UX5-2 at 1280 the header meta is at most 2 lines and New's first role t
   for (const [name, go] of [["public", () => openPublic(LAPTOP)], ["private", () => openPrivate(LAPTOP)]] as [string, () => ReturnType<typeof open>][]) {
     const { page } = await go();
     await page.click("#tab-inbox");
-    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #demoNote, header #demoTry, header #progress, header #scanLine")]), String(lineRows));
+    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #demoNote, header #demoTry, header #scanLine")]), String(lineRows));
     const dig = await page.locator("#digestCard").evaluate((d: HTMLDetailsElement) => d.open).catch(() => null);
     assert.notEqual(dig, false, `${name}: digest card is open by default at 1280`);
     const t = await page.locator("#view article.job h2").first().boundingBox();
@@ -328,18 +349,29 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
   const { page } = await openPrivate(LAPTOP);
   const seen = new Set();
   for (const id of ["pipeline", "all"]) {
-    await page.click(`#tab-${id}`);
-    const cards = await page.locator("#view article.job").evaluateAll((els: HTMLElement[]) => els.map((c) => ({
-      title: c.querySelector("h2")?.textContent.trim(),
-      status: c.querySelector<HTMLSelectElement>("select[data-setstatus]")?.value,
-      apply: [...c.querySelectorAll<HTMLElement>("button, a")].filter((b) => b.offsetParent && (b.matches("[data-apply]") || /^\s*apply\b/i.test(b.textContent))).map((b) => b.textContent.trim()),
-    })));
-    for (const c of cards) {
+    await openTab(page, id);
+    // RR-M4.3: Apply is the card's primary on new/viewed/saved; on Applying the card leads with "I submitted it" and
+    // Apply (Re-run intake) sits in Details. Status comes from the role, since the status menu moved to Details.
+    const applyIn = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>("button, a")].filter((b) => b.offsetParent && (b.matches("[data-apply]") || /^\s*apply\b/i.test(b.textContent!))).map((b) => b.textContent!.trim());
+    const cards = await page.locator("#view article.job").evaluateAll((els: HTMLElement[], src) => { const applyIn = (0, eval)(src); const list = (0, eval)("jobs"); return els.map((c) => ({
+      title: c.querySelector("h2")?.textContent!.trim(),
+      status: list.find((j: any) => "role-" + String(j._id).replace(/[^A-Za-z0-9_-]/g, "_") === c.id)?.status || "new",
+      apply: applyIn(c) as string[],
+    })); }, applyIn.toString());
+    for (const [i, c] of cards.entries()) {
       seen.add(c.status);
-      if (["applied", "screen", "interviewing", "offer"].includes(c.status!))
-        assert.deepEqual(c.apply, [], `${id}: '${c.title}' (${c.status}) still shows ${c.apply.join(", ")}`);
-      if (["new", "viewed", "saved", "applying"].includes(c.status!))
+      let sheet: string[] = [];
+      if (["applying", "applied", "screen", "interviewing", "offer"].includes(c.status)) {
+        await page.locator("#view article.job").nth(i).locator("button[data-details]").click();
+        sheet = await page.locator("#detailsSheet").evaluate(applyIn);
+        await page.keyboard.press("Escape");
+      }
+      if (["applied", "screen", "interviewing", "offer"].includes(c.status))
+        assert.deepEqual([...c.apply, ...sheet], [], `${id}: '${c.title}' (${c.status}) still shows ${[...c.apply, ...sheet].join(", ")}`);
+      if (["new", "viewed", "saved"].includes(c.status))
         assert.ok(c.apply.length >= 1, `${id}: '${c.title}' (${c.status}) lost its Apply`);
+      if (c.status === "applying")
+        assert.ok(sheet.length >= 1, `${id}: '${c.title}' (applying) has no Apply in Details`);
     }
   }
   assert.ok(["applied", "screen", "interviewing"].some((s) => seen.has(s)), `demo covers applied-or-later cards (saw ${[...seen].join(", ")})`);
@@ -347,10 +379,11 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
   await page.close();
 });
 
-test("RR-UX5-5 on a phone Progress's 'Follow-up sent' button text stays on one line", async () => {
+// RR-M4.4: the Progress tab's follow-ups moved to Home's Get ready.
+test("RR-UX5-5 on a phone Get ready's 'Follow-up sent' button text stays on one line", async () => {
   const { page } = await openPrivate(PHONE);
-  await page.click("#tab-progress");
-  const b = page.locator("section[aria-labelledby=pg-fu] button", { hasText: "Follow-up sent" }).first();
+  await openTab(page, "home");
+  const b = page.locator('#home-ready [data-ready="followup"] button', { hasText: "Follow-up sent" }).first();
   await b.waitFor();
   const rows = await b.evaluate((el, src) => (0, eval)(`(${src})`)([el]), String(lineRows));
   const m = await b.evaluate((el) => ({ h: el.getBoundingClientRect().height, ws: getComputedStyle(el).whiteSpace }));
@@ -385,7 +418,8 @@ test("RR-UX6-1 at >=900px every tab is fully visible with no sideways tab scroll
   assert.deepEqual(bad, []);
 });
 
-test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score math behind a 'why' disclosure, <=4 actions, Save the only primary", async () => {
+// RR-M4.3: the 'why' disclosure became the Details sheet (tests/card.test.ts holds the tighter 240px limit).
+test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score math in Details, <=4 actions, Save the only primary", async () => {
   const { page } = await openPublic(PHONE);
   await page.click("#tab-inbox");
   const accent = await accentRgb(page);
@@ -406,24 +440,26 @@ test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score ma
     if (m.fitr || m.why) bad.push(`${tag}: Values/Culture (.fitr ${m.fitr}) or score math (.why-score ${m.why}) visible by default`);
     if (m.ctl.length > 4) bad.push(`${tag}: ${m.ctl.length} action controls (${m.ctl.join(", ")})`);
     if (m.filled.length !== 1 || !/^save$/i.test(m.filled[0] || "")) bad.push(`${tag}: filled primaries [${m.filled.join(", ")}]`);
-    const why = c.locator("summary, button[aria-expanded]").filter({ hasText: /why/i }).first();
-    if (!(await why.count())) { bad.push(`${tag}: no 'why' disclosure`); continue; }
+    const why = c.locator("button[data-details]");
+    if (!(await why.count())) { bad.push(`${tag}: no Details button`); continue; }
     await why.click();
-    const open = await c.evaluate((el) => ["fitr", "why-score"].map((k) => [...el.querySelectorAll<HTMLElement>("." + k)].some((x) => !!x.offsetParent && x.getBoundingClientRect().height > 2)));
-    if (!open.every(Boolean)) bad.push(`${tag}: opening 'why' shows .fitr ${open[0]}, .why-score ${open[1]}`);
+    const open = await page.locator("#detailsSheet").evaluate((el) => ["fitr", "why-score"].map((k) => [...el.querySelectorAll<HTMLElement>("." + k)].some((x) => !!x.offsetParent && x.getBoundingClientRect().height > 2)));
+    if (!open.every(Boolean)) bad.push(`${tag}: Details shows .fitr ${open[0]}, .why-score ${open[1]}`);
+    await page.keyboard.press("Escape");
   }
   await page.close();
   assert.deepEqual(bad, []);
 });
 
 test("RR-UX6-3 the digest count matches the header's new count (or labels its set); a tab with zero roles hides #fbar", async () => {
+  // RR-M4.4: the digest moved from New to Home's This morning.
   const { page } = await openPublic(LAPTOP);
-  await page.click("#tab-inbox");
-  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
-  assert.ok(head, "header shows 'N new matches'");
-  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  await page.click("#tab-home");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
+  assert.ok(head, "header shows 'N new'");
+  const sum = (await page.locator("#home-morning .hh").innerText()).replace(/\s+/g, " ");
   const bare = [...sum.matchAll(/\b(\d+) roles?\b/gi)].filter((m) => m[1] !== head[1]).map((m) => m[0]);
-  const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}es'`] : [];
+  const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}'`] : [];
   await page.close();
   const { page: empty } = await openEmpty(LAPTOP);
   for (const id of ["inbox", "pipeline", "all"]) {
@@ -480,19 +516,20 @@ test("RR-UX7-2 Pipeline cards at 390 (private): the visible action-row buttons/l
 });
 
 test("RR-UX7-3 one story: the digest says 'Top N of M' with M = the header's new count; with ?fail=jobs the header shows no new count", async () => {
+  // RR-M4.4: the digest moved from New to Home's This morning.
   const { page } = await openPublic(LAPTOP);
-  await page.click("#tab-inbox");
-  const head = (await page.locator("header").innerText()).match(/(\d+) new match/);
-  assert.ok(head, "header shows 'N new matches'");
-  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  await page.click("#tab-home");
+  const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
+  assert.ok(head, "header shows 'N new'");
+  const sum = (await page.locator("#home-morning .hh").innerText()).replace(/\s+/g, " ");
   const bad = [];
   const top = sum.match(/Top (\d+) of (\d+)/i);
-  if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}es')`);
-  else if (top[2] !== head[1]) bad.push(`digest '${top[0]}' vs header '${head[0]}es'`);
+  if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}')`);
+  else if (top[2] !== head[1]) bad.push(`digest '${top[0]}' vs header '${head[0]}'`);
   await page.close();
   const { page: failed } = await openPrivate({ ...LAPTOP, query: "?fail=jobs", ready: "#tab-inbox" });
   const fh = (await failed.locator("header").innerText()).replace(/\s+/g, " ");
-  const n = fh.match(/\d+ new match\w*/);
+  const n = fh.match(/\d+ new\b/);
   if (n) bad.push(`?fail=jobs header still shows '${n[0]}'`);
   await failed.close();
   assert.deepEqual(bad, []);

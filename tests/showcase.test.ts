@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-showcase.html" });
@@ -13,20 +13,27 @@ before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
 test("RR-N3-2 on a phone, the public demo shows the first role's title on the first screen", async () => {
-  const { page } = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844 });
+  // RR-M4.4: Home opens first; This morning's first pick must show on the first screen, and New's first title too.
+  const home = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844, ready: "#home-morning" });
+  const pick = (await home.page.locator('#home-morning a[href^="#role-"]').first().boundingBox())!;
+  assert.ok(pick.y + pick.height <= 844, `This morning's first pick ends at ${Math.round(pick.y + pick.height)}px`);
+  await home.page.close();
+  const { page } = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844, query: "?tab=inbox" });
   // The progress line (+49px) had pushed the first card off screen; its first title line must show.
   const box = (await page.locator(".job h2").first().boundingBox())!;
   const line = await page.locator(".job h2").first().evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
   assert.ok(box.y + line <= 844, `first title line ends at ${Math.round(box.y + line)}px`);
   await page.close();
-  const wide = await openDemo({ html: buildDemo({ publicDemo: true }), width: 1280, height: 800 });
-  assert.ok(await wide.page.locator("#progress").isVisible(), "the progress line stays on laptops");
-  await wide.page.close();
 });
 
-test("RR-N3-3 the demo's progress line shows an application today, not zeros", async () => {
+test("RR-N3-3 the demo's progress shows an application today, not zeros", async () => {
   const { page } = await openDemo();
-  assert.match(await page.locator("#progress").innerText(), /^Today: applied 1, ruled out 1 · This week: applied [1-9]/);
+  // RR-M4.1: the Today/This week line left the header; RR-M4.4: Home shows the same counts.
+  await openTab(page, "home");
+  assert.match(await page.locator('#home-apps [role="meter"]').getAttribute("aria-valuetext") ?? "", /^1 application\b/);
+  assert.match(await page.locator('#home-apps [data-tile="done"]').innerText(), /\b[1-9] this week\b/);
+  await openTab(page, "ruled");
+  assert.equal(await page.locator("#view h3").first().textContent(), "Today · 1 ruled out");
   await page.close();
 });
 
@@ -44,7 +51,7 @@ test("RR-N3-4 the demo's Gmail status check has no example.com links and says th
 
 test("RR-N3-5 the Alerts card uses plain words, not rule ids or channel codes", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const text = await page.locator("#alertsPreview").innerText();
   assert.doesNotMatch(text, /\b[a-z]+_[a-z_]+\b/, "a snake_case id is showing");
   assert.doesNotMatch(text, /go to: push/);
@@ -54,14 +61,14 @@ test("RR-N3-5 the Alerts card uses plain words, not rule ids or channel codes", 
 
 test("RR-N3-6 the demo's alert preview reads the same at any hour (demo clock is 9:00 in the spec's time zone)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.doesNotMatch(await page.locator("#alertsPreview").innerText(), /held for quiet hours/);
   await page.close();
 });
 
 test("RR-N3-7 At a glance points to the Alerts card", async () => {
   const { page } = await openDemo({ html: buildDemo({ publicDemo: true }) });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const link = page.locator('.ccard a[href="#alerts"]');
   assert.equal(await link.count(), 1);
   assert.match(await link.innerText(), /Alerts/);
@@ -72,7 +79,8 @@ test("RR-N3-7 At a glance points to the Alerts card", async () => {
 test("RR-N3-8 the demo's preview says it's a sample above the description", async () => {
   const { page } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-all");
-  await page.click('.job:has-text("Gridlark") button[data-preview]');
+  await page.locator('.job:has-text("Gridlark")').locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForSelector("#pvBody li");
   const order = await page.evaluate(() => {
     const src = document.querySelector(".pv-src")!, body = document.querySelector("#pvBody")!;

@@ -190,3 +190,124 @@ test("fit badges never change the score", () => {
   const base = job({ sector: "solar_energy", fit: "strong" });
   assert.equal(S.scoreJob({ ...base, cultureChecks: ["recent_layoffs"], valuesFit: { rating: "no" } }, spec).score, S.scoreJob(base, spec).score);
 });
+
+// ---------------------------------------------------------------------------------------------
+// RR-M4.2 scoreSplit: the scan's 0-100 total grouped into Fit / Values / Culture (AC9b, architect §2).
+// Written red-first by qa-tdd. Contract pinned here:
+//   scoreSplit(result: ScoreResult, job?: Job) → {
+//     fit:     parts.fit + parts.comp + parts.dream        (max 60)
+//     values:  parts.sector + parts.values                 (max 45)
+//     culture: parts.culture + parts.stage                 (max 10)
+//     total:   result.score (the clamped scoreJob total, never re-scaled)
+//     max:     { fit: 60, values: 45, culture: 10 }
+//     capped:  true only when result.raw is above 100 or below 0
+//     cultureRated: false when there was no culture data at all (no stored job.cultureSignals and no
+//                   signal found in postingText), so the card can say "Culture 0/10 · not checked"
+//   }
+// fit + values + culture always equals result.raw. The badges stay out of the points.
+const split = (o: Record<string, unknown>) => { const j = job(o); const r = S.scoreJob(j, spec); return { r, s: S.scoreSplit(r, j) }; };
+
+test("RR-M4.2-S1 AC9b strong-fit solar role: Fit 45/60, Values 45/45, Culture 10/10, total 100, not capped", () => {
+  const { r, s } = split({ sector: "solar_energy", fit: "strong", comp: "$200K", cultureSignals: { good: ["4-day week"], red: [] } });
+  assert.equal(r.raw, 100);
+  assert.equal(s.fit, 45);
+  assert.equal(s.values, 45);
+  assert.equal(s.culture, 10);
+  assert.equal(s.total, 100);
+  assert.equal(s.total, r.score);
+  assert.deepEqual(s.max, { fit: 60, values: 45, culture: 10 });
+  assert.equal(s.capped, false, "exactly 100 is not capped");
+  assert.equal(s.cultureRated, true);
+});
+
+test("RR-M4.2-S2 AC9b values penalty lands in Values (sector + penalty), not Fit", () => {
+  const { r, s } = split({ sector: "solar_energy", fit: "strong", businessModel: "crypto trading or speculation" });
+  assert.equal(r.parts.values, -15);
+  assert.equal(s.values, 30, "45 sector - 15 values penalty");
+  assert.equal(s.fit, 35);
+  assert.equal(s.culture, 0);
+  assert.equal(s.total, 65);
+  const low = split({ fit: "maybe", businessModel: "gambling or sports betting" }).s;
+  assert.equal(low.values, 0, "15 default sector - 15 penalty");
+  assert.equal(low.total, 20);
+});
+
+test("RR-M4.2-S3 AC9b red flags plus startup make Culture negative (signals + stage)", () => {
+  const { r, s } = split({ sector: "solar_energy", fit: "strong", companyStage: "startup", cultureSignals: { good: [], red: ["hustle", "scrappy"] } });
+  assert.equal(r.parts.culture, -20);
+  assert.equal(r.parts.stage, -20);
+  assert.equal(s.culture, -40);
+  assert.equal(s.fit, 35);
+  assert.equal(s.values, 45);
+  assert.equal(s.total, 40);
+  assert.equal(s.capped, false);
+  assert.equal(s.cultureRated, true);
+});
+
+test("RR-M4.2-S4 AC9b no culture data: Culture 0 and cultureRated false ('not checked')", () => {
+  const { s } = split({ sector: "fintech", fit: "maybe" });
+  assert.equal(s.culture, 0);
+  assert.equal(s.cultureRated, false);
+  assert.equal(s.total, 35);
+  // The result alone is enough when nothing was found.
+  assert.equal(S.scoreSplit(S.scoreJob(job({ sector: "fintech" }), spec)).cultureRated, false);
+  // Startup with no culture data: Culture is the stage penalty only, still "not checked".
+  const st = split({ sector: "fintech", fit: "maybe", companyStage: "startup" }).s;
+  assert.equal(st.culture, -20);
+  assert.equal(st.cultureRated, false);
+  // Checked and nothing found is rated; a posting keyword is rated.
+  assert.equal(split({ fit: "maybe", cultureSignals: { good: [], red: [] } }).s.cultureRated, true);
+  assert.equal(split({ fit: "maybe", postingText: "We are a B Corp." }).s.cultureRated, true);
+});
+
+test("RR-M4.2-S5 AC9b total clamped above 100 or below 0 sets capped; the groups still sum to raw", () => {
+  const { r, s } = split({ company: "HelioHome", sector: "solar_energy", fit: "strong", comp: "$200K", cultureSignals: { good: ["B Corp"], red: [] } });
+  assert.equal(r.raw, 115);
+  assert.equal(s.fit, 60, "35 experience + 10 comp + 15 dream");
+  assert.equal(s.fit + s.values + s.culture, 115);
+  assert.equal(s.total, 100);
+  assert.equal(s.capped, true);
+  const lo = split({ fit: "stretch", postingText: "fast-paced hustle", businessModel: "crypto trading or speculation" });
+  assert.ok(lo.r.raw < 0);
+  assert.equal(lo.s.total, 0);
+  assert.equal(lo.s.capped, true);
+  assert.equal(lo.s.fit + lo.s.values + lo.s.culture, lo.r.raw);
+});
+
+test("RR-M4.2-S6 AC9b every demo role: groups sum to raw, total equals scoreJob().score, within their maxima", () => {
+  for (const [id, j] of Object.entries(seed.jobs as Record<string, S.Job>)) {
+    const r = S.scoreJob(j, spec);
+    const s = S.scoreSplit(r, j);
+    assert.equal(s.fit + s.values + s.culture, r.raw, id);
+    assert.equal(s.total, r.score, id);
+    assert.equal(s.capped, r.raw > 100 || r.raw < 0, id);
+    assert.ok(s.fit <= s.max.fit && s.values <= s.max.values && s.culture <= s.max.culture, id);
+  }
+});
+
+test("RR-M4.2-S7 scoreSplit leaves the scoreJob result and its parts unchanged", () => {
+  const r = S.scoreJob(job({ sector: "solar_energy", fit: "strong", companyStage: "startup" }), spec);
+  const before = JSON.stringify(r);
+  S.scoreSplit(r);
+  assert.equal(JSON.stringify(r), before);
+});
+
+test("RR-M4.2-S8 RR-TS-R2 skip-feedback reuses scoring by import (no second copy of the rules to drift)", () => {
+  const src = readFileSync(new URL("../src/skip-feedback.ts", import.meta.url), "utf8");
+  assert.match(src, /from "\.\/scoring\.ts"/);
+  for (const name of ["scoreJob", "scoreSplit", "cultureOf", "FIT_POINTS", "SECTOR_POINTS_PER_WEIGHT"])
+    assert.doesNotMatch(src, new RegExp(`(function|const|let)\\s+${name}\\b`), `skip-feedback.ts must not define its own ${name}`);
+});
+
+test("RR-M4.2-S9 the scoring bundle exposes scoreSplit and agrees with src (what the page calls)", async () => {
+  const { bundle } = await import("../scripts/build.mjs" as string);
+  const vm = await import("node:vm");
+  const sandbox: Record<string, any> = {};
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(bundle("scoring"), sandbox);
+  const B = sandbox.RoleRadarScoring;
+  assert.equal(typeof B.scoreSplit, "function", "window.RoleRadarScoring.scoreSplit");
+  const j = job({ company: "HelioHome", sector: "solar_energy", fit: "strong", comp: "$200K", companyStage: "startup" });
+  assert.deepEqual(JSON.parse(JSON.stringify(B.scoreSplit(B.scoreJob(j, spec), j))), JSON.parse(JSON.stringify(S.scoreSplit(S.scoreJob(j, spec), j))));
+});

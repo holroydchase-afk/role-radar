@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 import * as R from "../src/recruiter-store.ts";
 const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"));
@@ -103,10 +103,11 @@ const rendered = (page: Page) => page.evaluate(() => document.body.innerText + d
 test("RR-PR-7 a shared viewer sees no recruiter data on any tab", async () => {
   const { page, errors } = await openDemo({ query: "?as=viewer" });
   await page.waitForFunction(() => window.__RR_DB_READS__ && window.__RR_DB_READS__.includes("jobs"));
-  assert.equal(await page.locator("#tab-people").count(), 0, "no Recruiters tab");
+  assert.equal(await page.locator('#tab-people, #moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
   const recs = Object.values<{ name: string; lastNote?: string; email?: string }>(seed.recruiters);
-  for (const id of ["inbox", "pipeline", "action", "ruled", "all", "criteria", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+  // RR-M4.4: Home (with its Get ready list) replaced Needs action; it must not leak a recruiter either.
+  for (const id of ["home", "inbox", "pipeline", "ruled", "all", "criteria", "watch", "filters"]) {
+    await openTab(page, id);
     const html = await rendered(page);
     for (const r of recs) {
       assert.ok(!html.includes(r.name), `${id}: name visible: ${r.name}`);
@@ -114,7 +115,7 @@ test("RR-PR-7 a shared viewer sees no recruiter data on any tab", async () => {
       if (r.email) assert.ok(!html.includes(r.email), `${id}: email visible`);
     }
   }
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.doesNotMatch(await page.locator("#alertsCard, .alerts").first().innerText().catch(() => ""), /recruiter or hiring manager emailed/i);
   const reads = await page.evaluate(() => window.__RR_DB_READS__);
   assert.ok(!reads.some((p) => /^recruiters/.test(p)), "page asked the db for recruiters: " + reads.join(","));
@@ -122,21 +123,22 @@ test("RR-PR-7 a shared viewer sees no recruiter data on any tab", async () => {
   await page.close();
 });
 
-test("RR-PR-8 a remembered Recruiters tab falls back to New for a shared viewer", async () => {
+test("RR-PR-8 a remembered Recruiters tab falls back to the default tab (Home since RR-M4.4) for a shared viewer", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.goto(page.url().split("?")[0] + "?as=viewer");
   await page.waitForSelector(".job");
   await page.waitForFunction(() => (window.__RR_DB_READS__ || []).includes("jobs"));
-  assert.equal(await page.locator("#tab-people").count(), 0);
-  assert.equal(await page.locator("#tab-inbox").getAttribute("aria-selected"), "true");
+  assert.equal(await page.locator('#tab-people, #moreSheet [data-tab="people"]').count(), 0);
+  assert.equal(await page.locator("#tab-home").getAttribute("aria-selected"), "true");
+  assert.equal(await page.locator('#home-ready [data-ready="recruiters"]').count(), 0, "no recruiter row on Home");
   await page.close();
 });
 
 test("RR-PR-9 the owner still sees, adds and imports recruiters", async () => {
   const { page, errors } = await openDemo();
-  await page.waitForSelector("#tab-people");
-  await page.click("#tab-people");
+  await page.waitForSelector('#moreSheet [data-tab="people"]', { state: "attached" });
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   const recs = Object.values<{ name: string; lastNote?: string; email?: string }>(seed.recruiters);
   assert.ok((await rendered(page)).includes(recs[0].name));

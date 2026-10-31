@@ -51,3 +51,26 @@ export async function openDemo(browser, { html = buildDemo(), blockYaml = false,
   await page.evaluate(() => document.fonts.ready);
   return { page, errors };
 }
+
+/**
+ * Opens a tab the way a person would (RR-M4.1): New, Pipeline and All from the tab bar, every other tab from the
+ * More sheet. Resolves once #view shows that tab.
+ * @param {import("playwright").Page} page
+ * @param {string} id tab id: inbox, pipeline, all, people, action, progress, ruled, criteria, watch, filters
+ */
+export async function openTab(page, id) {
+  const bar = page.locator(`#tabs #tab-${id}`);
+  if (await bar.count()) await bar.click();
+  else {
+    if (!(await page.locator("#moreSheet").isVisible())) await page.click("#moreBtn");
+    await page.click(`#moreSheet [data-tab="${id}"]`);
+  }
+  await page.waitForFunction((t) => document.querySelector("#view")?.getAttribute("data-tab") === t, id, { timeout: 3000 });
+}
+
+/**
+ * The id of the tab #view is showing.
+ * @param {import("playwright").Page} page
+ * @returns {Promise<string | null>}
+ */
+export const currentTab = (page) => page.locator("#view").getAttribute("data-tab");

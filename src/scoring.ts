@@ -14,6 +14,7 @@
  * Two badges sit beside the score and never change it (criteria.yaml values_fit and culture_fit):
  *   Values  = great · good · neutral · no, from the sector weight, hard excludes and values_penalty
  *   Culture = great · good · maybe · no, from the culture_fit checks that apply; "unrated" until checked
+ * scoreSplit groups the same parts as Fit (fit + comp + dream), Values (sector + values) and Culture (culture + stage).
  *
  * ES module. scripts/build.mjs bundles it to build/scoring.js, a classic script that sets window.RoleRadarScoring. */
 
@@ -308,4 +309,29 @@ export function buildDigest(jobs: Many<Job>, spec?: Criteria | null): Digest {
     items.push(x);
   }
   return { items, extras, considered: arr(jobs).length, passed: scored.length };
+}
+
+/** The score grouped the way the page shows it. The groups sum to result.raw; total is the clamped score. */
+export interface ScoreSplit {
+  fit: number; values: number; culture: number; total: number;
+  max: { fit: number; values: number; culture: number };
+  /** The raw total was above 100 or below 0, so total was clamped. */
+  capped: boolean;
+  /** False when there was no culture data at all (no stored cultureSignals, nothing found in postingText). */
+  cultureRated: boolean;
+}
+
+/** Splits a scoreJob result into Fit (experience + comp + dream), Values (sector + values penalty)
+ *  and Culture (culture signals + startup stage). Re-groups the same parts; adds and re-scales nothing. */
+export function scoreSplit(result: ScoreResult, job?: Job | null): ScoreSplit {
+  const p = result.parts;
+  return {
+    fit: p.fit + p.comp + p.dream,
+    values: p.sector + p.values,
+    culture: p.culture + p.stage,
+    total: result.score,
+    max: { fit: FIT_POINTS.strong + COMP_BONUS + DREAM_BONUS, values: 3 * SECTOR_POINTS_PER_WEIGHT, culture: CULTURE_GOOD },
+    capped: result.raw > 100 || result.raw < 0,
+    cultureRated: !!(job && job.cultureSignals) || result.culture.good.length + result.culture.red.length > 0,
+  };
 }

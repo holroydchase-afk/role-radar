@@ -5,18 +5,31 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-demo.html" });
+// RR-M4.3: Values/Culture, the score math, dates and the source moved from the card into its Details sheet.
+// Opens Details for the first card matching `has` (or every card on the tab) and returns each sheet's text.
+async function detailsText(page: import("playwright").Page, has?: string, sel = "#detailsSheet"): Promise<string[]> {
+  const cards = has ? page.locator("#view article.job", { hasText: has }).first() : page.locator("#view article.job");
+  const n = has ? 1 : await cards.count(), out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    await (has ? cards : cards.nth(i)).locator("button[data-details]").click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    out.push(...(await page.locator(sel).allInnerTexts()));
+    await page.keyboard.press("Escape");
+  }
+  return out;
+}
 
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
 test("every tab renders on demo data without errors", async () => {
   const { page, errors } = await openDemo();
-  for (const id of ["inbox", "pipeline", "action", "all", "people", "criteria", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["home", "inbox", "pipeline", "all", "people", "criteria", "watch", "filters"]) {
+    await openTab(page, id);
     assert.ok((await page.locator("#view").innerText()).trim().length > 0, id);
   }
   assert.deepEqual(errors, []);
@@ -37,19 +50,21 @@ test("the filter bar keeps its styles (stray <style> tag fixed)", async () => {
   await page.close();
 });
 
-test("cards explain their score with the criteria rules", async () => {
+test("Details explains each score with the criteria rules", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const lines = await page.locator(".why-score").allInnerTexts();
+  const lines = await detailsText(page, undefined, "#detailsSheet .why-score");
   assert.ok(lines.length >= 10);
-  assert.ok(lines.some((l) => /^45 sector \+ 35 experience \+ 10 comp = 90/.test(l)), lines.join("\n"));
+  // UX-H2-R2: the groups add up to the tile, then one line per group with its parts.
+  assert.ok(lines.some((l) => /^Fit 45 \+ Values 45 \+ Culture 0 = 90$/.test(l)), lines.join("\n"));
+  assert.ok(lines.some((l) => /^Fit: experience 35 \+ pay 10\b/.test(l)), lines.join("\n"));
+  assert.ok(lines.some((l) => /^Values: sector 45\b/.test(l)), lines.join("\n"));
   assert.ok(!lines.some((l) => /scan said/.test(l)), "demo scores match the rules");
   await page.close();
 });
-
 test("digest preview re-ranks live as the criteria are edited", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const first = () => page.locator("#digestPreview li").first().innerText();
   assert.match(await first(), /Gridlark.*\n.*dream role/, "a dream-role anchor tops the digest");
   const text = await page.locator("#critText").inputValue();
@@ -64,7 +79,7 @@ test("digest preview re-ranks live as the criteria are edited", async () => {
 
 test("alerts preview lists the rules and updates live as the criteria are edited", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const preview = () => page.locator("#alertsPreview").innerText();
   assert.match(await preview(), /recruiter or hiring manager emails or replies: alert right away/);
   assert.match(await preview(), /scoring 85\+: alert right away/);
@@ -87,7 +102,7 @@ test("non-http links from scan data are not clickable", async () => {
 
 test("criteria tab explains itself when the YAML reader can't load", async () => {
   const { page } = await openDemo({ blockYaml: true });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.match(await page.locator("#view").innerText(), /YAML reader didn't load/);
   await page.close();
 });
@@ -95,7 +110,7 @@ test("criteria tab explains itself when the YAML reader can't load", async () =>
 test("no horizontal scroll at phone width", async () => {
   const { page } = await openDemo({ width: 390 });
   for (const id of ["inbox", "people", "criteria"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(over <= 0, `${id} overflows by ${over}px`);
   }
@@ -103,7 +118,7 @@ test("no horizontal scroll at phone width", async () => {
 });
 
 test("the search box stays inside the filter bar", async () => {
-  const { page } = await openDemo();
+  const { page } = await openDemo({ query: "?tab=inbox" });
   const [bar, box] = await Promise.all([page.locator("#fbar").boundingBox(), page.locator("#q").boundingBox()]);
   assert.ok(box!.x + box!.width <= bar!.x + bar!.width, `search ends at ${box!.x + box!.width}, bar at ${bar!.x + bar!.width}`);
   await page.close();
@@ -115,7 +130,7 @@ test("recruiter details are hidden until the viewer shows them", async () => {
   const { page, errors } = await openDemo();
   // Rendered markup and text only: the demo build also embeds the seed in a script tag.
   const shown = () => page.evaluate(() => document.querySelector<HTMLElement>("#app, main, body")!.innerText + document.querySelector("#view")!.innerHTML);
-  await page.click("#tab-people");
+  await openTab(page, "people");
   let html = await shown();
   for (const r of recs) {
     assert.ok(!html.includes(r.name), `name visible: ${r.name}`);
@@ -131,7 +146,7 @@ test("recruiter details are hidden until the viewer shows them", async () => {
   // The choice is remembered for this viewer.
   await page.reload();
   await page.waitForSelector(".job");
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.ok((await shown()).includes(recs[0].name));
   await page.click("#recPrivacy");
   assert.ok(!(await shown()).includes(recs[0].name));
@@ -153,7 +168,7 @@ test("on a phone, filters fold away behind one button", async () => {
 
 // Superseded by RR-UX4-1 (2026-10-28): filters fold behind the toggle at every width. The toggle still opens them.
 test("on a wide screen, filters fold behind the toggle and open on demand", async () => {
-  const { page } = await openDemo({ width: 1100 });
+  const { page } = await openDemo({ width: 1100, query: "?tab=inbox" });
   assert.ok(await page.locator("#ftoggle").isVisible());
   assert.ok(!(await page.locator("#fv-lane").isVisible()));
   await page.click("#ftoggle");
@@ -161,19 +176,18 @@ test("on a wide screen, filters fold behind the toggle and open on demand", asyn
   await page.close();
 });
 
-test("cards show Values and Culture badges with a reason", async () => {
+test("Details shows Values and Culture badges with a reason", async () => {
   const { page, errors } = await openDemo();
   await page.click("#tab-all");
-  const card = (co: string) => page.locator("article.job", { hasText: co }).first().locator(".fitr");
-  assert.match(await card("Sunfield Energy").innerText(), /Values\s+Great[\s\S]*Culture\s+Great/i);
-  assert.match(await card("Ledgerly").innerText(), /Values\s+Neutral[\s\S]*Culture\s+Good[\s\S]*but launch crunch risk/i);
-  assert.match(await card("Pebblepay").innerText(), /Culture\s+No/i);
-  assert.match(await card("Orbitline").innerText(), /rated up after research/);
-  assert.match(await card("Gridlark").innerText(), /Unrated[\s\S]*Not checked yet/i);
+  const card = async (co: string) => (await detailsText(page, co, "#detailsSheet .fitr"))[0];
+  assert.match(await card("Sunfield Energy"), /Values\s+Great[\s\S]*Culture\s+Great/i);
+  assert.match(await card("Ledgerly"), /Values\s+Neutral[\s\S]*Culture\s+Good[\s\S]*but launch crunch risk/i);
+  assert.match(await card("Pebblepay"), /Culture\s+No/i);
+  assert.match(await card("Orbitline"), /rated up after research/);
+  assert.match(await card("Gridlark"), /Unrated[\s\S]*Not checked yet/i);
   assert.deepEqual(errors, []);
   await page.close();
 });
-
 // Since RR-FS (2026-10-30) Values and Culture are quick chips ("good or better"), not dropdowns.
 test("Values and Culture filters narrow the list", async () => {
   const { page } = await openDemo({ width: 1100 });
@@ -189,7 +203,7 @@ test("Values and Culture filters narrow the list", async () => {
 
 test("the Criteria tab explains the fit ratings", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const card = page.locator("div.ccard", { has: page.locator("h2", { hasText: "Fit ratings" }) });
   assert.match(await card.innerText(), /\+2\s+calm pace/);
   assert.match(await card.innerText(), /−1\s+launch crunch risk/);
@@ -197,36 +211,34 @@ test("the Criteria tab explains the fit ratings", async () => {
   await page.close();
 });
 
-// Preview panel: the posting's own text, loaded from the board's public API on click.
+// Preview panel: the description the scan stored with the role (RR-M4.3: nothing is fetched from the board).
 test("clicking a role opens its description in a side panel on wide screens", async () => {
   const { page, errors } = await openDemo({ width: 1300, height: 900 });
   await page.click("#tab-all");
-  const card = page.locator(".job", { hasText: "Sunfield Energy" });
+  const card = page.locator(".job", { hasText: "Ledgerly" });
   await card.locator("h2 a").click();
   const panel = page.locator("#preview");
   await panel.locator("#pvBody li").first().waitFor();
-  assert.match(await panel.locator("#pvTitle").innerText(), /Utility Data/);
-  assert.match(await panel.innerText(), /Own the roadmap for utility data ingestion/);
-  assert.match(await panel.innerText(), /Greenhouse's public job board/);
+  assert.match(await panel.locator("#pvTitle").innerText(), /Checkout/);
+  assert.match(await panel.innerText(), /Own checkout conversion end to end/);
+  assert.match(await panel.innerText(), /Sample description written for this demo/);
   const pb = (await panel.boundingBox())!, cb = (await card.boundingBox())!;
   assert.ok(pb.x > cb.x + cb.width - 1, "panel sits to the right of the list");
   assert.equal(Math.round(pb.y), 0);
   assert.ok(await card.evaluate((el) => el.classList.contains("sel")));
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 0);
-  // Ashby and Lever shapes render too.
-  await page.locator(".job", { hasText: "Gridlark" }).getByRole("button", { name: "Preview" }).click();
+  // Another stored description replaces it.
+  await page.locator(".job", { hasText: "Gridlark" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForFunction(() => /Virtual Power Plants/.test(document.querySelector("#pvTitle")?.textContent!) && /three product teams/.test(document.querySelector("#pvBody")?.textContent || ""));
-  await page.locator(".job", { hasText: "Orbitline" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /What we're looking for/.test(document.querySelector("#pvBody")?.textContent || ""));
   await page.keyboard.press("Escape");
   assert.ok(await panel.isHidden());
   assert.deepEqual(errors, []);
   await page.close();
 });
-
 test("Gmail import: finds recruiters, skips known ones and job boards, adds only the picked", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   await page.locator("details.gmail summary").click();
   await page.click("#gmFind");
@@ -256,27 +268,27 @@ test("Gmail import: finds recruiters, skips known ones and job boards, adds only
   await page.close();
 });
 
-test("roles without a board feed show an Open posting link instead", async () => {
+test("roles without a stored description have no Preview; Details offers the posting instead (UX-H-R7)", async () => {
   const { page } = await openDemo({ width: 1300 });
   await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Carbonmark" }).getByRole("button", { name: "Preview" }).click();
-  const panel = page.locator("#preview");
-  assert.match(await panel.innerText(), /No preview for this source/);
-  assert.match(await panel.innerText(), /ZipRecruiter/);
-  // Demo roles are made up, so the panel says so instead of linking to example.com (RR-P1-2).
-  assert.equal(await panel.locator('a[href*="example.com"]').count(), 0);
-  assert.match(await panel.innerText(), /made-up role/);
-  // A board that no longer lists the role says so.
-  await page.locator(".job", { hasText: "Watermark Climate" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /isn't on the board anymore/.test(document.querySelector("#preview")?.textContent || ""));
+  for (const co of ["Carbonmark", "Watermark Climate"]) {
+    const card = page.locator(".job", { hasText: co });
+    assert.equal(await card.getByRole("button", { name: "Preview" }).count(), 0, `${co}: no Preview`);
+    await card.locator("button[data-details]").click();
+    // Demo roles are made up, so Details offers "Sample posting" instead of linking to example.com (RR-P1-2).
+    const sheet = page.locator("#detailsSheet");
+    assert.equal(await sheet.locator('a[href*="example.com"]').count(), 0);
+    assert.equal(await sheet.getByRole("button", { name: "Sample posting" }).count(), 1);
+    assert.equal(await sheet.getByRole("button", { name: "Preview posting" }).count(), 0, `${co}: no Preview posting without a stored description`);
+    await page.keyboard.press("Escape");
+  }
   await page.close();
 });
-
 test("on a phone the preview is a full-screen sheet that closes back to the card", async () => {
   const { page, errors } = await openDemo({ width: 390, height: 844 });
   await page.click("#tab-all");
-  const btn = page.locator(".job", { hasText: "Ledgerly" }).getByRole("button", { name: "Preview" });
-  await btn.click();
+  await page.locator(".job", { hasText: "Ledgerly" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   const panel = page.locator("#preview");
   await panel.locator("#pvBody").waitFor();
   const b = (await panel.boundingBox())!;
@@ -285,7 +297,7 @@ test("on a phone the preview is a full-screen sheet that closes back to the card
   assert.ok(await panel.locator("#pvBody").evaluate((el) => el.scrollWidth <= el.clientWidth));
   await page.click("#pvClose");
   assert.ok(await panel.isHidden());
-  assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.preview), "greenhouse-1005");
+  assert.equal(await page.evaluate(() => (document.activeElement as HTMLElement).dataset.details), "greenhouse-1005", "focus is back on the card's Details button");
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -294,7 +306,7 @@ test("Gmail import explains a missing connector instead of failing silently", as
   const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? readFileSync(new URL("../" + v.slice(6), import.meta.url), "utf8") : v));
   seed.gmail.error = "server_not_connected";
   const { page } = await openDemo({ html: buildDemo({ seed }) });
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   await page.locator("details.gmail summary").click();
   await page.click("#gmFind");
@@ -303,7 +315,7 @@ test("Gmail import explains a missing connector instead of failing silently", as
 
   delete seed.gmail;
   const { page: p2 } = await openDemo({ html: buildDemo({ seed }) });
-  await p2.click("#tab-people");
+  await openTab(p2, "people");
   await p2.click("#recPrivacy");
   await p2.locator("details.gmail summary").click();
   assert.match(await p2.locator("details.gmail").innerText(), /works when this page is open in Claude/);
@@ -357,14 +369,14 @@ test("Gmail status check is not on the public demo", async () => {
 
 test("Gmail import is hidden while recruiter details are hidden", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.equal(await page.locator("details.gmail").count(), 0);
   await page.close();
 });
 
 test("the Watchlist shows board health from the last scan", async () => {
   const { page, errors } = await openDemo();
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const strip = page.locator(".health");
   const t = await strip.innerText();
   assert.match(t, /Boards: 7\/9 read \(solar\/climate 4\/5\)/);
@@ -385,17 +397,18 @@ test("the Watchlist shows board health from the last scan", async () => {
 test("public demo: radar only, no resume or recruiter tools anywhere", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page, errors } = await openDemo({ html });
-  assert.equal(await page.locator("#tab-people").count(), 0, "no Recruiters tab");
-  for (const id of ["inbox", "pipeline", "action", "ruled", "all", "criteria", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+  assert.equal(await page.locator('#moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
+  for (const id of ["home", "inbox", "pipeline", "ruled", "all", "criteria", "watch", "filters"]) {
+    await openTab(page, id);
     const text = await page.locator("#view").innerText();
     assert.doesNotMatch(text, /resume|intake/i, `${id} mentions resume tooling`);
     assert.equal(await page.locator("#view .apply").count(), 0, `${id} has an Apply button`);
   }
   await page.click("#tab-all");
   assert.match(await page.locator("#lede").innerText(), /my own call/);
-  assert.match(await page.locator(".why-score").first().innerText(), /sector/);
-  await page.click("#tab-filters");
+  for (const t of await detailsText(page)) assert.doesNotMatch(t, /resume|intake/i, "Details mentions resume tooling");
+  assert.match((await detailsText(page, "Sunfield", "#detailsSheet .why-score")).join("\n"), /Values: sector/);
+  await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 0);
   assert.deepEqual(errors, []);
   await page.close();
@@ -404,24 +417,25 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
 test("public demo with ?full shows the resume and recruiter tools", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page, errors } = await openDemo({ html, query: "?full" });
-  assert.equal(await page.locator("#tab-people").count(), 1);
+  assert.equal(await page.locator('#moreSheet [data-tab="people"]').count(), 1);
   await page.click("#tab-all");
   assert.ok((await page.locator("#view .apply").count()) > 0);
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   assert.equal(await page.locator("#cCmd, #cInstr").count(), 2);
-  await page.click("#tab-people");
+  await openTab(page, "people");
   assert.match(await page.locator("#view").innerText(), /Show details/);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("a remembered Recruiters tab falls back to New in the public demo", async () => {
+test("a remembered Recruiters tab falls back to the default tab (Home since RR-M4.4) in the public demo", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, query: "?full" });
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.goto(page.url().split("?")[0]);
-  await page.waitForSelector("#tab-inbox");
-  assert.equal(await page.locator("#tab-inbox").getAttribute("aria-selected"), "true");
+  await page.waitForSelector("#tab-home");
+  assert.equal(await page.locator("#tab-home").getAttribute("aria-selected"), "true");
+  assert.equal(await page.locator("#view article.job.rec").count(), 0, "no recruiter cards");
   await page.close();
 });
 
@@ -476,7 +490,7 @@ test("a role added on Pipeline shows up right away (RR-P1-1)", async () => {
 
 test("a company added to the watchlist shows up right away (RR-P1-1)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   await page.fill("#coName", "Quillfern Labs");
   await page.fill("#coSlug", "quillfern");
   await page.locator("#addCo button[type=submit]").click();
@@ -486,7 +500,7 @@ test("a company added to the watchlist shows up right away (RR-P1-1)", async () 
 
 test("a recruiter added on ?full shows up right away (RR-P1-1)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   await page.click("#recPrivacy");
   const form = page.locator("#addRec");
   if (!(await form.isVisible())) await page.locator("details:has(#addRec) summary").click();
@@ -501,25 +515,24 @@ test("demo roles have no example.com links; 'Sample posting' explains itself (RR
   const { page, errors } = await openDemo();
   await page.click("#tab-all");
   assert.equal(await page.locator('a[href*="example.com"]').count(), 0);
-  const btn = page.locator("#view button", { hasText: "Sample posting" }).first();
+  await page.locator("#view article.job").first().locator("button[data-details]").click();
+  assert.equal(await page.locator('#detailsSheet a[href*="example.com"]').count(), 0);
+  const btn = page.locator("#detailsSheet button", { hasText: "Sample posting" });
   await btn.click();
   assert.match(await page.locator("#toast").innerText(), /made-up role/);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("board HTML is sanitized before it is shown", async () => {
+test("a stored description's HTML is sanitized before it is shown", async () => {
   const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"));
-  seed.jobs["greenhouse-777"] = { company: "Acme", title: "Senior Product Manager", ats: "greenhouse", source: "greenhouse", status: "new", firstSeen: "@t-1", url: "https://job-boards.greenhouse.io/acmetest/jobs/777" };
   const evil = `<p onclick="window.__x=1">Real words <b>stay</b>.</p><script>window.__x=2<\/script><img src=x onerror="window.__x=3"><a href="javascript:window.__x=4">bad link</a><a href="https://example.com/benefits">good link</a><style>body{display:none}</style><iframe src="https://example.com"></iframe>`;
-  const esc = (h: string) => h.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  seed.jobs["greenhouse-777"] = { company: "Acme", title: "Senior Product Manager", ats: "greenhouse", source: "greenhouse", status: "new", firstSeen: "@t-1", url: "https://job-boards.greenhouse.io/acmetest/jobs/777", descriptionHtml: evil };
   const { page, errors } = await openDemo({ html: buildDemo({ seed }), width: 1300, ready: "#view" });
-  let asked = "";
-  await page.route("https://boards-api.greenhouse.io/**", (route) => { asked = route.request().url(); route.fulfill({ contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ id: 777, content: esc(evil) }) }); });
   await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Acme" }).getByRole("button", { name: "Preview" }).click();
+  await page.locator(".job", { hasText: "Acme" }).locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.locator("#pvBody b").waitFor();
-  assert.equal(asked, "https://boards-api.greenhouse.io/v1/boards/acmetest/jobs/777");
   const body = page.locator("#pvBody");
   assert.match(await body.innerText(), /Real words stay\./);
   assert.equal(await body.locator("script, img, style, iframe, [onclick]").count(), 0);
@@ -531,26 +544,26 @@ test("board HTML is sanitized before it is shown", async () => {
   await page.close();
 });
 
-test("RR-UX-1 the chip beside the score names what it rates (experience), so 90 + chip never reads as a contradiction", async () => {
+// RR-M4.3: the Experience chip became the Fit sub-score under the title; its label still names what it rates.
+test("RR-UX-1 the Fit part beside the score names what it rates (experience), so 90 + Fit never reads as a contradiction", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const chips = await page.locator("#view .chip[class*=fit-]").allTextContents();
-  assert.ok(chips.length >= 10);
-  for (const c of chips) assert.match(c, /^Experience: (strong|partial|stretch)$/);
+  const labels = await page.locator('#view .subscores [data-part="fit"]').evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || ""));
+  assert.ok(labels.length >= 10);
+  for (const l of labels) assert.match(l, /^Fit -?\d+ of 60(, (Strong|Partial|Stretch))?$/);
+  assert.ok(labels.some((l) => /Strong$/.test(l)) && labels.some((l) => /Partial$/.test(l)));
   assert.match((await page.locator("#view .score").first().getAttribute("title"))!, /Criteria score, 0.100/);
   assert.equal(await page.locator('#fbar [data-chip="strong"]').innerText(), "Strong fit");
   await page.close();
 });
-
-test("header numbers agree with the Watchlist strip and the New tab (RR-P1-4)", async () => {
+test("header new count agrees with the New tab (RR-P1-4)", async () => {
+  // RR-M4.1: the header is `Scan <time> · N new`; the board count moves to Home (M4.4), so only the New half stays here.
   const { page } = await openDemo();
   const line = await page.locator("#scanLine").innerText();
-  const [, boards, fresh] = /(\d+) boards · (\d+) new/.exec(line) || [];
-  assert.ok(boards, line);
+  const [, fresh] = /· (\d+) new\b/.exec(line) || [];
+  assert.ok(fresh, line);
   const newCount = await page.locator("#tab-inbox .n").innerText();
   assert.equal(fresh, newCount.trim(), "new matches = New tab");
-  await page.click("#tab-watch");
-  assert.match(await page.locator("#view").innerText(), new RegExp(`\\d+/${boards} read`));
   assert.doesNotMatch(line, /demo data/i, "the badge already says demo");
   assert.equal(await page.locator("#scanLine .mono").count(), 0, "one font in the scan line (RR-P2-2)");
   await page.close();
@@ -561,7 +574,8 @@ test("light theme chips meet 4.5:1 contrast (RR-P1-5)", async () => {
   const ratio = await page.evaluate(() => {
     const lum = (c: string) => { const v = c.match(/\d+/g)!.slice(0, 3).map((x: any) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
     const r = (el: Element | null) => { const s = getComputedStyle(el!); const a = lum(s.color), b = lum(s.backgroundColor); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
-    return { demo: r(document.querySelector("#demoNote")), fit: r(document.querySelector(".fit-strong")), score: r(document.querySelector(".score.hi")) };
+    // RR-M4.3: the Experience chip (.fit-strong) is gone; its Fit sub-score is checked in tests/card.test.ts CARD-4.
+    return { demo: r(document.querySelector("#demoNote")), score: r(document.querySelector(".score.hi")) };
   });
   for (const [k, v] of Object.entries(ratio)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}`);
   await page.close();
@@ -571,7 +585,7 @@ test("phone controls are at least 44px tall (RR-P1-6)", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, width: 390, height: 844 });
   for (const id of ["inbox", "pipeline", "watch", "filters"]) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     if (id === "pipeline") await page.locator("#addRole summary").click();
     const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("button, a.btn, select, input:not([type=checkbox]):not([type=radio]), [role=tab], .showcase a, summary")]
       .filter((el) => el.offsetParent !== null)
@@ -587,47 +601,38 @@ test("public demo works with the CDN blocked: js-yaml is inlined (RR-P2-9)", asy
   assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/js-yaml/);
   assert.match(html, /js-yaml 4\.1\.0 .*@license MIT/);
   const { page, errors } = await openDemo({ html, blockYaml: true });
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.ok((await page.locator("#digestPreview li").count()) > 0);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("a board that can't be reached falls back to the posting link", async () => {
-  const seed = JSON.parse(readFileSync(new URL("../demo/seed.json", import.meta.url), "utf8"));
-  seed.jobs["lever-9"] = { company: "Acme", title: "Senior Product Manager", ats: "lever", source: "lever", status: "new", firstSeen: "@t-1", url: `https://jobs.lever.co/acmetest/0c2f6d1e-8a7b-4c3d-9e1f-2a3b4c5d6e7f` };
-  const { page } = await openDemo({ html: buildDemo({ seed }), width: 1300, ready: "#view" });
-  await page.route("https://api.lever.co/**", (route) => route.abort());
-  await page.click("#tab-all");
-  await page.locator(".job", { hasText: "Acme" }).getByRole("button", { name: "Preview" }).click();
-  await page.waitForFunction(() => /Couldn't load the description/.test(document.querySelector("#preview")?.textContent || ""));
-  assert.ok(await page.locator("#preview").getByRole("link", { name: /Open posting/ }).isVisible());
-  await page.close();
-});
-
-test("cards name sources in plain words (RR-P2-3)", async () => {
+// RR-M4.3 (UX-H-R7): Preview no longer fetches from the board, so "a board that can't be reached falls back to the
+// posting link" was dropped with that feature. Details always offers Open posting.
+// RR-M4.3: the source moved from the card's meta line into Details ("Found via Greenhouse").
+test("Details names sources in plain words (RR-P2-3)", async () => {
   const { page } = await openDemo();
   await page.click("#tab-all");
-  const text = await page.locator("#view").innerText();
+  const text = (await detailsText(page)).join("\n");
   assert.match(text, /Greenhouse/);
   assert.match(text, /ZipRecruiter/);
   assert.doesNotMatch(text, /\b(greenhouse|ziprecruiter|himalayas)\b/);
   await page.close();
 });
-
-test("no date repeats as '<status> since' on the same card (RR-P2-7)", async () => {
+test("no date repeats as '<status> since' in a role's Details (RR-P2-7)", async () => {
   const { page } = await openDemo();
   await page.click("#tab-pipeline");
-  for (const d of await page.locator(".dates").allInnerTexts()) {
+  const all = await detailsText(page, undefined, "#detailsSheet .dates");
+  assert.ok(all.length >= 3);
+  for (const d of all) {
     const m = /Applied\s+(\w+ \d+).*Applied since\s+(\w+ \d+)/s.exec(d);
     assert.ok(!m || m[1] !== m[2], d);
   }
   await page.close();
 });
-
 test("public demo on a laptop folds filters so the first role shows (RR-P2-4)", async () => {
   const html = buildDemo({ publicDemo: true });
-  const { page } = await openDemo({ html, width: 1280, height: 800 });
+  const { page } = await openDemo({ html, width: 1280, height: 800, query: "?tab=inbox" });
   assert.ok(!(await page.locator("#fbar .fields").isVisible()));
   const first = (await page.locator(".job").first().boundingBox())!;
   assert.ok(first.y < 800, `first role at ${first.y}`);
@@ -639,33 +644,34 @@ test("public demo on a laptop folds filters so the first role shows (RR-P2-4)", 
 test("page has a main landmark and valid headings (RR-P2-5)", async () => {
   const { page } = await openDemo();
   assert.equal(await page.locator("main").count(), 1);
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   assert.equal(await page.locator(".ccard h3").count(), 0);
   assert.equal(await page.locator(".pips:not([role=img])").count(), 0);
   await page.close();
 });
 
-test("public demo cards show one category chip, the sector (RR-P2-11)", async () => {
+// RR-M4.3 (UX-H-R3): sector and lane pills are cut from the card; the sector shows in Details' Values reason.
+test("public demo cards show no category pills; the sector is in Details (RR-P2-11)", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html });
   await page.click("#tab-all");
   const first = page.locator(".job").first();
-  const chips = await first.locator(".chip.lane").allTextContents();
-  assert.deepEqual(chips.map((c) => c.toLowerCase()), ["solar, storage & distributed energy"]);
+  assert.equal(await first.locator(".chip").count(), 0);
+  const fitr = (await detailsText(page, (await first.locator("h2").innerText()).trim(), "#detailsSheet .fitr"))[0];
+  assert.match(fitr.toLowerCase(), /solar, storage & distributed energy/);
   await page.close();
 });
-
 test("Recruiters tab says its number is next steps due (RR-P2-12)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-people");
+  await openTab(page, "people");
   const due = await page.locator("#view .rec .next", { hasText: "due" }).count();
-  assert.equal(await page.locator("#tab-people .n").innerText(), `${due} due`);
+  assert.equal(((await page.locator('#moreSheet [data-tab="people"] .n').textContent()) ?? ""), `${due} due`);
   await page.close();
 });
 
 test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
   const { page } = await openDemo();
-  await page.click("#tab-criteria");
+  await openTab(page, "criteria");
   const kv = page.locator(".kv b");
   const font = await kv.first().evaluate((el) => getComputedStyle(el).fontFamily);
   assert.doesNotMatch(font, /Plex Mono/);
@@ -677,7 +683,7 @@ test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
 
 test("the Filters button's text is centered", async () => {
   const html = buildDemo({ publicDemo: true });
-  const { page } = await openDemo({ html, width: 390, height: 844 });
+  const { page } = await openDemo({ html, width: 390, height: 844, query: "?tab=inbox" });
   assert.equal(await page.locator("#ftoggle").evaluate((el) => getComputedStyle(el).alignItems), "center");
   await page.close();
 });

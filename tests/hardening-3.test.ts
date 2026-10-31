@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 import * as G from "../src/gmail-import.ts";
 const at = (local: string, domain: string) => [local, domain].join("@");
@@ -42,8 +42,8 @@ test("RR-H-10 Ruled out stays newest-first by day when dates mix date-only and f
     b: { company: "Tidewater Analytics (demo)", title: "Role B", status: "skipped", skipReason: "Culture", skippedAt: lateYesterday },
     c: { company: "Copperleaf Insurance (demo)", title: "Role C", status: "skipped", skipReason: "Not remote", statusAt: today },
   };
-  const { page, errors } = await open(browser, { html: buildDemo({ seed: { jobs, companies: {}, recruiters: {}, meta: {} } }), ready: "#tab-ruled", file: "dist/test-h3.html", timezoneId: "America/New_York" });
-  await page.click("#tab-ruled");
+  const { page, errors } = await open(browser, { html: buildDemo({ seed: { jobs, companies: {}, recruiters: {}, meta: {} } }), ready: "#tab-inbox", file: "dist/test-h3.html", timezoneId: "America/New_York" });
+  await openTab(page, "ruled");
   const heads = await page.locator("#view .ruled h3").allInnerTexts();
   assert.equal(heads.length, 2, "each day appears once: " + heads.join(" | "));
   assert.match(heads[0], /^Today · 2 ruled out$/i);

@@ -19,11 +19,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 // The global and the exported names each classic script exposes today (captured from main's
 // src/*.js via require on 2026-10-29). The bundles and the .ts modules must keep exactly these.
 const MODULES = {
-  scoring: { global: "RoleRadarScoring", keys: ["FIT_POINTS", "buildDigest", "cultureFitOf", "explain", "matchJob", "parseComp", "scoreJob", "sectorFor", "valuesFitOf"] },
+  scoring: { global: "RoleRadarScoring", keys: ["FIT_POINTS", "buildDigest", "cultureFitOf", "explain", "matchJob", "parseComp", "scoreJob", "scoreSplit", "sectorFor", "valuesFitOf"] },
   "gmail-import": { global: "RoleRadarGmail", keys: ["DEFAULT_QUERY", "candidates", "companyFromEmail", "dateOf", "isAutomated", "needsFullThread", "nextStatus", "parseAddress", "recruiterDoc", "signalOf", "slug", "statusPatch", "statusQuery", "statusUpdates", "threadsFrom", "typeFor"] },
   posting: { global: "RoleRadarPosting", keys: ["ATS", "ATS_LABEL", "apiUrl", "decodeEntities", "extractHtml", "fromUrl", "postingSource", "sanitizeHtml"] },
   alerts: { global: "RoleRadarAlerts", keys: ["CHANNELS", "DEFAULT_RULES", "EVENTS", "LEVELS", "clock", "describe", "evaluate", "inQuietHours", "matches", "normalize"] },
-  progress: { global: "RoleRadarProgress", keys: ["RESPONSE_AFTER_DAYS", "STAGES", "benchmarks", "businessDaysSince", "dashboard", "dayKey", "dayStart", "emailWindow", "periodReport", "reached", "scanStale", "skippedBy", "snapshot", "toMs", "topNew", "weekStart"] },
+  progress: { global: "RoleRadarProgress", keys: ["RESPONSE_AFTER_DAYS", "STAGES", "benchmarks", "businessDaysSince", "coverageLine", "dashboard", "dayKey", "dayStart", "emailWindow", "homeStats", "periodReport", "reached", "scanStale", "skippedBy", "snapshot", "toMs", "topNew", "weekStart"] },
   "recruiter-store": { global: "RoleRadarRecruiters", keys: ["PATH", "RULES", "create"] },
   "skip-feedback": { global: "RoleRadarSkipFeedback", keys: ["WINDOW_DAYS", "analyze", "applyToYaml", "ownerSkips"] },
 };

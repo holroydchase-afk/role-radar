@@ -243,3 +243,52 @@ export function dashboard(jobs: Jobs, { now = Date.now(), tz, bar = 3 }: { now?:
     sectorMix: [...mix.entries()].map(([sector, count]) => ({ sector, count })).sort((a, b) => b.count - a.count || a.sector.localeCompare(b.sector)),
   };
 }
+
+/** The Home tab's counts. Each role lands in at most one of todo / inProgress / stages / closed / newToReview. */
+export interface HomeStats {
+  /** status "saved" */
+  todo: number;
+  /** status "applying" */
+  inProgress: number;
+  /** reached Applied, including roles now rejected or closed */
+  done: number;
+  /** done roles whose appliedAt falls in the week of now (Monday 12am in tz) */
+  doneThisWeek: number;
+  /** current status, not all-time reached */
+  stages: { applied: number; screen: number; interviewing: number; offer: number };
+  /** rejected or closed after reaching Applied (Home shows a grey "N closed") */
+  closed: number;
+  /** status new or viewed */
+  newToReview: number;
+}
+
+/** Home's numbers. skipped, rejected/closed before Applied and unknown statuses count nowhere. */
+export function homeStats(jobs: Jobs, { now = Date.now(), tz = "America/New_York" }: { now?: When; tz?: string } = {}): HomeStats {
+  const h: HomeStats = { todo: 0, inProgress: 0, done: 0, doneThisWeek: 0, stages: { applied: 0, screen: 0, interviewing: 0, offer: 0 }, closed: 0, newToReview: 0 };
+  const n = toMs(now, tz), w0 = weekStart(n, tz), w1 = weekStart(n + 7 * DAY, tz);
+  for (const j of list(jobs)) {
+    const s = st(j), done = reached(j) !== "";
+    if (s === "saved") h.todo++;
+    else if (s === "applying") h.inProgress++;
+    else if (STAGES.includes(s)) h.stages[s as keyof HomeStats["stages"]]++;
+    else if ((s === "rejected" || s === "closed") && done) h.closed++;
+    else if (s === "new" || s === "viewed") h.newToReview++;
+    if (done) { h.done++; if (inRange(sentAt(j), w0, w1, tz)) h.doneThisWeek++; }
+  }
+  return h;
+}
+
+/** The board-health summary Home and the Watchlist share; null until a scan has written coverage.
+ *  failing = companies (not vetoed) with failStreak > 0 when companies are given, else coverage.failed, else failedList. */
+export function coverageLine(coverage: unknown, companies?: unknown): { text: string; failing: number } | null {
+  if (!coverage || typeof coverage !== "object") return null;
+  const cv = coverage as { attempted?: unknown; failed?: unknown; failedList?: unknown };
+  const num = (v: unknown): number => Number(v) || 0;
+  const total = num(cv.attempted);
+  let failing: number;
+  if (companies && typeof companies === "object") {
+    const cos = (Array.isArray(companies) ? companies : Object.values(companies)) as ({ status?: unknown; failStreak?: unknown } | null)[];
+    failing = cos.filter((c) => c && c.status !== "vetoed" && num(c.failStreak) > 0).length;
+  } else failing = num(cv.failed) || (Array.isArray(cv.failedList) ? cv.failedList.length : 0);
+  return { text: failing ? `${total - failing} of ${total} boards OK · ${failing} failing` : `${total} boards read · all OK`, failing };
+}

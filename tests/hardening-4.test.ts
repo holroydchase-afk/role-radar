@@ -7,13 +7,14 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 import * as G from "../src/gmail-import.ts";
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
 const FILE = "dist/test-qa-tdd.html";
-const TABS = ["inbox", "pipeline", "action", "ruled", "progress", "all", "people", "criteria", "watch", "filters"];
+// RR-M4.4: Needs action and Progress folded into Home.
+const TABS = ["home", "inbox", "pipeline", "ruled", "all", "people", "criteria", "watch", "filters"];
 
 let browser: Browser;
 before(async () => { browser = await chromium.launch(); });
@@ -21,7 +22,8 @@ after(async () => { await browser?.close(); });
 
 // The base demo (meta: criteria, config, scan) with the given jobs/companies/recruiters.
 const seedWith = (over: Record<string, any>) => ({ ...baseSeed(), ...over });
-const openSeed = (seed: Record<string, any>, opts: Parameters<typeof open>[1] = {}) => open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#tab-inbox", ...opts });
+// RR-M4.4: Home is the default tab; these tests start on New unless they pass their own query.
+const openSeed = (seed: Record<string, any>, opts: Parameters<typeof open>[1] = {}) => open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#tab-inbox", query: "?tab=inbox", ...opts });
 const toastShown = (page: Page) => page.evaluate(() => { const t = document.querySelector<HTMLElement>("#toast"); return t && !t.hidden ? t.textContent!.trim() : ""; });
 const noJunkText = (s: string) => !/\bundefined\b|\bnull\b|\bNaN\b|Invalid Date|\[object Object\]/.test(s);
 
@@ -31,7 +33,7 @@ const EVIL = `<img src=x onerror="window.__xss=1"><script>window.__xss=2<\/scrip
 test("RR-H-11 HTML and script in company, title, notes, skip notes, recruiters and watchlist render as text on every tab", async () => {
   const seed = seedWith({
     jobs: {
-      e1: { company: "Evil Co (demo) " + EVIL, title: "Senior PM " + EVIL, status: "new", score: 80, fit: "strong", location: EVIL, comp: EVIL, sector: EVIL, lane: EVIL, tags: [EVIL], fitNote: EVIL, url: "https://example.com/evil" },
+      e1: { company: "Evil Co (demo) " + EVIL, title: "Senior PM " + EVIL, status: "new", score: 80, fit: "strong", location: EVIL, comp: EVIL, sector: EVIL, lane: EVIL, tags: [EVIL], fitNote: EVIL, url: "https://example.com/evil", descriptionPlain: EVIL },
       e2: { company: "Evil Two (demo)", title: "Staff PM " + EVIL, status: "screen", nextStep: EVIL, notes: EVIL, referral: EVIL, emailNote: EVIL },
       e3: { company: "Evil Three (demo)", title: "PM " + EVIL, status: "skipped", skippedBy: "owner", skipReason: EVIL, skipNote: EVIL, skippedAt: new Date().toISOString() },
     },
@@ -41,12 +43,22 @@ test("RR-H-11 HTML and script in company, title, notes, skip notes, recruiters a
   seed.meta.scan = { ...seed.meta.scan, note: EVIL };
   const { page, errors } = await openSeed(seed);
   for (const id of TABS) {
-    await page.click(`#tab-${id}`);
+    await openTab(page, id);
     if (id === "people") { const b = page.locator("#recPrivacy"); if (await b.count()) await b.click(); }
   }
-  await page.click("#tab-inbox");
-  await page.locator("[data-preview]").first().click();
+  await openTab(page, "all");
+  await page.locator("#role-e1").locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.waitForTimeout(300);
+  await page.keyboard.press("Escape");
+  // RR-M4.3: notes, referral, next step and the inbox note live in the Details sheet now.
+  for (const id of ["e1", "e2"]) {
+    await openTab(page, "all");
+    await page.locator(`#role-${id} button[data-details]`).click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    assert.match(await page.locator("#detailsSheet").innerText(), /<img src=x onerror=/, `${id}: the sheet shows the markup as text`);
+    await page.keyboard.press("Escape");
+  }
   const out = await page.evaluate(() => ({ xss: window.__xss, imgs: document.querySelectorAll('img[src="x"]').length, bolds: [...document.querySelectorAll("b")].filter((b) => b.textContent === "bold").length }));
   assert.equal(out.xss, undefined, "no injected script ran");
   assert.equal(out.imgs, 0, "no injected <img> in the page");
@@ -67,8 +79,9 @@ test("RR-H-12 very long unbroken titles, company names, notes and skip notes don
     },
   });
   const { page, errors } = await openSeed(seed, { width: 390, height: 844 });
-  for (const id of ["inbox", "pipeline", "action", "ruled", "progress", "all"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["home", "inbox", "pipeline", "ruled", "all"]) {
+    if (id === "home") { await openTab(page, id); await page.locator("#moreStats summary").click(); }
+    await openTab(page, id);
     const w = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     assert.ok(w.s <= w.c + 1, `${id}: page is ${w.s}px wide in a ${w.c}px viewport`);
   }
@@ -95,7 +108,7 @@ test("RR-H-13 Add role with whitespace-only company and title adds nothing and s
 
 test("RR-H-14 Add a company with a whitespace-only name doesn't add a nameless company", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const rowsBefore = await page.locator("#view .row").count();
   await page.fill("#coName", "   ");
   await page.selectOption("#coAts", "lever");
@@ -111,7 +124,7 @@ test("RR-H-14 Add a company with a whitespace-only name doesn't add a nameless c
 
 test("RR-H-15 Add a company with a slug of only symbols adds nothing and says why", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
+  await openTab(page, "watch");
   const rowsBefore = await page.locator("#view .row").count();
   await page.fill("#coName", "Symbol Slug (demo)");
   await page.fill("#coSlug", "!!! ///");
@@ -125,6 +138,8 @@ test("RR-H-15 Add a company with a slug of only symbols adds nothing and says wh
 });
 
 // ── Scan docs with edge values ───────────────────────────────────────────────────────────────
+// RR-M4.3: with criteria loaded the tile shows the computed score (tests/card.test.ts CARD-1/CARD-3). Without criteria it
+// falls back to the score the scan stored, so this runs with no meta/criteria.
 test("RR-H-16 scores of 0 and 100 both show and sort: 100 first, 0 above an unscored role", async () => {
   const jobs = {
     a: { company: "Zero Co (demo)", title: "PM Zero", status: "new", score: 0 },
@@ -132,7 +147,8 @@ test("RR-H-16 scores of 0 and 100 both show and sort: 100 first, 0 above an unsc
     c: { company: "None Co (demo)", title: "PM Unscored", status: "new" },
     d: { company: "Mid Co (demo)", title: "PM Mid", status: "new", score: 55 },
   };
-  const { page, errors } = await openSeed(seedWith({ jobs }));
+  const seed = seedWith({ jobs }); delete seed.meta.criteria;
+  const { page, errors } = await openSeed(seed, { ready: "#view article.job" });
   const titles = await page.locator("#view article.job h2").allInnerTexts();
   assert.deepEqual(titles, ["PM Hundred", "PM Mid", "PM Zero", "PM Unscored"]);
   assert.deepEqual(await page.locator("#view article.job .score").allInnerTexts(), ["100", "55", "0"]);
@@ -141,18 +157,29 @@ test("RR-H-16 scores of 0 and 100 both show and sort: 100 first, 0 above an unsc
 });
 
 test("RR-H-17 a scan role with no url, comp, score, location or dates shows no 'undefined', 'null' or 'NaN', on the card or in Preview", async () => {
-  const jobs = { bare: { company: "Bare Fields (demo)", title: "Senior PM, Bare", status: "new" }, b2: { company: "Bare Pipe (demo)", title: "PM, Bare Applied", status: "applied" } };
+  const jobs = { bare: { company: "Bare Fields (demo)", title: "Senior PM, Bare", status: "new", descriptionPlain: "A bare description." }, b2: { company: "Bare Pipe (demo)", title: "PM, Bare Applied", status: "applied" } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
-  for (const id of ["inbox", "pipeline", "action", "progress", "all"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["home", "inbox", "pipeline", "all"]) {
+    await openTab(page, id);
+    if (id === "home") await page.locator("#moreStats summary").click();
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id} shows junk: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }
   await page.click("#tab-inbox");
   assert.equal(await page.locator("#view article.job").getByRole("link", { name: /open posting/i }).count(), 0, "no dead posting link");
-  await page.locator("[data-preview]").first().click();
+  await page.locator("#role-bare").locator("button[data-details]").click();
+  await page.locator("#detailsSheet").getByRole("button", { name: "Preview posting" }).click(); // UX-H2-R3: Preview lives in Details
   await page.locator("#preview").waitFor({ state: "visible" });
   assert.ok(noJunkText(await page.locator("#preview").innerText()));
+  await page.keyboard.press("Escape");
+  for (const id of ["bare", "b2"]) {
+    await openTab(page, "all");
+    await page.locator(`#role-${id} button[data-details]`).click();
+    await page.locator("#detailsSheet").waitFor({ state: "visible" });
+    const t = await page.locator("#detailsSheet").innerText();
+    assert.ok(noJunkText(t), `${id} Details shows junk: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
+    await page.keyboard.press("Escape");
+  }
   assert.deepEqual(errors, []);
   await page.close();
 });
@@ -171,7 +198,8 @@ test("RR-H-19 a role with a status the page doesn't know isn't shown as New in i
   const jobs = { u: { company: "Odd Status (demo)", title: "PM, Archived", status: "archived", score: 70 } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
   await page.click("#tab-all");
-  const sel = page.locator("#st-u");
+  await page.locator("#role-u button[data-details]").click();
+  const sel = page.locator("#detailsSheet").getByLabel("Status", { exact: true });
   await sel.waitFor();
   const shown = await sel.evaluate((s: HTMLSelectElement) => s.options[s.selectedIndex]?.textContent || "");
   assert.notEqual(shown, "New", "the menu claims New for a role whose status is 'archived'");
@@ -209,7 +237,7 @@ test("RR-H-21 2,000 roles: the page opens, counts are right and tabs and search 
   const { page, errors } = await openSeed(seedWith({ jobs }));
   const openMs = Date.now() - t0;
   assert.match(await page.locator("#tab-inbox").innerText(), /1000/);
-  assert.match(await page.locator("#tab-ruled").innerText(), /500/);
+  assert.match(((await page.locator('#moreSheet [data-tab="ruled"]').textContent()) ?? ""), /500/);
   const t1 = Date.now();
   await page.click("#tab-all");
   await page.waitForFunction(() => document.querySelectorAll("#view article.job").length === 2000);
@@ -230,51 +258,62 @@ test("RR-H-21 2,000 roles: the page opens, counts are right and tabs and search 
 });
 
 // ── Core flows with no test until now ────────────────────────────────────────────────────────
+// RR-M4.3: the status menu and the detail fields moved from the card into the Details sheet (one Save).
+const details = async (page: Page, id: string) => {
+  await page.locator(`#role-${id} button[data-details]`).click({ timeout: 3000 });
+  const sheet = page.locator("#detailsSheet"); await sheet.waitFor({ state: "visible", timeout: 3000 }); return sheet;
+};
 test("RR-H-22 status walk: Saved → Applying → 'I submitted it' sets Applied and a follow-up date; Screen asks for a next step until one is saved", async () => {
   const jobs = { w: { company: "Walkthrough Co (demo)", title: "Senior PM, Walk", status: "saved", statusAt: new Date().toISOString(), score: 80 } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
   await page.click("#tab-pipeline");
-  await page.selectOption("#st-w", "applying");
+  await (await details(page, "w")).getByLabel("Status", { exact: true }).selectOption("applying");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "I submitted it" }).click({ timeout: 3000 });
   const card = page.locator("#view article.job").filter({ hasText: "Senior PM, Walk" });
-  await card.locator(".st-applied").waitFor({ timeout: 3000 });
-  const dates = await card.locator(".dates").innerText();
+  await card.locator(".meta", { hasText: "Applied" }).waitFor({ timeout: 3000 });
+  let sheet = await details(page, "w");
+  assert.equal(await sheet.getByLabel("Status", { exact: true }).inputValue(), "applied");
+  const dates = await sheet.locator(".dates").innerText();
   assert.match(dates, /Applied/);
   assert.match(dates, /Follow up/);
-  await page.selectOption("#st-w", "screen");
-  await page.click("#tab-action");
-  await page.locator("#view article.job").filter({ hasText: "Add the next step" }).waitFor({ timeout: 3000 });
-  const c2 = page.locator("#view article.job").filter({ hasText: "Senior PM, Walk" });
-  await c2.locator("summary").click();
+  await sheet.getByLabel("Status", { exact: true }).selectOption("screen");
+  await page.keyboard.press("Escape");
+  // RR-M4.4: Needs action became Home's Get ready: "<Company>" over "Add next step" (UX-H2-R5) with an Add step button.
+  await openTab(page, "home");
+  const row = page.locator('#home-ready [data-ready="nextstep"]', { hasText: "Walkthrough Co (demo)" });
+  await row.waitFor({ timeout: 3000 });
+  await row.getByRole("button", { name: "Add step" }).click();
+  sheet = page.locator("#detailsSheet"); await sheet.waitFor({ state: "visible", timeout: 3000 });
   await page.fill("#nx-w", "Recruiter screen Thursday");
-  await c2.getByRole("button", { name: "Save details" }).click();
-  await page.waitForFunction(() => !/Senior PM, Walk/.test(document.querySelector<HTMLElement>("#view")!.innerText), null, { timeout: 3000 });
+  await sheet.getByRole("button", { name: "Save", exact: true }).click();
+  await row.waitFor({ state: "detached", timeout: 3000 });
   await page.click("#tab-pipeline");
-  assert.match(await page.locator("#view").innerText(), /Next: Recruiter screen Thursday/);
+  assert.equal(await (await details(page, "w")).getByLabel(/^Next step/).inputValue(), "Recruiter screen Thursday");
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test("RR-H-23 Save details shows the saved tags right away, trimming blanks, and ignores a whitespace-only next step", async () => {
+test("RR-H-23 Save in Details stores the tags trimmed of blanks and ignores a whitespace-only next step", async () => {
   const jobs = { d: { company: "Details Co (demo)", title: "PM, Details", status: "saved", statusAt: new Date().toISOString() } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
   await page.click("#tab-pipeline");
-  const card = page.locator("#view article.job").filter({ hasText: "PM, Details" });
-  await card.locator("summary").click();
+  const sheet = await details(page, "d");
   await page.fill("#tg-d", " , ,priority ,,  referral ,");
   await page.fill("#nx-d", "    ");
-  await card.getByRole("button", { name: "Save details" }).click();
-  await page.waitForFunction(() => document.querySelectorAll("#view .tag").length > 0, null, { timeout: 3000 });
-  assert.deepEqual(await page.locator("#view article.job .tag").allInnerTexts(), ["priority", "referral"]);
-  assert.doesNotMatch(await page.locator("#view article.job").innerText(), /Next:/);
+  await sheet.getByRole("button", { name: "Save", exact: true }).click();
+  await page.waitForFunction("jobs.find((j) => j._id === 'd')?.tags?.length > 0", null, { timeout: 3000 });
+  const again = await details(page, "d");
+  assert.equal(await again.getByLabel(/^Tags/).inputValue(), "priority, referral");
+  assert.equal(await again.getByLabel(/^Next step/).inputValue(), "");
   assert.deepEqual(errors, []);
   await page.close();
 });
 
 test("RR-H-24 Never show moves a company to the Never show list and Restore brings it back", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-watch");
-  const count = async () => Number((await page.locator("#tab-watch .n").innerText()).trim());
+  await openTab(page, "watch");
+  const count = async () => parseInt((await page.locator('#moreSheet [data-tab="watch"] .n').textContent()) ?? "", 10);
   const n0 = await count();
   const row = () => page.locator("#view .row").filter({ hasText: "Sunfield Energy" });
   await row().getByRole("button", { name: "Never show" }).click();
@@ -289,14 +328,14 @@ test("RR-H-24 Never show moves a company to the Never show list and Restore brin
 
 test("RR-H-25 Scan rules: zero, words and negative numbers for the follow-up and stale days never save as 0 or blank", async () => {
   const { page, errors } = await openSeed(seedWith({}));
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   await page.fill("#cFu", "0");
   await page.fill("#cStale", "abc");
   await page.fill("#cSaved", "  ");
   await page.locator("#cfgForm button[type=submit]").click();
   await page.waitForFunction(() => /Settings saved/.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 3000 });
   await page.click("#tab-all"); // re-read what was saved (RR-H-23: the open form isn't redrawn after a save)
-  await page.click("#tab-filters");
+  await openTab(page, "filters");
   for (const id of ["#cFu", "#cStale", "#cSaved"]) {
     const v = Number(await page.locator(id).inputValue());
     assert.ok(Number.isInteger(v) && v > 0, `${id} is ${v}`);
@@ -310,7 +349,7 @@ test("RR-H-26 a new user's criteria that are a plain word or a list are refused 
   delete seed.meta.criteria;
   for (const bad of ["hello", "- a\n- b", "   "]) {
     const { page, errors } = await openSeed(seed);
-    await page.click("#tab-criteria");
+    await openTab(page, "criteria");
     await page.fill("#critText", bad);
     await page.getByRole("button", { name: /save criteria/i }).click();
     const shown = await page.locator("#critErr").waitFor({ timeout: 3000 }).then(() => true, () => false);
@@ -323,15 +362,16 @@ test("RR-H-26 a new user's criteria that are a plain word or a list are refused 
   }
 });
 
-test("RR-H-27 Progress tab copes with junk dates and fields: no NaN, no errors", async () => {
+test("RR-H-27 Home (with More stats open) copes with junk dates and fields: no NaN, no errors", async () => {
   const jobs = {
     p1: { company: "Junk Dates (demo)", title: "PM 1", status: "applied", appliedAt: "not a date", followUpDue: "soon", statusHistory: "applied", followUpsSent: "x" },
     p2: { company: "Junk Two (demo)", title: "PM 2", status: "screen", statusHistory: [{ status: "screen" }, null, 5], statusAt: 12345 },
     p3: { company: "Junk Three (demo)", title: "PM 3", status: "skipped", skippedAt: "yesterday", skippedBy: "owner" },
   };
   const { page, errors } = await openSeed(seedWith({ jobs }));
-  for (const id of ["progress", "action", "ruled", "pipeline"]) {
-    await page.click(`#tab-${id}`);
+  for (const id of ["home", "ruled", "pipeline"]) {
+    await openTab(page, id);
+    if (id === "home") await page.locator("#moreStats summary").click();
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id}: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }

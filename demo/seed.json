@@ -1,5 +1,5 @@
 {
-  "_about": "DEMO DATA. Every company, role, person and date here is fictional. Dates written as @d-N / @t-N mean N days before the day the demo is opened (date only / full timestamp). \"postings\" holds fictional job descriptions that the demo serves in place of the Greenhouse, Ashby and Lever APIs, keyed <ats>/<slug>/<job id>; Watermark Climate has none, to show a closed posting.",
+  "_about": "DEMO DATA. Every company, role, person and date here is fictional. Dates written as @d-N / @t-N mean N days before the day the demo is opened (date only / full timestamp). \"postings\" holds fictional job descriptions that the demo serves in place of the Greenhouse, Ashby and Lever APIs, keyed <ats>/<slug>/<job id>; Watermark Climate has none, to show a closed posting. Four roles also carry a copy as descriptionHtml, the way a scan stores one, so the demo shows Preview on them.",
   "jobs": {
     "greenhouse-1001": {
       "company": "Sunfield Energy",
@@ -44,7 +44,8 @@
       "lane": "Geospatial / clean energy",
       "tags": [],
       "status": "new",
-      "statusAt": "@t-0"
+      "statusAt": "@t-0",
+      "descriptionHtml": "<p><strong>Gridlark</strong> (a fictional demo company) turns home batteries and thermostats into virtual power plants that utilities can dispatch.</p><p>As <strong>Staff Product Manager, Virtual Power Plants</strong>, you will set product direction across our enrollment, dispatch and settlement teams.</p><h3>Responsibilities</h3><ul><li>Own the VPP platform strategy across three product teams</li><li>Work with utility partners to design programs homeowners actually join</li><li>Define how we measure grid impact and customer payouts</li><li>Coach senior PMs and raise the bar on product thinking</li></ul><h3>Requirements</h3><ul><li>8+ years of product management, including platform ownership across several teams</li><li>Energy, utility or IoT experience</li><li>Strong written communication</li></ul><p>Base pay $185K to $220K. Remote (US).</p>"
     },
     "ziprecruiter-1003": {
       "company": "Carbonmark",
@@ -119,7 +120,8 @@
         "family_benefits",
         "good_reviews",
         "crunch_risk"
-      ]
+      ],
+      "descriptionHtml": "<p><strong>About us</strong></p><p>Ledgerly (a fictional demo company) builds checkout and financing tools for independent retailers.</p><p><strong>The role</strong></p><p>As Senior Product Manager, Checkout, you'll own the moment a customer pays: payment methods, point-of-sale financing and the conversion funnel.</p><h3>What you'll do</h3><ul><li>Own checkout conversion end to end, from cart to confirmation</li><li>Launch pay-over-time options with lending partners</li><li>Run experiments on payment method ordering and messaging</li><li>Partner with risk and compliance on disclosures</li></ul><h3>What you bring</h3><ul><li>5+ years in product, with at least 2 in payments, checkout or lending</li><li>A record of moving conversion with experiments</li><li>Comfort working with partners, legal and compliance</li></ul><p><em>$175,000 to $210,000 base. Remote, US.</em></p>"
     },
     "himalayas-1006": {
       "company": "Trailhead Outfitters",
@@ -164,7 +166,8 @@
       "appliedAt": "@t-9",
       "followUpDue": "@d-2",
       "resumeName": "Tailored resume (demo)",
-      "emailNote": "Application received (demo email)."
+      "emailNote": "Application received (demo email).",
+      "descriptionHtml": "<p><strong>About us</strong></p><p>Brightwell Solar (a fictional demo company) runs a network of independent solar installers across 20 states.</p><p><strong>The role</strong></p><p>We're looking for a Senior Product Manager to lead the Installer Platform, the tools our partners use to quote, sell and schedule installs.</p><h3>What you'll do</h3><ul><li>Own the installer portal: onboarding, quoting, permits and scheduling</li><li>Talk with installers every week and turn what you hear into a clear roadmap</li><li>Ship pricing and tiering tools for different partner levels</li><li>Track partner activation and retention</li></ul><h3>What you bring</h3><ul><li>5+ years of B2B product management</li><li>Experience with channel partner or marketplace products</li><li>Energy or home services background is a plus</li></ul>"
     },
     "ashby-1008": {
       "company": "Pebblepay",
@@ -189,7 +192,8 @@
       "cultureChecks": {
         "fast_paced": "posting: fast-paced, wear many hats",
         "recent_layoffs": "demo: layoffs this spring"
-      }
+      },
+      "descriptionHtml": "<p><strong>Pebblepay</strong> (a fictional demo company) processes card payments for small online merchants.</p><p>We're hiring a <strong>Senior Product Manager, Merchant Risk</strong> to help good merchants get paid fast while keeping fraud and losses low.</p><h3>What you'll work on</h3><ul><li>Merchant onboarding and underwriting flows</li><li>Rules and models that flag risky activity, with clear review queues</li><li>Reserve and payout policies, and how we explain them to merchants</li></ul><h3>About you</h3><ul><li>5+ years in product, ideally in payments, lending or risk</li><li>Comfort with data, rules engines and trade-offs between growth and loss</li></ul><p>Compensation: $180K to $215K base. Remote, US.</p>"
     },
     "manual-heliohome-sr-pm": {
       "company": "HelioHome",
