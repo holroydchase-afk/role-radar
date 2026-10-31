@@ -82,10 +82,13 @@ test("RR-UX-5 the demo's preview says its description is a sample, not word for 
 
 test("RR-UX-6/7 the demo label says what's made up and that changes reset on reload", async () => {
   const { page } = await openPublic();
-  assert.ok((await page.locator("#demoNote").textContent())!.length <= 28, "chip stays on one line at 320px");
-  assert.ok(await page.locator("#demoTry").isVisible());
-  assert.match(await page.locator("#demoTry").innerText(), /roles, recruiters and scores are made up/i);
-  assert.match(await page.locator("#demoTry").innerText(), /resets when you reload/);
+  // Issue #62: the old #demoNote chip and #demoTry line became the studio Demo bar (tests/demo-bar.test.ts);
+  // its drawer now says what is made up and that a reload starts over.
+  const demoBar = page.getByRole("region", { name: "Demo" });
+  await demoBar.getByRole("button", { name: "Demo details" }).click();
+  const drawer = page.locator("#" + (await demoBar.getByRole("button", { name: "Demo details" }).getAttribute("aria-controls")));
+  assert.match(await drawer.innerText(), /made-up sample data/i);
+  assert.match(await drawer.innerText(), /reload to start over/);
   await openTab(page, "criteria");
   await page.click("#critForm button[type=submit]");
   assert.match(await toastText(page), /for this visit/);
