@@ -81,7 +81,8 @@ const seedWithFixtures = () => { const s = baseSeed(); return { ...s, jobs: { ..
 let browser: Browser;
 type Opts = Parameters<typeof open>[1] & { publicDemo?: boolean; seed?: Record<string, any> };
 const openDemo = ({ publicDemo = false, seed = seedWithFixtures(), ...opts }: Opts = {}) =>
-  open(browser, { html: buildDemo({ publicDemo, seed }), file: "dist/test-card.html", ready: "#view article.job", ...opts });
+  // RR-M4.4: Home is the default tab; these tests start on New, where every fixture role is.
+  open(browser, { html: buildDemo({ publicDemo, seed }), file: "dist/test-card.html", ready: "#view article.job", query: "?tab=inbox", ...opts });
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1280, height: 800 };
 const anchor = (id: string) => "role-" + id.replace(/[^A-Za-z0-9_-]/g, "_");
@@ -183,13 +184,22 @@ test("CARD-2 under the title, Fit · Values · Culture points from scoreSplit, e
       if (!new RegExp(`\\bCulture\\b[\\s\\S]*${e.culture}\\b[\\s\\S]*\\b10\\b[\\s\\S]*\\b${e.cultureWord}\\b`, "i").test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks points and '${e.cultureWord}'`);
       // AC9b: what the card shows adds up to its tile.
       if (!e.capped && fm && vm && cm && num(fm[1]) + num(vm[1]) + num(cm[1]) !== Number(m.tile)) bad.push(`${id}: ${m.subText} doesn't add up to the tile ${m.tile}`);
-    } else {
+    } else if (e.cultureWord === "Unrated" && e.culture === 0) {
       if (c.text !== "Culture not checked") bad.push(`${id}: unrated culture reads '${c.text}', want 'Culture not checked'`);
       if (!/culture/i.test(c.label) || !/not checked/i.test(c.label)) bad.push(`${id}: culture aria-label '${c.label}'`);
+    } else {
+      // RR-M4.4 review fix: no culture signals, but culture checks gave a badge (or a startup penalty moved the points).
+      // The card then shows the points with the badge word, so it never says "not checked" while Details says "Great".
+      const cm = c.text.match(/^Culture ([−-]?\d+)\/10$/);
+      if (!cm || num(cm[1]) !== e.culture) bad.push(`${id}: culture '${c.text}', want 'Culture ${e.culture}/10'`);
+      if (e.cultureWord !== "Unrated" && !new RegExp(`\\b${e.cultureWord}\\b`).test(c.label)) bad.push(`${id}: culture aria-label '${c.label}' lacks '${e.cultureWord}'`);
+      if (/not checked/i.test(c.label) && e.cultureWord !== "Unrated") bad.push(`${id}: says 'not checked' though Details rates culture '${e.cultureWord}'`);
     }
     if (!/^Fit [−-]?\d+\/60 · Values [−-]?\d+\/45 · Culture ([−-]?\d+\/10|not checked)$/.test(m.subText)) bad.push(`${id}: line reads '${m.subText}'`);
   }
   assert.ok(exp["card-cult"].rated && !exp["greenhouse-1001"].rated, "fixtures: one role with culture signals, one without");
+  assert.ok(exp["card-hi"].cultureWord === "Unrated" && exp["card-hi"].culture === 0, "fixtures: card-hi reads 'Culture not checked'");
+  assert.ok(exp["greenhouse-1001"].cultureWord !== "Unrated", "fixtures: greenhouse-1001 has checks but no signals (the review fix)");
   assert.deepEqual(bad, []);
   assert.deepEqual(errors, []);
   await page.close();
@@ -286,9 +296,10 @@ test("CARD-7 one reason line: the first sentence of the fit note, clamped to 2 l
   }
 });
 
-test("CARD-8 on Needs action the reason line is the action reason (Follow-up due <date>)", async () => {
+// RR-M4.4: Needs action is gone, so any card whose follow-up is due says so (here on Pipeline).
+test("CARD-8 a card whose follow-up is due shows the action reason (Follow-up due <date>) as its reason line", async () => {
   const { page, errors } = await openDemo({ ...PHONE });
-  await openTab(page, "action");
+  await openTab(page, "pipeline");
   const m = await measure(card(page, "greenhouse-1007"));
   assert.equal(m.reasonCount, 1, "one reason line");
   assert.match(m.reasonText, /^Follow-up due (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}$/);
@@ -308,7 +319,9 @@ test("CARD-9 one meta line: location · pay · one date for the status, no chips
     if (!label.test(m.metaText)) bad.push(`${id}: '${m.metaText}' lacks ${label}`);
     if (m.metaLines > 1) bad.push(`${id}: meta wraps to ${m.metaLines} lines`);
     if (m.metaChips) bad.push(`${id}: ${m.metaChips} chips in the meta line`);
-    if ((m.text.match(DATE) || []).length > 1) bad.push(`${id}: ${(m.text.match(DATE) || []).length} dates on the card`);
+    // RR-M4.4: a due follow-up's reason line ("Follow-up due <date>") carries its own date; the rest of the card has one.
+    const extra = /^Follow-up due /.test(m.reasonText) ? (m.reasonText.match(DATE) || []).length : 0;
+    if ((m.text.match(DATE) || []).length - extra > 1) bad.push(`${id}: ${(m.text.match(DATE) || []).length - extra} dates on the card`);
   };
   await check("card-hi", /Remote, US.*\$170K–\$200K.*Found /);
   await check("greenhouse-1001", /Found /);

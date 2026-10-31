@@ -9,7 +9,8 @@ import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-hardening.html" });
-const openPublic = (opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), ...opts });
+// RR-M4.4: Home is the default tab; these public-demo tests start on New, where the role cards are.
+const openPublic = (opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), query: "?tab=inbox", ...opts });
 const toastText = (page: Page) => page.locator("#toast").innerText();
 
 before(async () => { browser = await chromium.launch(); });

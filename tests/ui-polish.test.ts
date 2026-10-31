@@ -10,7 +10,8 @@ import { openDemo as open, openTab, currentTab } from "../scripts/browser.mjs";
 let browser: Browser;
 type Opts = Parameters<typeof open>[1];
 const openDemo = (opts: Opts = {}) => open(browser, { ...opts, file: "dist/test-ui-polish.html" });
-const openPublic = (opts: Opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), ...opts });
+// RR-M4.4: Home is the default tab; these public-demo tests start on New, where the role cards are.
+const openPublic = (opts: Opts = {}) => openDemo({ html: buildDemo({ publicDemo: true }), query: "?tab=inbox", ...opts });
 const PHONE = { width: 390, height: 844 };
 const LAPTOP = { width: 1280, height: 800 };
 const accentRgb = (page: Page) => page.evaluate(() => {
@@ -216,10 +217,11 @@ test("RR-UX4-3 on a phone each Values/Culture reason in Details sits under its l
   await page.close();
 });
 
-test("RR-UX4-4 every card on Pipeline, All and Needs action has at most one emphasized (accent) action", async () => {
+// RR-M4.4: Needs action folded into Home, whose Pipeline cards are checked instead.
+test("RR-UX4-4 every card on Pipeline, All and Home has at most one emphasized (accent) action", async () => {
   const { page } = await openPrivate(LAPTOP);
   const accent = await accentRgb(page);
-  for (const id of ["pipeline", "all", "action"]) {
+  for (const id of ["pipeline", "all", "home"]) {
     await openTab(page, id);
     const cards = await page.locator("#view .job").evaluateAll((els, accent) => els.map((c) => {
       const btns = [...c.querySelectorAll<HTMLElement>("button, a.btn")].filter((b) => b.offsetParent && !b.closest("details"));
@@ -377,10 +379,11 @@ test("RR-UX5-3 Apply shows only before applying: not on Applied, Screen, Intervi
   await page.close();
 });
 
-test("RR-UX5-5 on a phone Progress's 'Follow-up sent' button text stays on one line", async () => {
+// RR-M4.4: the Progress tab's follow-ups moved to Home's Get ready.
+test("RR-UX5-5 on a phone Get ready's 'Follow-up sent' button text stays on one line", async () => {
   const { page } = await openPrivate(PHONE);
-  await openTab(page, "progress");
-  const b = page.locator("section[aria-labelledby=pg-fu] button", { hasText: "Follow-up sent" }).first();
+  await openTab(page, "home");
+  const b = page.locator('#home-ready [data-ready="followup"] button', { hasText: "Follow-up sent" }).first();
   await b.waitFor();
   const rows = await b.evaluate((el, src) => (0, eval)(`(${src})`)([el]), String(lineRows));
   const m = await b.evaluate((el) => ({ h: el.getBoundingClientRect().height, ws: getComputedStyle(el).whiteSpace }));
@@ -449,11 +452,12 @@ test("RR-UX6-2 on a phone New cards are <=460px with Values/Culture and score ma
 });
 
 test("RR-UX6-3 the digest count matches the header's new count (or labels its set); a tab with zero roles hides #fbar", async () => {
+  // RR-M4.4: the digest moved from New to Home's This morning.
   const { page } = await openPublic(LAPTOP);
-  await page.click("#tab-inbox");
+  await page.click("#tab-home");
   const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
   assert.ok(head, "header shows 'N new'");
-  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  const sum = (await page.locator("#home-morning .hh").innerText()).replace(/\s+/g, " ");
   const bare = [...sum.matchAll(/\b(\d+) roles?\b/gi)].filter((m) => m[1] !== head[1]).map((m) => m[0]);
   const bad = bare.length ? [`digest summary '${sum}' shows bare ${bare.join(", ")} vs header '${head[0]}'`] : [];
   await page.close();
@@ -512,11 +516,12 @@ test("RR-UX7-2 Pipeline cards at 390 (private): the visible action-row buttons/l
 });
 
 test("RR-UX7-3 one story: the digest says 'Top N of M' with M = the header's new count; with ?fail=jobs the header shows no new count", async () => {
+  // RR-M4.4: the digest moved from New to Home's This morning.
   const { page } = await openPublic(LAPTOP);
-  await page.click("#tab-inbox");
+  await page.click("#tab-home");
   const head = (await page.locator("header").innerText()).match(/(\d+) new\b/);
   assert.ok(head, "header shows 'N new'");
-  const sum = (await page.locator("#digestCard summary").innerText()).replace(/\s+/g, " ");
+  const sum = (await page.locator("#home-morning .hh").innerText()).replace(/\s+/g, " ");
   const bad = [];
   const top = sum.match(/Top (\d+) of (\d+)/i);
   if (!top) bad.push(`digest summary '${sum}' has no 'Top N of M' (header '${head[0]}')`);

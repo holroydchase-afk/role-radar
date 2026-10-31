@@ -157,6 +157,8 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 @media (max-width:600px), (pointer:coarse){.chipbtn{min-height:44px}}
 /* On phones the tab bar scrolls away instead of covering a fifth of the screen. */
 @media (max-width:600px){#tabs{position:static;gap:4px;scroll-snap-type:x proximity;padding:6px 16px;margin-inline:-16px;scroll-padding-inline:16px}#tabs button{padding:0 12px}}
+/* RR-M4.4: on phones the five tabs share the row (no sideways scroll at 360px). */
+@media (max-width:600px){#tabs{padding-inline:0;margin-inline:0}#tabs button{flex:1 0 auto;justify-content:center;padding:0 6px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
   /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
@@ -299,22 +301,43 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
 .dig .sub2{grid-column:2;color:var(--muted);font-size:.8rem}
-/* This morning's digest: a compact card at the top of New; each entry jumps to its role card. */
-#digestCard{gap:0;padding:4px 16px;margin-bottom:12px}
-#digestCard>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;list-style:none}
-#digestCard>summary::-webkit-details-marker{display:none}
-#digestCard>summary::before{content:"\25B8";font-size:.8em;color:var(--muted)}#digestCard[open]>summary::before{content:"\25BE"}
-#digestCard>summary h2{flex:1;min-width:0}
-#digestCard>summary .hint{white-space:nowrap}
-#digestCard .dig{gap:2px;padding:2px 0 10px}#digestCard .dig li{display:block}
-#digestCard .dig a{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:10px;align-items:center;min-height:36px;padding:2px 6px;margin-inline:-6px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:.9rem}
-#digestCard .dig a .score{text-align:center}
-#digestCard .dig a .t{overflow-wrap:anywhere}#digestCard .dig a b{font-weight:600}
-#digestCard .dig a:hover .t{color:var(--accent);text-decoration:underline}
-#digestCard .dig a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-#digestCard>.hint{margin:0 0 10px}
-@media (max-width:600px), (pointer:coarse){#digestCard .dig a{min-height:44px}#digestCard>summary{padding-block:0}}
-@media (min-width:900px){#digestCard .dig{display:block;columns:2;column-gap:20px;padding-bottom:8px}#digestCard .dig li{break-inside:avoid}#digestCard .dig a{min-height:30px;padding-block:1px}#digestCard .dig a .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#digestCard>summary{min-height:40px}}
+/* Home (RR-M4.4): one column of plain sections; numbers in mono, labels muted, one verb per row. */
+.home{display:grid;gap:12px}
+.hsec{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.hsec .hh{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:28px}
+.hsec h2{font:600 1.0625rem var(--f-body);margin:0}
+.hsec .hh .hint{font-size:.875rem;white-space:nowrap}
+#home-pipeline{background:none;border:0;padding:0}
+.hline{margin:0;font-size:.875rem;color:var(--muted)}
+.hline .linkbtn{font-size:inherit}
+.hrows,.rrows,.stepper{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr)}
+.hrows a{display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:12px;align-items:center;min-height:48px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none}
+.hrows li:first-child a{border-top:0}
+.hrows .score{box-sizing:border-box;min-width:2.75rem;text-align:center;font-size:.9375rem;font-weight:500}
+.hrows .t,.rrows .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.rrows .t{flex:1 1 auto}
+.hrows .t b{font-weight:600}
+.hrows a:hover .t{color:var(--accent);text-decoration:underline}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{display:grid;align-content:start;justify-items:start;gap:2px;text-align:left;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.tile:hover{border-color:var(--accent)}
+.tile .num,.stepper .num{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .num{font-size:1.75rem}.tile .lbl{font-size:.875rem}.tile small{font-size:.8125rem;color:var(--muted)}
+#home-apps .days .col{height:40px}
+.today{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;font-size:.9375rem}
+.today .meter{height:8px;background:var(--bg)}.today.met .meter i{background:var(--good)}
+.stepper{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stepper li{position:relative;display:grid;justify-items:center;gap:2px;padding:6px 0;border-radius:8px;background:var(--bg)}
+.stepper li+li::before{content:"\2192";position:absolute;left:-8px;top:50%;transform:translate(-50%,-50%) translateX(4px);color:var(--muted);font-size:.8rem}
+.stepper .num{font-size:1.375rem}.stepper .lbl{font-size:.8125rem;color:var(--muted)}
+#moreStats{border-top:0;padding-top:0}#moreStats>summary{min-height:36px;padding-block:0;display:inline-flex;align-items:center;gap:6px;list-style:none;color:var(--accent);font-size:.875rem}#moreStats>summary::-webkit-details-marker{display:none}#moreStats>summary::before{content:"\25B8";font-size:.8em}#moreStats[open]>summary::before{content:"\25BE"}
+@media (max-width:600px), (pointer:coarse){#moreStats>summary{min-height:44px}}
+#moreStats .prog{padding-top:10px}#moreStats h3{font-family:var(--f-display);font-weight:500;font-size:1.05rem;margin:0}
+.rrows li{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;border-top:1px solid var(--line);padding-block:2px}
+.rrows li:first-child{border-top:0}
+.rrows .t small{color:var(--muted);font-size:.8125rem;margin-left:4px}
+.rrows .btn{flex:none;min-height:44px}
+.more-ready{justify-self:start;min-height:36px}
+@media (max-width:600px), (pointer:coarse){.more-ready{min-height:44px}}
 .job{scroll-margin-top:72px}.job:focus{outline:none}.job.target{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
 .arules{display:grid;gap:6px;margin:0;padding:0;list-style:none}.arules li{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:10px;align-items:baseline}
 .lvl{font:600 .8rem var(--f-body);text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
@@ -349,7 +372,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
   body.previewing{overflow:hidden}
 }
 /* RR-UX7-1: phones get tighter spacing above the first role (these follow the base rules they override). */
-@media (max-width:600px){.main{gap:8px}.fbar{margin-bottom:8px;padding-block:6px}#digestCard{margin-bottom:8px}
+@media (max-width:600px){.main{gap:8px}.fbar{margin-bottom:8px;padding-block:6px}
   .wrap{padding-top:4px}.showcase{margin-bottom:-12px}.showcase a{font-size:.85rem}h1{font-size:1.5rem;line-height:1.15}
   .lede{font-size:.875rem;line-height:1.4}header .sub{font-size:.84rem;line-height:1.4}#tabs{padding-block:2px}}
 </style>
@@ -396,8 +419,10 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 // The public demo (chaseholroyd.com/role-radar/) is radar only: scan, score, pipeline. Resume intake, intake
 // settings and the Recruiters tab show only with ?full. The demo build sets __RR_PUBLIC__; the live app never does.
 const TOOLS=!window.__RR_PUBLIC__;
+// RR-M4.4: Home first and the default. Needs action and Progress were folded into Home (Get ready, More stats);
+// their old ?tab= links open Home (TAB_ALIAS).
 const TABS=[
-  {id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"action",label:"Needs action"},{id:"ruled",label:"Ruled out"},{id:"progress",label:"Progress"},
+  {id:"home",label:"Home"},{id:"inbox",label:"New"},{id:"pipeline",label:"Pipeline"},{id:"ruled",label:"Ruled out"},
   {id:"all",label:"All"},...(TOOLS?[{id:"people",label:"Recruiters"}]:[]),{id:"criteria",label:"Criteria"},{id:"watch",label:"Watchlist"},{id:"filters",label:"Scan rules"}];
 const STATUSES=[["new","New"],["viewed","Viewed"],["saved","Saved"],["applying","Applying"],["applied","Applied"],["screen","Screen"],["interviewing","Interviewing"],["offer","Offer"],["skipped","Skipped"],["rejected","Rejected"],["closed","Closed"]];
 const STATUS_LABEL=Object.fromEntries(STATUSES);
@@ -415,7 +440,7 @@ const ATS=["greenhouse","ashby","lever"];
 const DEF_VIEW={q:"",status:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",sorts:{}};
 // Four sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7).
 const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"]];
-const DEF_SORT={inbox:"fit",pipeline:"updated",action:"followup",all:"fit"};
+const DEF_SORT={inbox:"fit",pipeline:"updated",all:"fit"};
 // Quick chips: each sets one view key (RR-FS-3). The Filters sheet holds the rest.
 const CHIPS=[["day","Last 24 hrs","found","1"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
 const SHEET_KEYS=["lane","found","source","tag","conflict","status"];
@@ -428,8 +453,10 @@ let recruiters=[], editRec=null, filtersOpen=false, sortOpen=false;
 const RS=window.RoleRadarRecruiters||null;
 let recStore=null, savedTab=null;
 const showPeople=()=>TOOLS&&!!recStore&&recStore.visible;
-// RR-M4.1: the tab bar holds New, Pipeline, All and More; every other tab opens from the More sheet, in this order.
-const BAR_TABS=["inbox","pipeline","all"], MORE_TABS=["people","action","progress","ruled","criteria","watch","filters"];
+const recruitersDue=()=>recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length;
+// The tab bar holds Home, New, Pipeline, All and More; every other tab opens from the More sheet, in this order.
+const BAR_TABS=["home","inbox","pipeline","all"], MORE_TABS=["people","ruled","criteria","watch","filters"];
+const TAB_ALIAS={action:"home",progress:"home"};
 const tabList=()=>TABS.filter(t=>t.id!=="people"||showPeople());
 let moreOpen=false;
 // Privacy: recruiter details are hidden on screen until this viewer chooses to show them.
@@ -448,7 +475,7 @@ let skipFb=null, critFrom=null;
 let preview=null, previewFrom=null;
 // jobs: "loading" until the first snapshot, "error" if the read fails. Neither ever shows an empty tracker.
 let jobsState="loading", dbChecked=false;
-let tab="inbox", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
+let tab="home", jobs=[], companies=[], filters=null, scan=null, db=null, view={...DEF_VIEW}, openMore=new Set(), skipOpen=null;
 try{const t=localStorage.getItem("rr-tab"); if(t==="people"&&TOOLS) savedTab=t; else if(TABS.some(x=>x.id===t)) tab=t; const v=JSON.parse(localStorage.getItem("rr-view")||"null"); if(v) view=migrateView(v);}catch(e){}
 const saveView=()=>{try{localStorage.setItem("rr-view",JSON.stringify(view))}catch(_){}};
 // Views saved by the old filter bar (one global sort, Experience/Values/Culture dropdowns) load as the nearest new view (RR-FS-6).
@@ -463,13 +490,14 @@ function migrateView(v){
   for(const k of Object.keys(DEF_VIEW)) if(k!=="sorts"&&typeof o[k]!=="string") o[k]="";
   return o;
 }
-const sortOf=()=>view.sorts[tab]||DEF_SORT[tab]||"fit";
+const sortOf=(t=tab)=>view.sorts[t]||DEF_SORT[t]||"fit";
 // Deep links: ?tab=<id> opens a tab (it beats the remembered one), #role-<id> jumps to a role card.
 // A tab this viewer can't see (Recruiters on the public build) or an unknown id never opens; the URL drops it.
 function setUrlTab(t,hash=""){ try{ const u=new URL(location.href); if(t) u.searchParams.set("tab",t); else u.searchParams.delete("tab"); u.hash=hash; history.replaceState(history.state,"",u.href); }catch(_){} }
 let urlTab=null, deepRole=null;
 try{ const q=new URLSearchParams(location.search).get("tab");
-  if(q!==null){ if(q==="people"&&TOOLS){ urlTab=q; savedTab=q; } else if(TABS.some(x=>x.id===q&&x.id!=="people")){ urlTab=q; tab=q; savedTab=null; } else setUrlTab(null,location.hash); }
+  if(q!==null&&TAB_ALIAS[q]){ urlTab=tab=TAB_ALIAS[q]; savedTab=null; setUrlTab(tab,location.hash); }
+  else if(q!==null){ if(q==="people"&&TOOLS){ urlTab=q; savedTab=q; } else if(TABS.some(x=>x.id===q&&x.id!=="people")){ urlTab=q; tab=q; savedTab=null; } else setUrlTab(null,location.hash); }
   const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)) deepRole=h; }catch(_){}
 
 const $=s=>document.querySelector(s);
@@ -535,24 +563,23 @@ function inTab(j,t){
   if(t==="inbox") return INBOX.includes(s);
   if(t==="pipeline") return PIPE.includes(s);
   if(t==="ruled") return s==="skipped"&&!byRule(j);
-  if(t==="action") return !!actionReason(j);
   return true;
 }
 function counts(){
-  const c={inbox:0,pipeline:0,action:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",progress:"",people:recruiters.filter(r=>r.nextStepDue&&r.nextStepDue<=today()).length||""};
-  jobs.forEach(j=>{["inbox","pipeline","action","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
-  if(jobsState!=="ready") JOB_TABS.forEach(t=>{if(t!=="progress") c[t]="";});
+  const c={home:"",inbox:0,pipeline:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",people:recruitersDue()||""};
+  jobs.forEach(j=>{["inbox","pipeline","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
+  if(jobsState!=="ready") JOB_TABS.forEach(t=>{c[t]="";});
   return c;
 }
 function renderTabs(){
   const c=counts();
-  if(tab==="people"&&!showPeople()) tab="inbox";
+  if(tab==="people"&&!showPeople()) tab="home";
   const label=id=>(TABS.find(t=>t.id===id)||{}).label||id, inMore=MORE_TABS.includes(tab);
   // Only New and Pipeline carry a count; recruiter follow-ups due show as a dot on More (owner's build only).
   const due=showPeople()&&c.people?c.people:0;
-  $("#tabs").innerHTML=BAR_TABS.map(id=>`<button role="tab" id="tab-${id}" aria-selected="${id===tab}" data-tab="${id}">${label(id)}${id!=="all"&&c[id]!==""?` <span class="n">${c[id]}</span>`:""}</button>`).join("")
+  $("#tabs").innerHTML=BAR_TABS.map(id=>`<button role="tab" id="tab-${id}" aria-selected="${id===tab}" data-tab="${id}">${label(id)}${(id==="inbox"||id==="pipeline")&&c[id]!==""?` <span class="n">${c[id]}</span>`:""}</button>`).join("")
     +`<button type="button" id="moreBtn" aria-haspopup="dialog" aria-controls="moreSheet" aria-expanded="${moreOpen}"${inMore?` aria-current="page"`:""}${due?` aria-label="More, ${due} due"`:""}>More${due?`<span class="dot" aria-hidden="true"></span>`:""}</button>`;
-  const rowN={people:due?due+" due":"",action:c.action,ruled:c.ruled,watch:c.watch!==""?c.watch+" boards":""};
+  const rowN={people:due?due+" due":"",ruled:c.ruled,watch:c.watch!==""?c.watch+" boards":""};
   $("#moreSheet").innerHTML=`<h2 id="moreTitle">More</h2>`+tabList().filter(t=>MORE_TABS.includes(t.id)).sort((a,b)=>MORE_TABS.indexOf(a.id)-MORE_TABS.indexOf(b.id))
     .map(t=>`<button type="button" class="mrow" data-tab="${t.id}"${t.id===tab?` aria-current="page"`:""}><span>${t.label}</span>${rowN[t.id]!==undefined&&rowN[t.id]!==""?`<span class="n">${rowN[t.id]}</span>`:""}</button>`).join("");
   $("#moreSheet").hidden=!moreOpen; $("#mscrim").hidden=!moreOpen;
@@ -644,9 +671,11 @@ function subScores(j){
   const r=scoreOf(j); if(!r||!SC.scoreSplit) return "";
   const s=SC.scoreSplit(r,j), f=fitsOf(j), n=x=>String(x).replace("-","−");
   const part=(k,label,v,max,word)=>`<span data-part="${k}" aria-label="${label} ${v} of ${max}${word?", "+esc(word):""}">${label} <span class="mono">${n(v)}/${max}</span></span>`;
-  // Culture reads "not checked" only when nothing was read about it and nothing (a startup penalty) moved its points.
-  const cult=!s.cultureRated&&s.culture===0?`<span data-part="culture" aria-label="Culture not checked">Culture not checked</span>`
-    :part("culture","Culture",s.culture,s.max.culture,s.cultureRated?f&&RATE_LABEL[f.culture.rating]:"not checked");
+  // Culture reads "not checked" only when nothing was read about it (no signals, no checks) and nothing (a startup
+  // penalty) moved its points. Otherwise its label is the Culture badge word, so the card never contradicts Details.
+  const cw=f&&f.culture.rating!=="unrated"?RATE_LABEL[f.culture.rating]:"";
+  const cult=!s.cultureRated&&s.culture===0&&!cw?`<span data-part="culture" aria-label="Culture not checked">Culture not checked</span>`
+    :part("culture","Culture",s.culture,s.max.culture,cw||(s.cultureRated?"":"not checked"));
   return `<div class="subscores">${part("fit","Fit",s.fit,s.max.fit,FIT_WORD[String(j.fit||"").toLowerCase()])}<span aria-hidden="true"> · </span>${part("values","Values",s.values,s.max.values,f&&RATE_LABEL[f.values.rating])}<span aria-hidden="true"> · </span>${cult}</div>`;
 }
 // The one date a card shows: the one for its status (UX-H-R10). All dates are in Details.
@@ -663,10 +692,10 @@ function jobCard(j){
   const id=esc(j._id), s=st(j), sample=isSampleUrl(j.url), url=sample?"":safeUrl(j.url), desc=!!descOf(j);
   const n=scoreNum(j), scoreTile=n!==null?`<span class="score${n>=70?" hi":""}" title="Criteria score, 0–100">${esc(n)}</span>`:"";
   const title=String(j.title??"").trim()||"Untitled role";
-  // The reason line: what to do next on Needs action, otherwise the first sentence of the fit note.
-  const reason=(tab==="action"&&actionReason(j))||firstSentence(j.fitNote);
-  // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
+  // The reason line: "Follow-up due <date>" when one is due (on any tab), otherwise the first sentence of the fit note.
   const fupDue=s==="applied"&&j.followUpDue&&j.followUpDue<=today();
+  const reason=(fupDue&&"Follow-up due "+fmtDate(j.followUpDue))||firstSentence(j.fitNote);
+  // One primary (solid accent) action per card: the natural next step for its status. The rest stay outlined.
   const primary=TOOLS&&(INBOX.includes(s)||s==="saved")?`<button class="btn cta apply" type="button" data-apply="${id}">${safeUrl(j.resumeUrl)?"Re-run intake":"Apply"}</button>`
     :INBOX.includes(s)?`<button class="btn cta" type="button" data-quick="saved" data-job="${id}">Save</button>`
     :s==="applying"?`<button class="btn cta" type="button" data-quick="applied" data-job="${id}">I submitted it</button>`
@@ -746,7 +775,7 @@ function closeDetails(focus=true){
 // existing cards instead of rebuilding thousands of them (RR-H-21).
 const cardCache=new Map(); let cardCtx=null;
 function cardEls(list){
-  const ctx=[tab==="action",specData,config,filters,LANES,today()];
+  const ctx=[specData,config,filters,LANES,today()];
   if(!cardCtx||ctx.some((x,i)=>x!==cardCtx[i])){ cardCache.clear(); cardCtx=ctx; }
   const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id);
   const keys=list.map(keyOf), miss=list.filter((j,i)=>{const c=cardCache.get(j._id); return !c||c.key!==keys[i];});
@@ -816,7 +845,7 @@ function applyView(list){
     return true;
   });
 }
-function sortList(list){
+function sortList(list,t=tab){
   const rank={strong:0,maybe:1,stretch:2};
   // Culture then values ranks, worked out once per role per sort (sorting 2,000 roles stays quick, RR-H-21).
   const memo=new Map(), fr=j=>{ if(!memo.has(j)) memo.set(j,fitsOf(j)); return memo.get(j); }, sc=scoreNum;
@@ -827,7 +856,7 @@ function sortList(list){
     found:(a,b)=>String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     updated:(a,b)=>String(b.statusAt||b.firstSeen||"").localeCompare(String(a.statusAt||a.firstSeen||"")),
     followup:(a,b)=>String(a.followUpDue||"9999").localeCompare(String(b.followUpDue||"9999"))};
-  return list.sort(by[sortOf()]||by.fit);
+  return list.sort(by[sortOf(t)]||by.fit);
 }
 function addRoleForm(){
   return `<details class="more" id="addRole"${openMore.has("_add")?" open":""} data-more="_add"><summary>Add a role found somewhere else</summary>
@@ -839,29 +868,14 @@ function addRoleForm(){
       <label for="aj-st">Status<select id="aj-st">${STATUSES.filter(([v])=>["saved","applying","applied"].includes(v)).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></label>
     </div><button class="primary" type="submit">Add role</button></form></details>`;
 }
-// "This morning's digest" at the top of New: what the weekday scan would send, ranked as the Criteria preview ranks it.
-// Open on wide screens, a one-line summary on phones; the viewer's own toggle is kept across redraws.
-let digestOpen=null;
-function digestCard(){
-  if(!SC||!specData) return "";
-  const d=digestOf(specData); if(!d) return "";
-  const open=digestOpen??(typeof matchMedia==="function"&&matchMedia("(min-width:900px)").matches);
-  const n=d.items.length;
-  // "Top N of M new" with M the header's new-match count, so the digest and the header tell one story (RR-UX7-3).
-  const of=Number(scan&&scan.newMatches)||jobs.filter(j=>inTab(j,"inbox")).length;
-  const body=n?`<ol class="dig">${d.items.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}" title="${esc(x.job.company)} · ${esc(x.job.title)}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
-    :`<p class="hint">Nothing in New clears the minimum score yet.</p>`;
-  return `<details class="ccard" id="digestCard"${open?" open":""}><summary><h2>This morning's digest</h2><span class="hint">${of>n?`Top ${n} of ${of} new`:n===1?"Top pick":`Top ${n} picks`}</span></summary>${body}</details>`;
-}
 function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
   const list=sortList(applyView(base));
-  const head=(tab==="inbox"?digestCard():"")+(base.length?filterBar():"")+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
+  const head=(base.length?filterBar():"")+(tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"");
   let body;
   if(!list.length){
     const msg=base.length?["No roles match these filters","Clear a filter to see more."]:{inbox:["Nothing new right now","The morning scan adds matching roles here. Open one and it's marked viewed; save or skip it to clear it out."],
       pipeline:["Nothing in the pipeline","Save a role, or tap Apply, and it moves here. Add roles found elsewhere above."],
-      action:["Nothing needs you right now",(TOOLS?"Follow-ups due, stale applications and unsent resumes show up here.":"Follow-ups due and stale applications show up here.")],
       all:["No roles yet","After the first scan runs, every match it finds is listed here."]}[tab];
     const noCrit=!base.length&&tab==="inbox"&&!(criteria&&criteria.spec);
     body=noCrit?`<div class="empty"><strong>Set your criteria first</strong><span>The morning scan scores roles against your criteria. Add them and new matches show up here.</span><button class="btn cta" type="button" data-tab="criteria">Open Criteria</button></div>`
@@ -1289,40 +1303,92 @@ function renderRuled(){
   </div>`;
 }
 
-// Progress: today against the daily bar, the week, the funnel, response rate, follow-ups due and sector mix.
-// Every number comes from progress.js, the same rules the daily family email uses.
-function renderProgressTab(){
-  if(!PG) return `<div class="empty"><strong>Progress didn't load</strong><span>Reload the page to try again.</span></div>`;
-  const d=PG.dashboard(jobs,{bar:Number(config.dailyBar)||3}), t=d.today;
-  const pct=Math.min(100,Math.round(t.total/t.bar*100)), maxDay=Math.max(1,...d.week.days.map(x=>x.applied));
-  const wd=k=>new Date(k+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
+// Home (RR-M4.4): what to do next, top to bottom. This morning (the digest's top picks and board health),
+// Applications (to do, in progress, done; the week; today against the bar), After you apply (where sent roles stand,
+// plus the old Progress charts under More stats), Get ready (what is due) and the first Pipeline cards.
+// Every number comes from progress.js and scoring.js, the same rules the scan, digest and family email use.
+let readyAll=false, homeMemo=null;
+const HOME_ROWS=5, HOME_CARDS=3;
+function homeNumbers(){
+  const bar=Number(config.dailyBar)||3, t=today();
+  if(homeMemo&&homeMemo.jobs===jobs&&homeMemo.bar===bar&&homeMemo.t===t) return homeMemo;
+  return homeMemo={jobs,bar,t,h:PG.homeStats(jobs),d:PG.dashboard(jobs,{bar})};
+}
+// What is due, most urgent first: follow-ups (oldest due first), resumes not sent, missing next steps, roles saved
+// too long, then recruiters (owner's build only). Each row has one verb.
+function readyRows(){
+  const t=today(), co=j=>esc(j.company||"Untitled"), rows=[];
+  jobs.filter(j=>st(j)==="applied"&&j.followUpDue&&j.followUpDue<=t).sort((a,b)=>String(a.followUpDue).localeCompare(String(b.followUpDue)))
+    .forEach(j=>rows.push({kind:"followup",text:`Follow up · ${co(j)}`,sub:"due "+fmtDate(j.followUpDue),btn:`<button class="btn" type="button" data-fupsent="${esc(j._id)}">Follow-up sent</button>`}));
+  jobs.filter(j=>st(j)==="applying"&&(daysSince(j.statusAt)??2)>=2)
+    .forEach(j=>rows.push({kind:"submit",text:`Send it · ${co(j)}`,btn:`<button class="btn" type="button" data-quick="applied" data-job="${esc(j._id)}">I submitted it</button>`}));
+  jobs.filter(j=>(st(j)==="screen"||st(j)==="interviewing")&&!j.nextStep)
+    .forEach(j=>rows.push({kind:"nextstep",text:`Add next step · ${co(j)}`,btn:`<button class="btn" type="button" data-details="${esc(j._id)}" aria-haspopup="dialog" aria-controls="detailsSheet">Add step</button>`}));
+  jobs.filter(j=>st(j)==="saved"&&(daysSince(j.statusAt)??0)>=(Number(config.staleSavedDays)||7))
+    .forEach(j=>rows.push({kind:"decide",text:`Decide · ${co(j)}`,btn:`<button class="btn" type="button" data-role="${roleAnchor(j._id)}">Open</button>`}));
+  const due=showPeople()?recruitersDue():0;
+  if(due) rows.push({kind:"recruiters",text:`Recruiter · ${due} due`,btn:`<button class="btn" type="button" data-tab="people">Open</button>`});
+  return rows;
+}
+// The old Progress charts, now under Home's More stats: funnel, response rate and sector mix.
+function moreStats(d){
   const top=d.funnel[0].count, maxMix=Math.max(1,...d.sectorMix.map(x=>x.count));
   const STAGE={applied:"Applied",screen:"Screen",interviewing:"Interviewing",offer:"Offer"};
-  const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
-  return `<div class="prog">
-    <section class="ccard pg-today${t.met?" met":""}" aria-labelledby="pg-today"><h2 id="pg-today">Today</h2>
-      <p class="big"><b>${t.total}</b> of ${t.bar}${t.met?` <span class="ok">bar met</span>`:""}</p>
-      <div class="meter" role="meter" aria-label="Applications and follow-ups today" aria-valuemin="0" aria-valuemax="${t.bar}" aria-valuenow="${t.total}"><i style="width:${pct}%"></i></div>
-      <p class="hint">${plural(t.applied,"application")} and ${plural(t.followUps,"follow-up")} sent today</p></section>
-    <section class="ccard" aria-labelledby="pg-week"><h2 id="pg-week">This week</h2>
-      <p class="line">Applied <b>${d.week.applied}</b>, ruled out <b>${d.week.ruledOut}</b> · <button type="button" class="linkbtn" data-tab="ruled">See ruled out</button></p>
-      ${d.week.removedByRules?`<p class="hint">Plus ${d.week.removedByRules} removed by screening rules, not counted.</p>`:""}
-      <ol class="days" aria-label="Applications each day this week">${d.week.days.map(x=>`<li class="${x.future?"future":""}"><span class="col"><i style="height:${x.future?0:Math.round(x.applied/maxDay*100)}%"></i></span><b>${x.future?"":x.applied}</b><small>${esc(wd(x.day))}</small></li>`).join("")}</ol></section>
-    <section class="ccard" aria-labelledby="pg-funnel"><h2 id="pg-funnel">Funnel</h2>
+  return `<details class="more" id="moreStats"><summary>More stats</summary><div class="prog">
+    <section class="ccard" aria-labelledby="pg-funnel"><h3 id="pg-funnel">Funnel</h3>
       ${top?`<ul class="bars">${d.funnel.map((x,i)=>`<li><span class="lbl">${STAGE[x.stage]}</span><span class="track"><i style="width:${Math.round(x.count/top*100)}%"></i></span><b>${x.count}</b>${i&&d.funnel[i-1].count?`<small>${Math.round(x.count/d.funnel[i-1].count*100)}%</small>`:"<small></small>"}</li>`).join("")}</ul>
       <p class="hint">Roles that reached each step, all time. Percent = carried on from the step before.</p>`:`<p class="hint">No applications yet. Mark a role Applied and it shows up here.</p>`}</section>
-    <section class="ccard" aria-labelledby="pg-resp"><h2 id="pg-resp">Response rate</h2>
+    <section class="ccard" aria-labelledby="pg-resp"><h3 id="pg-resp">Response rate</h3>
       ${d.response.pct===null?`<p class="hint">Not enough yet. It counts roles applied ${d.response.afterDays} or more days ago.</p>`:`<p class="big"><b>${d.response.pct}%</b> heard back</p>
       <p class="hint">${d.response.heard} of ${d.response.eligible} roles applied ${d.response.afterDays}+ days ago reached Screen or later.</p>`}</section>
-    <section class="ccard" aria-labelledby="pg-fu"><h2 id="pg-fu">Follow-ups due</h2>
-      ${d.followUpsDue.length?d.followUpsDue.map(x=>`<div class="row"><div class="info"><h4>${esc(x.company)}</h4><small>${esc(x.title)} · due ${fmtDate(x.due)}</small></div><button class="btn" type="button" data-fupsent="${esc(x.id)}">Follow-up sent</button></div>`).join(""):`<p class="hint">Nothing due. A follow-up is set ${esc(config.followUpBusinessDays)} business days after you apply.</p>`}</section>
-    <section class="ccard" aria-labelledby="pg-mix"><h2 id="pg-mix">Sector mix this month</h2>
+    <section class="ccard" aria-labelledby="pg-mix"><h3 id="pg-mix">Sector mix this month</h3>
       ${d.sectorMix.length?`<ul class="bars">${d.sectorMix.map(x=>`<li><span class="lbl">${esc(x.sector)}</span><span class="track"><i style="width:${Math.round(x.count/maxMix*100)}%"></i></span><b>${x.count}</b></li>`).join("")}</ul>`:`<p class="hint">No applications this month yet.</p>`}</section>
+  </div></details>`;
+}
+function homePipeline(){ return sortList(jobs.filter(j=>inTab(j,"pipeline")),"pipeline").slice(0,HOME_CARDS); }
+function renderHome(){
+  if(!PG) return `<div class="empty"><strong>Home didn't load</strong><span>Reload the page to try again.</span></div>`;
+  const {h,d}=homeNumbers(), t=d.today, newN=jobs.filter(j=>inTab(j,"inbox")).length;
+  const sec=(k,title,right,body)=>`<section class="hsec" id="home-${k}" aria-labelledby="hh-${k}"><div class="hh"><h2 id="hh-${k}">${title}</h2>${right||""}</div>${body}</section>`;
+  // 1. This morning: the digest's picks (the Criteria preview's ranking) and one board-health line.
+  const dg=SC&&specData?digestOf(specData):null, picks=dg?dg.items.slice(0,HOME_ROWS):[];
+  const morning=!(criteria&&criteria.spec)?`<p class="hint hline">Set your criteria and the scan's top picks show here. <button class="linkbtn" type="button" data-tab="criteria">Open Criteria</button></p>`
+    :picks.length?`<ol class="hrows">${picks.map(x=>{const a=roleAnchor(x.job._id); return `<li><a href="#${a}" data-role="${a}"><span class="score${x.result.score>=70?" hi":""}">${esc(x.result.score)}</span><span class="t"><b>${esc(x.job.company)}</b> · ${esc(x.job.title)}</span></a></li>`;}).join("")}</ol>`
+    :`<p class="hint hline">${newN?"Nothing in New clears the minimum score yet.":"Nothing new right now. The morning scan adds matching roles to New."}</p>`;
+  const cl=PG.coverageLine&&scan?PG.coverageLine(scan.coverage,companies):null;
+  const health=cl?`<p class="hint hline" id="homeHealth">${cl.failing?esc(cl.text.replace(/ · \d+ failing$/,""))+` · <button class="linkbtn" type="button" data-tab="watch">${cl.failing} failing</button>`:esc(cl.text)}</p>`:"";
+  const right1=picks.length&&newN>picks.length?`<span class="hint">Top ${picks.length} of ${newN} new</span>`:"";
+  // 2. Applications: three tiles, the week and today against the daily bar.
+  const tile=(k,label,n,sub)=>`<button type="button" class="tile" data-tile="${k}"><span class="num">${n}</span><span class="lbl">${label}</span>${sub?`<small>${sub}</small>`:""}</button>`;
+  const maxDay=Math.max(1,...d.week.days.map(x=>x.applied)), wd=k=>new Date(k+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"});
+  const pct=Math.min(100,Math.round(t.total/t.bar*100)), plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+  const apps=`<div class="tiles">${tile("todo","To do",h.todo)}${tile("inprogress","In progress",h.inProgress)}${tile("done","Done",h.done,`${h.doneThisWeek} this week`)}</div>
+    <ol class="days" aria-label="Applications each day this week">${d.week.days.map(x=>`<li class="${x.future?"future":""}"><span class="col"><i style="height:${x.future?0:Math.round(x.applied/maxDay*100)}%"></i></span><b>${x.future?"":x.applied}</b><small>${esc(wd(x.day))}</small></li>`).join("")}</ol>
+    <div class="today${t.met?" met":""}"><span>Today <b class="mono">${t.total}</b> of ${t.bar}</span><div class="meter" role="meter" aria-label="Applications and follow-ups today" aria-valuemin="0" aria-valuemax="${t.bar}" aria-valuenow="${t.total}" aria-valuetext="${plural(t.applied,"application")} and ${plural(t.followUps,"follow-up")} sent today"><i style="width:${pct}%"></i></div></div>
+    <p class="hint hline" id="homeWeek">${d.week.ruledOut} ruled out this week${d.week.removedByRules?`, plus ${d.week.removedByRules} removed by screening rules (not counted)`:""} · <button class="linkbtn" type="button" data-tab="ruled">See ruled out</button></p>`;
+  // 3. After you apply: where sent roles stand now. Rejections read as a grey "closed" count, never "Rejected".
+  const STEPS=[["applied","Waiting"],["screen","Screen"],["interviewing","Interviews"],["offer","Offer"]];
+  const after=`<ol class="stepper">${STEPS.map(([k,l])=>`<li data-stage="${k}"><span class="num">${h.stages[k]}</span><span class="lbl">${l}</span></li>`).join("")}</ol>
+    <p class="hint hline" id="homeClosed">${h.closed} closed${d.response.pct!==null?` · ${d.response.pct}% heard back`:""}</p>${moreStats(d)}`;
+  // 4. Get ready: at most five rows unless "See all" was picked.
+  const rows=readyRows(), shown=readyAll?rows:rows.slice(0,HOME_ROWS);
+  const ready=rows.length?`<ul class="rrows">${shown.map(r=>`<li data-ready="${r.kind}"><span class="t">${r.text}${r.sub?` <small>${r.sub}</small>`:""}</span>${r.btn}</li>`).join("")}</ul>`
+      +(rows.length>HOME_ROWS?`<button class="linkbtn more-ready" type="button" id="readyAll" aria-expanded="${readyAll}">${readyAll?"Show fewer":`See all ${rows.length}`}</button>`:"")
+    :`<p class="hint hline">Nothing due. Nice.</p>`;
+  // 5. Pipeline: its first cards, in the Pipeline tab's sort, as the same cards.
+  const pipeN=jobs.filter(j=>inTab(j,"pipeline")).length;
+  const pipe=pipeN?`<div class="list"></div>`:`<p class="hint hline">Nothing in the pipeline yet. Save a role from New and it shows here.</p>`;
+  return `<div class="home">
+    ${sec("morning","This morning",right1,morning+health)}
+    ${sec("apps","Applications","",apps)}
+    ${sec("after","After you apply","",after)}
+    ${sec("ready","Get ready","",ready)}
+    ${sec("pipeline","Pipeline",`<button class="linkbtn" type="button" data-tab="pipeline">Open Pipeline</button>`,pipe)}
   </div>`;
 }
 
 // Tabs built from the jobs collection: they wait for its first read instead of looking empty.
-const JOB_TABS=["inbox","pipeline","action","ruled","progress","all"];
+const JOB_TABS=["home","inbox","pipeline","ruled","all"];
 function loadState(){
   if(jobsState==="error") return `<div class="empty error" role="alert"><strong>Couldn't load your roles</strong><span>Nothing was lost. The tracker couldn't read your data just now. Reload to try again.</span><button class="btn cta" type="button" id="reloadPage">Reload</button></div>`;
   return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
@@ -1338,7 +1404,9 @@ function render(){
   if(tab==="people"){v.innerHTML=renderPeople();return;}
   if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
-  if(tab==="progress"){v.innerHTML=renderProgressTab();return;}
+  if(tab==="home"){ const md=v.querySelector("#moreStats"), keepOpen=!!(md&&md.open);
+    v.innerHTML=renderHome(); if(keepOpen) v.querySelector("#moreStats").open=true;
+    const l=v.querySelector("#home-pipeline .list"); if(l) l.replaceChildren(...cardEls(homePipeline())); return; }
   // Reused cards keep their focus across a redraw (a #role- link or digest jump stays put when data arrives).
   const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
   const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
@@ -1433,7 +1501,10 @@ async function copyText(s){
 function focusRole(anchor){
   if(!jobs.some(x=>roleAnchor(x._id)===anchor)) return false;
   const find=()=>{const el=document.getElementById(anchor); return el&&el.matches("#view article.job")?el:null;};
-  let el=find();
+  // From Home, a role opens on its own tab (a new role on New, a saved or applied one on Pipeline), even when it is
+  // one of Home's own Pipeline cards, so a link always lands in the same place.
+  let el=tab==="home"?null:find();
+  if(tab==="home"){ const j=jobs.find(x=>roleAnchor(x._id)===anchor), t=["inbox","pipeline"].find(t=>inTab(j,t)); if(t){ tab=t; setUrlTab(tab,anchor); render(); el=find(); } }
   if(!el){ tab="all"; view.status=""; saveView(); setUrlTab(tab,anchor); render(); el=find(); }
   if(!el){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); el=find(); }
   if(!el) return false;
@@ -1442,10 +1513,9 @@ function focusRole(anchor){
   el.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
   return true;
 }
-document.addEventListener("toggle",e=>{ if(e.target&&e.target.id==="digestCard") digestOpen=e.target.open; },true);
 addEventListener("hashchange",()=>{ try{ const h=decodeURIComponent(location.hash.slice(1)); if(/^role-/.test(h)&&jobsState==="ready") focusRole(h); }catch(_){} });
 document.addEventListener("click",async e=>{
-  const dl=e.target.closest&&e.target.closest("#digestCard a[data-role]");
+  const dl=e.target.closest&&e.target.closest("#home-morning a[data-role],#home-ready [data-role]");
   if(dl){ e.preventDefault(); focusRole(dl.dataset.role); return; }
   if(e.target.closest("#pvClose")){ closePreview(); return; }
   const dt=e.target.closest("button[data-details]");
@@ -1499,6 +1569,11 @@ document.addEventListener("click",async e=>{
   const un=e.target.closest("[data-unset]");
   if(un){ view[un.dataset.unset]=""; saveView(); render(); ($(".fbar [data-unset]")||$("#ftoggle"))?.focus(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); $("#q")?.focus(); return; }
+  // Home's tiles open the roles behind each number: To do and In progress on All by status, Done on Pipeline.
+  const tl=e.target.closest("button[data-tile]");
+  if(tl){ const k=tl.dataset.tile; tab=k==="done"?"pipeline":"all"; view={...DEF_VIEW,sorts:view.sorts}; if(k!=="done") view.status=k==="todo"?"saved":"applying";
+    filtersOpen=false; sortOpen=false; saveView(); try{localStorage.setItem("rr-tab",tab)}catch(_){} setUrlTab(tab); render(); $("#tab-"+tab)?.focus(); return; }
+  if(e.target.id==="readyAll"){ readyAll=!readyAll; render(); $("#readyAll")?.focus(); return; }
   if(e.target.closest("#moreBtn")){ if(moreOpen) closeMoreSheet(); else openMoreSheet(); return; }
   if(e.target.id==="mscrim"){ closeMoreSheet(); return; }
   const t=e.target.closest("button[data-tab]"); // #view also carries data-tab (the open tab's id); only buttons navigate
@@ -1519,8 +1594,10 @@ document.addEventListener("click",async e=>{
   if(qk){
     const j=jobs.find(x=>x._id===qk.dataset.job); if(!j) return;
     if(qk.dataset.quick==="skipped"){ skipOpen=j._id; render(); requestAnimationFrame(()=>document.querySelector("[data-skipform] [data-skipwhy]")?.focus()); return; }
-    const i=[...document.querySelectorAll("#view article.job")].indexOf(qk.closest("article.job"));
-    await setStatus(j,qk.dataset.quick,null,{undo:true}); render(); focusCardAfter(Math.max(0,i)); return;
+    const inCard=qk.closest("article.job"), i=[...document.querySelectorAll("#view article.job")].indexOf(inCard);
+    await setStatus(j,qk.dataset.quick,null,{undo:true}); render();
+    // From a card, focus moves to the card that took its place; from Home's Get ready, to the list's next button.
+    if(inCard) focusCardAfter(Math.max(0,i)); else ($("#home-ready [data-ready] button")||$("#hh-ready"))?.focus?.(); return;
   }
   const c=e.target.closest("[data-co]");
   if(c&&db){
@@ -1654,13 +1731,13 @@ render();
   // A failed read logs only which collection failed, never the error (it can carry data or links).
   const readFailed=name=>()=>console.warn("Role Radar: couldn't read "+name);
   db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender(); if(deepRole){ const r=deepRole; deepRole=null; setTimeout(()=>focusRole(r),0); }},()=>{readFailed("jobs")(); jobsState="error"; render();});
-  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch") render(); else renderTabs();},readFailed("companies"));
+  db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch"||tab==="home") softRender(); else renderTabs();},readFailed("companies"));
   db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},readFailed("meta/filters"));
   db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},readFailed("meta/config"));
-  if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people") softRender(); else renderTabs();});
+  if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people"||tab==="home") softRender(); else renderTabs();});
   db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},readFailed("meta/criteria"));
   db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},readFailed("meta/skipFeedback"));
-  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if(tab==="watch"&&!document.activeElement?.closest("form")) render();},readFailed("meta/scan"));
+  db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if((tab==="watch"||tab==="home")&&!document.activeElement?.closest("form")) render();},readFailed("meta/scan"));
 })();
 </script>
 <script type="text/plain" id="exampleCriteria">

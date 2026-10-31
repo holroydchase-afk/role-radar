@@ -28,7 +28,7 @@ after(async () => { await browser?.close(); });
 
 test("every tab renders on demo data without errors", async () => {
   const { page, errors } = await openDemo();
-  for (const id of ["inbox", "pipeline", "action", "all", "people", "criteria", "watch", "filters"]) {
+  for (const id of ["home", "inbox", "pipeline", "all", "people", "criteria", "watch", "filters"]) {
     await openTab(page, id);
     assert.ok((await page.locator("#view").innerText()).trim().length > 0, id);
   }
@@ -115,7 +115,7 @@ test("no horizontal scroll at phone width", async () => {
 });
 
 test("the search box stays inside the filter bar", async () => {
-  const { page } = await openDemo();
+  const { page } = await openDemo({ query: "?tab=inbox" });
   const [bar, box] = await Promise.all([page.locator("#fbar").boundingBox(), page.locator("#q").boundingBox()]);
   assert.ok(box!.x + box!.width <= bar!.x + bar!.width, `search ends at ${box!.x + box!.width}, bar at ${bar!.x + bar!.width}`);
   await page.close();
@@ -165,7 +165,7 @@ test("on a phone, filters fold away behind one button", async () => {
 
 // Superseded by RR-UX4-1 (2026-10-28): filters fold behind the toggle at every width. The toggle still opens them.
 test("on a wide screen, filters fold behind the toggle and open on demand", async () => {
-  const { page } = await openDemo({ width: 1100 });
+  const { page } = await openDemo({ width: 1100, query: "?tab=inbox" });
   assert.ok(await page.locator("#ftoggle").isVisible());
   assert.ok(!(await page.locator("#fv-lane").isVisible()));
   await page.click("#ftoggle");
@@ -393,7 +393,7 @@ test("public demo: radar only, no resume or recruiter tools anywhere", async () 
   const html = buildDemo({ publicDemo: true });
   const { page, errors } = await openDemo({ html });
   assert.equal(await page.locator('#moreSheet [data-tab="people"]').count(), 0, "no Recruiters tab");
-  for (const id of ["inbox", "pipeline", "action", "ruled", "all", "criteria", "watch", "filters"]) {
+  for (const id of ["home", "inbox", "pipeline", "ruled", "all", "criteria", "watch", "filters"]) {
     await openTab(page, id);
     const text = await page.locator("#view").innerText();
     assert.doesNotMatch(text, /resume|intake/i, `${id} mentions resume tooling`);
@@ -423,13 +423,14 @@ test("public demo with ?full shows the resume and recruiter tools", async () => 
   await page.close();
 });
 
-test("a remembered Recruiters tab falls back to New in the public demo", async () => {
+test("a remembered Recruiters tab falls back to the default tab (Home since RR-M4.4) in the public demo", async () => {
   const html = buildDemo({ publicDemo: true });
   const { page } = await openDemo({ html, query: "?full" });
   await openTab(page, "people");
   await page.goto(page.url().split("?")[0]);
-  await page.waitForSelector("#tab-inbox");
-  assert.equal(await page.locator("#tab-inbox").getAttribute("aria-selected"), "true");
+  await page.waitForSelector("#tab-home");
+  assert.equal(await page.locator("#tab-home").getAttribute("aria-selected"), "true");
+  assert.equal(await page.locator("#view article.job.rec").count(), 0, "no recruiter cards");
   await page.close();
 });
 
@@ -625,7 +626,7 @@ test("no date repeats as '<status> since' in a role's Details (RR-P2-7)", async 
 });
 test("public demo on a laptop folds filters so the first role shows (RR-P2-4)", async () => {
   const html = buildDemo({ publicDemo: true });
-  const { page } = await openDemo({ html, width: 1280, height: 800 });
+  const { page } = await openDemo({ html, width: 1280, height: 800, query: "?tab=inbox" });
   assert.ok(!(await page.locator("#fbar .fields").isVisible()));
   const first = (await page.locator(".job").first().boundingBox())!;
   assert.ok(first.y < 800, `first role at ${first.y}`);
@@ -676,7 +677,7 @@ test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
 
 test("the Filters button's text is centered", async () => {
   const html = buildDemo({ publicDemo: true });
-  const { page } = await openDemo({ html, width: 390, height: 844 });
+  const { page } = await openDemo({ html, width: 390, height: 844, query: "?tab=inbox" });
   assert.equal(await page.locator("#ftoggle").evaluate((el) => getComputedStyle(el).alignItems), "center");
   await page.close();
 });

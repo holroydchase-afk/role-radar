@@ -13,7 +13,12 @@ before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
 test("RR-N3-2 on a phone, the public demo shows the first role's title on the first screen", async () => {
-  const { page } = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844 });
+  // RR-M4.4: Home opens first; This morning's first pick must show on the first screen, and New's first title too.
+  const home = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844, ready: "#home-morning" });
+  const pick = (await home.page.locator('#home-morning a[href^="#role-"]').first().boundingBox())!;
+  assert.ok(pick.y + pick.height <= 844, `This morning's first pick ends at ${Math.round(pick.y + pick.height)}px`);
+  await home.page.close();
+  const { page } = await openDemo({ html: buildDemo({ publicDemo: true }), width: 390, height: 844, query: "?tab=inbox" });
   // The progress line (+49px) had pushed the first card off screen; its first title line must show.
   const box = (await page.locator(".job h2").first().boundingBox())!;
   const line = await page.locator(".job h2").first().evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
@@ -23,10 +28,10 @@ test("RR-N3-2 on a phone, the public demo shows the first role's title on the fi
 
 test("RR-N3-3 the demo's progress shows an application today, not zeros", async () => {
   const { page } = await openDemo();
-  // RR-M4.1: the Today/This week line left the header; the Progress tab shows the same counts.
-  await openTab(page, "progress");
-  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^1 application\b/);
-  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied [1-9]/);
+  // RR-M4.1: the Today/This week line left the header; RR-M4.4: Home shows the same counts.
+  await openTab(page, "home");
+  assert.match(await page.locator('#home-apps [role="meter"]').getAttribute("aria-valuetext") ?? "", /^1 application\b/);
+  assert.match(await page.locator('#home-apps [data-tile="done"]').innerText(), /\b[1-9] this week\b/);
   await openTab(page, "ruled");
   assert.equal(await page.locator("#view h3").first().textContent(), "Today · 1 ruled out");
   await page.close();

@@ -13,7 +13,8 @@ import * as G from "../src/gmail-import.ts";
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
 const FILE = "dist/test-qa-tdd.html";
-const TABS = ["inbox", "pipeline", "action", "ruled", "progress", "all", "people", "criteria", "watch", "filters"];
+// RR-M4.4: Needs action and Progress folded into Home.
+const TABS = ["home", "inbox", "pipeline", "ruled", "all", "people", "criteria", "watch", "filters"];
 
 let browser: Browser;
 before(async () => { browser = await chromium.launch(); });
@@ -21,7 +22,8 @@ after(async () => { await browser?.close(); });
 
 // The base demo (meta: criteria, config, scan) with the given jobs/companies/recruiters.
 const seedWith = (over: Record<string, any>) => ({ ...baseSeed(), ...over });
-const openSeed = (seed: Record<string, any>, opts: Parameters<typeof open>[1] = {}) => open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#tab-inbox", ...opts });
+// RR-M4.4: Home is the default tab; these tests start on New unless they pass their own query.
+const openSeed = (seed: Record<string, any>, opts: Parameters<typeof open>[1] = {}) => open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#tab-inbox", query: "?tab=inbox", ...opts });
 const toastShown = (page: Page) => page.evaluate(() => { const t = document.querySelector<HTMLElement>("#toast"); return t && !t.hidden ? t.textContent!.trim() : ""; });
 const noJunkText = (s: string) => !/\bundefined\b|\bnull\b|\bNaN\b|Invalid Date|\[object Object\]/.test(s);
 
@@ -76,7 +78,8 @@ test("RR-H-12 very long unbroken titles, company names, notes and skip notes don
     },
   });
   const { page, errors } = await openSeed(seed, { width: 390, height: 844 });
-  for (const id of ["inbox", "pipeline", "action", "ruled", "progress", "all"]) {
+  for (const id of ["home", "inbox", "pipeline", "ruled", "all"]) {
+    if (id === "home") { await openTab(page, id); await page.locator("#moreStats summary").click(); }
     await openTab(page, id);
     const w = await page.evaluate(() => ({ s: document.documentElement.scrollWidth, c: document.documentElement.clientWidth }));
     assert.ok(w.s <= w.c + 1, `${id}: page is ${w.s}px wide in a ${w.c}px viewport`);
@@ -155,8 +158,9 @@ test("RR-H-16 scores of 0 and 100 both show and sort: 100 first, 0 above an unsc
 test("RR-H-17 a scan role with no url, comp, score, location or dates shows no 'undefined', 'null' or 'NaN', on the card or in Preview", async () => {
   const jobs = { bare: { company: "Bare Fields (demo)", title: "Senior PM, Bare", status: "new", descriptionPlain: "A bare description." }, b2: { company: "Bare Pipe (demo)", title: "PM, Bare Applied", status: "applied" } };
   const { page, errors } = await openSeed(seedWith({ jobs }));
-  for (const id of ["inbox", "pipeline", "action", "progress", "all"]) {
+  for (const id of ["home", "inbox", "pipeline", "all"]) {
     await openTab(page, id);
+    if (id === "home") await page.locator("#moreStats summary").click();
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id} shows junk: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }
@@ -273,12 +277,15 @@ test("RR-H-22 status walk: Saved → Applying → 'I submitted it' sets Applied 
   assert.match(dates, /Follow up/);
   await sheet.getByLabel("Status", { exact: true }).selectOption("screen");
   await page.keyboard.press("Escape");
-  await openTab(page, "action");
-  await page.locator("#view article.job").filter({ hasText: "Add the next step" }).waitFor({ timeout: 3000 });
-  sheet = await details(page, "w");
+  // RR-M4.4: Needs action became Home's Get ready: "Add next step · <Company>" with an Add step button.
+  await openTab(page, "home");
+  const row = page.locator('#home-ready [data-ready="nextstep"]', { hasText: "Add next step · Walkthrough Co (demo)" });
+  await row.waitFor({ timeout: 3000 });
+  await row.getByRole("button", { name: "Add step" }).click();
+  sheet = page.locator("#detailsSheet"); await sheet.waitFor({ state: "visible", timeout: 3000 });
   await page.fill("#nx-w", "Recruiter screen Thursday");
   await sheet.getByRole("button", { name: "Save", exact: true }).click();
-  await page.waitForFunction(() => !/Senior PM, Walk/.test(document.querySelector<HTMLElement>("#view")!.innerText), null, { timeout: 3000 });
+  await row.waitFor({ state: "detached", timeout: 3000 });
   await page.click("#tab-pipeline");
   assert.equal(await (await details(page, "w")).getByLabel(/^Next step/).inputValue(), "Recruiter screen Thursday");
   assert.deepEqual(errors, []);
@@ -353,15 +360,16 @@ test("RR-H-26 a new user's criteria that are a plain word or a list are refused 
   }
 });
 
-test("RR-H-27 Progress tab copes with junk dates and fields: no NaN, no errors", async () => {
+test("RR-H-27 Home (with More stats open) copes with junk dates and fields: no NaN, no errors", async () => {
   const jobs = {
     p1: { company: "Junk Dates (demo)", title: "PM 1", status: "applied", appliedAt: "not a date", followUpDue: "soon", statusHistory: "applied", followUpsSent: "x" },
     p2: { company: "Junk Two (demo)", title: "PM 2", status: "screen", statusHistory: [{ status: "screen" }, null, 5], statusAt: 12345 },
     p3: { company: "Junk Three (demo)", title: "PM 3", status: "skipped", skippedAt: "yesterday", skippedBy: "owner" },
   };
   const { page, errors } = await openSeed(seedWith({ jobs }));
-  for (const id of ["progress", "action", "ruled", "pipeline"]) {
+  for (const id of ["home", "ruled", "pipeline"]) {
     await openTab(page, id);
+    if (id === "home") await page.locator("#moreStats summary").click();
     const t = await page.locator("#view").innerText();
     assert.ok(noJunkText(t), `${id}: ${t.match(/.{0,40}(undefined|null|NaN|Invalid Date).{0,40}/)?.[0]}`);
   }

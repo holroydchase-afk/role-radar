@@ -7,7 +7,8 @@ import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
 import { openDemo as open, openTab } from "../scripts/browser.mjs";
 
-const TABS = ["inbox", "pipeline", "action", "all", "people", "criteria", "watch", "filters"];
+// RR-M4.4: Needs action folded into Home.
+const TABS = ["home", "inbox", "pipeline", "all", "people", "criteria", "watch", "filters"];
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const baseSeed = () => JSON.parse(read("demo/seed.json"), (k, v) => (typeof v === "string" && v.startsWith("@file:") ? read(v.slice(6)) : v));
 let browser: Browser;

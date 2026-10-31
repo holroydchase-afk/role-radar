@@ -13,13 +13,14 @@ const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-ruled.
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
-test("Progress and Ruled out count today's and this week's applications and ruled-out roles", async () => {
+test("Home and Ruled out count today's and this week's applications and ruled-out roles", async () => {
   const { page, errors } = await openDemo();
   // The demo has one role ruled out today (screened out in an intake chat) and one applied today.
-  // RR-M4.1: these counts left the header; the Progress tab and the Ruled out tab carry them.
-  await openTab(page, "progress");
-  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^1 application\b/);
-  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied \d+, ruled out \d+/);
+  // RR-M4.1: these counts left the header; RR-M4.4: Home (Applications) and the Ruled out tab carry them.
+  await openTab(page, "home");
+  assert.match(await page.locator('#home-apps [role="meter"]').getAttribute("aria-valuetext") ?? "", /^1 application\b/);
+  assert.match(await page.locator('#home-apps [data-tile="done"]').innerText(), /\b\d+ this week\b/);
+  assert.match(await page.locator("#homeWeek").innerText(), /^\d+ ruled out this week/);
   await openTab(page, "ruled");
   assert.equal(await page.locator("#view h3").first().textContent(), "Today · 1 ruled out");
   assert.deepEqual(errors, []);
@@ -103,9 +104,10 @@ test("an empty tracker shows a plain Ruled out message and a zero count", async 
   await openTab(page, "ruled");
   assert.match(await page.locator("#view").innerText(), /Nothing ruled out yet/);
   assert.equal(((await page.locator('#moreSheet [data-tab="ruled"] .n').textContent()) ?? "").trim(), "0");
-  // RR-M4.1: Today/This week counts moved from the header to the Progress tab.
-  await openTab(page, "progress");
-  assert.match(await page.locator("section[aria-labelledby=pg-today] .hint").innerText(), /^0 applications\b/);
-  assert.match(await page.locator("section[aria-labelledby=pg-week] .line").innerText(), /^Applied 0, ruled out 0/);
+  // RR-M4.1: Today/This week counts moved from the header; RR-M4.4: they live on Home.
+  await openTab(page, "home");
+  assert.match(await page.locator('#home-apps [role="meter"]').getAttribute("aria-valuetext") ?? "", /^0 applications\b/);
+  assert.match((await page.locator('#home-apps [data-tile="done"]').innerText()).replace(/\s+/g, " "), /^0 Done 0 this week$/);
+  assert.match(await page.locator("#homeWeek").innerText(), /^0 ruled out this week/);
   await page.close();
 });

@@ -1,6 +1,6 @@
 // RR-M4.1 header and tab bar declutter (ux-reviewer UX-H-R1, R2, R8 and the tab half of R6; ACs UX-H-AC1, AC2,
-// AC3, AC14). A title plus one line; tabs New · Pipeline · All · More (Home arrives in M4.4); the rest moves into a
-// More sheet so nothing is lost. Demo data only (demo/seed.json); red first.
+// AC3, AC14). A title plus one line; tabs Home · New · Pipeline · All · More (Home added in M4.4, see tests/home.test.ts);
+// the rest moves into a More sheet so nothing is lost. Demo data only (demo/seed.json); red first.
 //
 // Contract the engineer builds to (stable selectors):
 //   Header
@@ -9,8 +9,8 @@
 //     counts and no board count, and reads like `Scan 8:24 AM · 6 new` with N = the New tab count.
 //   - Stale scan: #scanStale stays (role=status, "Scan hasn't run since <date>") and is then the only meta line.
 //   Tab bar
-//   - #tabs holds exactly four visible buttons, in order: #tab-inbox (New), #tab-pipeline (Pipeline), #tab-all (All),
-//     #moreBtn (More). Same in the private and public builds.
+//   - #tabs holds exactly five visible buttons, in order: #tab-home (Home), #tab-inbox (New), #tab-pipeline (Pipeline),
+//     #tab-all (All), #moreBtn (More). Same in the private and public builds.
 //   - Only New and Pipeline show a count (`.n`). All and More show none.
 //   - #tabs scrollWidth <= clientWidth at 360, 390 and 1280; every tab button is >= 44px tall.
 //   - #moreBtn: aria-haspopup="dialog", aria-expanded="true|false", aria-controls="moreSheet". When a recruiter
@@ -19,14 +19,14 @@
 //   More sheet (reuse the PR #57 Filters sheet pattern: .sheet + scrim)
 //   - #moreSheet: role="dialog", visible only while open, rendered on every tab (not only where #fbar exists).
 //   - Rows are buttons `#moreSheet [data-tab="<id>"]`, in order: people (Recruiters, private build only, text
-//     includes "<N> due"), action (Needs action), progress (Progress), ruled (Ruled out), criteria (Criteria),
-//     watch (Watchlist), filters (Scan rules). Each row is >= 48px tall.
+//     includes "<N> due"), ruled (Ruled out), criteria (Criteria), watch (Watchlist), filters (Scan rules).
+//     Needs action and Progress left More in M4.4 (Home's Get ready and More stats). Each row is >= 48px tall.
 //   - Picking a row opens that tab, closes the sheet, and rewrites the URL to ?tab=<id> (as tabs do today).
 //   - Escape closes the sheet and puts focus back on #moreBtn.
 //   Open tab hook
 //   - #view carries data-tab="<id>" for the tab it is showing (tabs inside More have no #tab-<id> button any more).
-//   Deep links: ?tab=ruled, ?tab=action, ?tab=progress, ?tab=criteria (and the other More ids) still open their tab.
-//   M4.4 later sends ?tab=action and ?tab=progress to Home; update DCL-9 then.
+//   Deep links: ?tab=ruled, ?tab=criteria (and the other More ids) still open their tab. Since M4.4 the old
+//   ?tab=action and ?tab=progress open Home.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -50,8 +50,7 @@ const SMALL = { width: 360, height: 740 };
 const LAPTOP = { width: 1280, height: 800 };
 const settle = (page: Page) => page.waitForTimeout(120);
 const BUILDS: [string, boolean][] = [["private", false], ["public", true]];
-const MORE_ROWS = [["people", "Recruiters"], ["action", "Needs action"], ["progress", "Progress"], ["ruled", "Ruled out"],
-  ["criteria", "Criteria"], ["watch", "Watchlist"], ["filters", "Scan rules"]] as const;
+const MORE_ROWS = [["people", "Recruiters"], ["ruled", "Ruled out"], ["criteria", "Criteria"], ["watch", "Watchlist"], ["filters", "Scan rules"]] as const;
 
 const visibleTabIds = (page: Page) => page.locator("#tabs button").evaluateAll((els: HTMLElement[]) =>
   els.filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0).map((e) => e.id));
@@ -115,16 +114,16 @@ test("DCL-2 UX-H-AC1 a stale scan keeps its warning, and the warning is then the
 
 // ── Tab bar (UX-H-R2, UX-H-AC2 for M4.1) ──────────────────────────────────────────────────────
 
-test("DCL-3 UX-H-AC2 the tab bar is New, Pipeline, All, More in both builds; only New and Pipeline show counts", async () => {
+test("DCL-3 UX-H-AC2 the tab bar is Home, New, Pipeline, All, More in both builds; only New and Pipeline show counts", async () => {
   for (const [name, publicDemo] of BUILDS) {
     const { page, errors } = await openDemo({ ...LAPTOP, publicDemo, ready: "#tab-inbox .n" });
-    assert.deepEqual(await visibleTabIds(page), ["tab-inbox", "tab-pipeline", "tab-all", "moreBtn"], `${name}: tab bar`);
+    assert.deepEqual(await visibleTabIds(page), ["tab-home", "tab-inbox", "tab-pipeline", "tab-all", "moreBtn"], `${name}: tab bar`);
     const labels = await page.locator("#tabs button").evaluateAll((els: HTMLElement[]) => els.filter((e) => e.offsetParent)
       .map((e) => [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").trim()));
-    assert.deepEqual(labels, ["New", "Pipeline", "All", "More"], `${name}: labels`);
+    assert.deepEqual(labels, ["Home", "New", "Pipeline", "All", "More"], `${name}: labels`);
     const counted = await page.locator("#tabs .n").evaluateAll((els: HTMLElement[]) => els.filter((e) => e.offsetParent).map((e) => e.closest("button")!.id));
     assert.deepEqual(counted, ["tab-inbox", "tab-pipeline"], `${name}: only New and Pipeline carry a count`);
-    for (const id of ["tab-all", "moreBtn"]) assert.doesNotMatch(await page.locator("#" + id).innerText(), /\d/, `${name}: ${id} shows no number`);
+    for (const id of ["tab-home", "tab-all", "moreBtn"]) assert.doesNotMatch(await page.locator("#" + id).innerText(), /\d/, `${name}: ${id} shows no number`);
     assert.deepEqual(errors, []);
     await page.close();
   }
@@ -147,7 +146,7 @@ test("DCL-4 UX-H-AC2 #tabs never scrolls sideways at 360, 390 or 1280, and every
 
 // ── More sheet (UX-H-R2, R8, UX-H-AC3) ────────────────────────────────────────────────────────
 
-test("DCL-5 UX-H-AC3 More opens a dialog listing Recruiters (with due count), Needs action, Progress, Ruled out, Criteria, Watchlist, Scan rules", async () => {
+test("DCL-5 UX-H-AC3 More opens a dialog listing Recruiters (with due count), Ruled out, Criteria, Watchlist, Scan rules", async () => {
   const { page, errors } = await openDemo({ ...PHONE, ready: "#tab-inbox .n" });
   const more = page.locator("#moreBtn");
   assert.equal(await more.getAttribute("aria-haspopup"), "dialog");
@@ -213,12 +212,20 @@ test("DCL-8 picking a More row opens that tab, closes the sheet, marks More curr
   await page.close();
 });
 
-test("DCL-9 deep links ?tab=ruled, action, progress and criteria still open their tabs (both builds)", async () => {
-  for (const [name, publicDemo] of BUILDS) for (const id of ["ruled", "action", "progress", "criteria", "watch", "filters"]) {
+test("DCL-9 deep links ?tab=ruled, criteria, watch and filters still open their tabs; the old action and progress links open Home (both builds)", async () => {
+  for (const [name, publicDemo] of BUILDS) for (const id of ["ruled", "criteria", "watch", "filters"]) {
     const { page, errors } = await openDemo({ ...LAPTOP, publicDemo, query: `?tab=${id}` });
     await waitViewTab(page, id);
     assert.equal(await viewTab(page), id, `${name}: ?tab=${id}`);
     assert.equal(await page.locator("#moreBtn").getAttribute("aria-current"), "page", `${name} ${id}: More marked current`);
+    assert.deepEqual(errors, [], `${name} ${id}`);
+    await page.close();
+  }
+  for (const [name, publicDemo] of BUILDS) for (const id of ["action", "progress"]) {
+    const { page, errors } = await openDemo({ ...LAPTOP, publicDemo, query: `?tab=${id}` });
+    await waitViewTab(page, "home").catch(() => {});
+    assert.equal(await viewTab(page), "home", `${name}: ?tab=${id} opens Home`);
+    assert.notEqual(await page.locator("#moreBtn").getAttribute("aria-current"), "page", `${name} ${id}: More not current on Home`);
     assert.deepEqual(errors, [], `${name} ${id}`);
     await page.close();
   }
@@ -233,7 +240,7 @@ test("DCL-10 privacy: the public demo's More has no Recruiters row and no due do
   assert.deepEqual(rows, MORE_ROWS.filter(([id]) => id !== "people").map(([id]) => id), "public rows");
   assert.doesNotMatch(await pub.page.locator("#moreSheet").innerText(), /Recruiter|\bdue\b/i);
   await pub.page.close();
-  // ?tab=people on the public build stays on New and never shows a recruiter.
+  // ?tab=people on the public build falls back to the default tab and never shows a recruiter.
   const deep = await openDemo({ ...PHONE, publicDemo: true, query: "?tab=people", ready: "#tab-inbox .n" });
   await settle(deep.page);
   assert.notEqual(await viewTab(deep.page), "people");
