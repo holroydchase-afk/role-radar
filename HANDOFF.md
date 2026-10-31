@@ -1,6 +1,18 @@
 # Handoff
+<!-- status
+stage: live
+goal: staff-pm-role
+milestone: M4
+now: working the studio intake queue (Intake check runs 4x a day)
+next: Chase says `republish` so the live page picks up RR-M4 Home and declutter (PR #60) and the demo bar (PR #65)
+waiting_on_chase:
+  - `republish` the live page from main (page + seven build/*.js bundles, capabilities = app/capabilities.json)
+  - one manual run of the MCP server from Claude Code on the laptop (intake #59 done-when)
+  - `scan on` to restart the weekday scan
+blockers: []
+-->
 
-Updated: 2026-10-31 (RR intake #62 studio demo bar built on `claude/project-thread-p1n7fs`, uncommitted; RR intake #59 MCP server built on the same branch; RR-M4 Home and declutter in progress on `claude/project-thread-law8qj`)
+Updated: 2026-10-31 (HANDOFF status header for the Studio Console, intake #64; intakes #59 MCP server and #62 demo bar merged as PRs #61 and #65)
 
 ## Planning IDs (Oct 21, 2026)
 The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1.1.1`; product code `RR` across products). Old labels stay in git history and branch names. New work uses the new IDs.
@@ -129,8 +141,10 @@ _Updated 2026-10-31._
 - Public demo: merged (PR #17), repo renamed to `role-radar`, redeployed, Pages green after #25. Waiting on a phone check of the live URL and https, and on the portfolio repoint (intake with Chase).
 
 ## Exact next step
-- RR intake #62 demo bar: qa-tdd runs all suites 3x, then ux-reviewer after-score with 390/1280 light/dark screenshots, then commit and draft PR (with an `Agents:` line). Live page unaffected (bar renders only in demo builds).
-- RR intake #59 MCP server: qa-tdd runs all suites 3x, then commit and draft PR. The one done-when item not run yet: a manual Claude Code run (`claude mcp add role-radar -- node <path-to-repo>/mcp/server.ts`, then "score this posting for me"); it needs a Claude client, so it can't run in the cloud sandbox.
+- RR intake #62 demo bar: merged (PR #65, 2026-10-31). Optional polish UX-DB-R1..R3 under Decisions to review.
+- RR intake #63 (qa-tdd refresh from studio-agents): waits on studio-agents #33 merging; the Intake check picks it up after that.
+- Keep the status header at the top of this file current with every HANDOFF update (intake #64).
+- RR intake #59 MCP server: merged (PR #61, 2026-10-31). The one done-when item not run yet: a manual Claude Code run (`claude mcp add role-radar -- node <path-to-repo>/mcp/server.ts`, then "score this posting for me"); it needs a Claude client, so it can't run in the cloud sandbox.
 - RR-M4.5 review fixes built (uncommitted): next qa-tdd runs all suites 3x, then ux-reviewer round 3 and privacy-security, then commit and the M4.5 ready gate.
 - RR-M4.4 built (Home tab, default; Needs action and Progress retired). Next: ux-reviewer and privacy-security pass on Home, commit, then M4.5 ready gate. Live page untouched until Chase says `republish` after merge (page + all seven bundles, `capabilities` = `app/capabilities.json`).
 - Filters redesign (RR-FS): merged (PR #57) and the live page republished 2026-10-30 on Chase's `republish` (version 27: `app/role-radar.html` plus the seven `build/*.js` bundles from main, `capabilities` = `app/capabilities.json`, contract unchanged). This also brought the live page up from v25, so it now has the Progress tab, skip feedback, the culture gate and the M3 fixes. Next: Chase opens the live page once and checks New, a chip and the Sort sheet.
