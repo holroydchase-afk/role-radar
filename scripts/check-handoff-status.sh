@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Status header check (from holroydchase-afk/studio-agents, PMT-M3.4): HANDOFF.md opens with the
+# Status header check (from the studio-agents repo, PMT-M3.4): HANDOFF.md opens with the
 # `<!-- status` block the Studio Console reads (pm-tools scripts/feed/core.ts parseHandoff):
 # within the first 15 lines, closed by `-->`, with every key below and a known stage.
 # Warns only (GitHub `::warning::` lines), always exits 0: a repo without the header still works.
