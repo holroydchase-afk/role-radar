@@ -334,11 +334,11 @@ test("RR-UX5-2 at 1280 the header meta is at most 2 lines and New's first role t
   for (const [name, go] of [["public", () => openPublic(LAPTOP)], ["private", () => openPrivate(LAPTOP)]] as [string, () => ReturnType<typeof open>][]) {
     const { page } = await go();
     await page.click("#tab-inbox");
-    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #demoNote, header #demoTry, header #scanLine")]), String(lineRows));
+    const rows = await page.evaluate((src: string) => (0, eval)(`(${src})`)([...document.querySelectorAll<HTMLElement>("header #scanLine")]), String(lineRows));
     const dig = await page.locator("#digestCard").evaluate((d: HTMLDetailsElement) => d.open).catch(() => null);
     assert.notEqual(dig, false, `${name}: digest card is open by default at 1280`);
     const t = await page.locator("#view article.job h2").first().boundingBox();
-    if (rows > 2) bad.push(`${name}: header meta (demo note, today, last scan) renders on ${rows} lines`);
+    if (rows > 2) bad.push(`${name}: header meta (last scan; issue #62 moved the demo note into the Demo bar) renders on ${rows} lines`);
     if (!(t && t.y >= 0 && t.y + t.height <= 800)) bad.push(`${name}: first New title ends at ${t ? Math.round(t.y + t.height) : "n/a"}px (viewport 800)`);
     await page.close();
   }

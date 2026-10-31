@@ -163,8 +163,7 @@ dialog .row2{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-
 @media (max-width:380px){#tabs{gap:2px}#tabs button{padding:0 4px}}
 /* Phones: a shorter header so the first role title lands on the first screen. */
 @media (max-width:600px){h1{font-size:1.6rem}.wrap{padding-top:12px;gap:12px}header{gap:4px}.lede{font-size:.95rem}
-  /* RR-UX7-1: on a phone the demo note runs inline and the filter bar is one search box plus its toggle, so the first role starts higher. */
-  header .hrow:has(#demoNote:not([hidden])){display:block}header .hrow #demoNote{display:inline-block;margin-right:8px}header .hrow #demoTry{display:inline}
+  /* RR-UX7-1: on a phone the filter bar is one search box plus its toggle, so the first role starts higher. */
   .fbar{padding:8px 12px;gap:6px}}
 /* Filters fold behind one button at every width, so the first role is never pushed below the fold (RR-UX4-1). */
 /* Touch: every control at least 44px tall. */
@@ -300,10 +299,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .why-score span{white-space:nowrap}
 .dream-note{font:500 .8rem var(--f-body);color:var(--good);margin:0}
 /* Header meta in two rows: demo badge + note, then today's progress · last scan (RR-UX5-2). */
-.hrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
-.hrow:not(:has(> :not([hidden]))){display:none}
 @media (min-width:601px){header .sub{font-size:.85rem}}
-.demo{font:600 .72rem var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);justify-self:start}
 .dig{display:grid;gap:6px;margin:0;padding:0;list-style:none}
 .dig li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;align-items:baseline}
 .dig .sub2{grid-column:2;color:var(--muted);font-size:.8rem}
@@ -352,7 +348,27 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .arules{display:grid;gap:6px;margin:0;padding:0;list-style:none}.arules li{display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:10px;align-items:baseline}
 .lvl{font:600 .8rem var(--f-body);text-align:center;padding:3px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}.lvl.loud{background:var(--bad-soft);color:var(--bad)}.lvl.off{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .privbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 12px}.privbar .hint{margin:0;max-width:65ch}
-.showcase[hidden]{display:none}.showcase{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.9rem}.showcase a{color:var(--accent);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;min-height:44px}.showcase a:hover{text-decoration:underline}
+/* Studio demo bar (issue #62; pm-tools docs/DEMO-BANNER.md): demo builds only (window.__RR_DEMO__). A slim bar in the page
+   flow whose Details button opens a push-down drawer. Drawn in Role Radar's own tokens; the badge never wears --accent. */
+body:has(> .demo-bar){margin:0}
+.demo-bar{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line);font-family:var(--f-body);font-size:14px;line-height:1.4}
+.demo-bar *{box-sizing:border-box}
+.demo-bar__row{display:flex;align-items:stretch;padding-left:max(16px,env(safe-area-inset-left,0px))}
+.demo-bar__home{flex:none;display:inline-flex;align-items:center;min-height:44px;padding-right:12px;margin-right:2px;border-right:1px solid var(--line);color:inherit;font-weight:600;text-decoration:none;white-space:nowrap}
+.demo-bar__home:hover{text-decoration:underline;text-underline-offset:3px}
+.demo-bar__toggle{display:flex;align-items:center;gap:10px;flex:1;min-width:0;min-height:44px;margin:0;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 12px;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.demo-bar__toggle:hover .demo-bar__more{text-decoration:underline}
+.demo-bar__toggle:focus-visible,.demo-bar__home:focus-visible,.demo-bar__panel a:focus-visible{outline:2px solid var(--ink);outline-offset:-4px}
+.demo-bar__badge{flex:none;padding:2px 8px;border-radius:999px;border:1px solid var(--ink);background:transparent;color:var(--ink);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.demo-bar__sum{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--muted)}
+.demo-bar__long{display:none}@media (min-width:600px){.demo-bar__long{display:inline}}@media (max-width:359px){.demo-bar__sum{display:none}}
+.demo-bar__more{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.demo-bar__chev{width:10px;height:10px;transition:transform .15s}.demo-bar__toggle[aria-expanded=true] .demo-bar__chev{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.demo-bar__chev{transition:none}}
+.demo-bar__panel{padding:4px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}.demo-bar__panel[hidden]{display:none}
+.demo-bar__panel p{margin:0 0 12px;max-width:70ch;font-size:16px;line-height:1.5;text-wrap:pretty}
+.demo-bar__actions{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.demo-bar__back{display:inline-flex;align-items:center;min-height:44px;color:inherit;font-weight:600;text-underline-offset:3px}
 .lede{margin:0;max-width:62ch;font-size:1rem}
 .cnote{font:500 .84rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;margin:0;max-width:65ch}
 /* Preview panel: the posting's own text, docked on the right on wide screens, a full-screen sheet on phones. */
@@ -383,17 +399,14 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 }
 /* RR-UX7-1: phones get tighter spacing above the first role (these follow the base rules they override). */
 @media (max-width:600px){.main{gap:8px}.fbar{margin-bottom:8px;padding-block:6px}
-  .wrap{padding-top:4px}.showcase{margin-bottom:-12px}.showcase a{font-size:.85rem}h1{font-size:1.5rem;line-height:1.15}
+  .wrap{padding-top:4px}h1{font-size:1.5rem;line-height:1.15}
   .lede{font-size:.875rem;line-height:1.4}header .sub{font-size:.84rem;line-height:1.4}#tabs{padding-block:2px}}
 </style>
 
 <div class="wrap">
-  <nav class="showcase" id="showcase" aria-label="About this demo" hidden><a href="https://chaseholroyd.com/role-radar.html">← Chase Holroyd</a><a href="https://chaseholroyd.com/">More of my work</a></nav>
   <header>
     <h1>Role Radar</h1>
     <p class="lede" id="lede" hidden>A job-search radar I built for my own search. It reads job boards every weekday and scores each role 0–100 against criteria I edit, with the math on every card. Applying stays my own call.</p>
-    <div class="hrow"><span class="demo" id="demoNote" hidden>Demo data</span>
-    <p class="sub" id="demoTry" hidden>Roles, recruiters and scores are made up. Try anything; it resets when you reload.</p></div>
     <p class="sub" id="scanLine">Remote Senior and Staff PM roles from company boards, ZipRecruiter, Himalayas and job alerts, checked every weekday morning.</p>
     <p class="sub stale" id="scanStale" role="status" hidden></p>
   </header>
@@ -1727,8 +1740,20 @@ document.addEventListener("keydown",e=>{
 });
 
 { const t=$("#toast"); t.addEventListener("mouseenter",toastHold); t.addEventListener("mouseleave",toastLetGo); t.addEventListener("focusin",toastHold); t.addEventListener("focusout",toastLetGo); }
-if(window.__RR_DEMO__){ $("#demoNote").hidden=false; $("#demoTry").hidden=false; }
-if(window.__RR_SHOWCASE__){ $("#showcase").hidden=false; $("#lede").hidden=false; document.body.classList.add("showcase-mode"); }
+// Issue #62: the studio demo bar, demo builds only. Collapsed on load; Details opens a push-down drawer, Esc closes it.
+// No Reset: the demo database lives in memory and re-seeds on every load.
+if(window.__RR_DEMO__){
+  const BACK="https://chaseholroyd.com/role-radar.html", b=document.createElement("section");
+  b.className="demo-bar"; b.setAttribute("aria-label","Demo");
+  b.innerHTML=`<div class="demo-bar__row"><a class="demo-bar__home" href="${BACK}">← Portfolio</a><button type="button" class="demo-bar__toggle" aria-expanded="false" aria-controls="demo-bar-panel" aria-label="Demo details"><span class="demo-bar__badge">Demo</span><span class="demo-bar__sum">Sample data<span class="demo-bar__long"> · resets when you reload</span></span><span class="demo-bar__more">Details<svg class="demo-bar__chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span></button></div>`
+    +`<div class="demo-bar__panel" id="demo-bar-panel" hidden><p>This is the real Role Radar, running on made-up sample data. Changes to roles and recruiters aren't saved anywhere; reload to start over.</p><div class="demo-bar__actions"><a class="demo-bar__back" href="${BACK}">← Chase Holroyd's portfolio</a></div></div>`;
+  const tg=b.querySelector(".demo-bar__toggle"), pn=b.querySelector(".demo-bar__panel");
+  const setOpen=(o)=>{ tg.setAttribute("aria-expanded",String(o)); pn.hidden=!o; };
+  tg.addEventListener("click",()=>setOpen(pn.hidden));
+  b.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&!pn.hidden){ setOpen(false); tg.focus(); } });
+  document.body.prepend(b);
+}
+if(window.__RR_SHOWCASE__){ $("#lede").hidden=false; }
 render();
 (async()=>{
   Promise.resolve(window.claude?.use?.("mcp")).then(m=>{mcp=m||null; mcpState=m?"ready":"none";},()=>{mcpState="none";}).then(()=>{ if(tab==="people"||tab==="pipeline") render(); });

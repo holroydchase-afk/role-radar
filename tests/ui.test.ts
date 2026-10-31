@@ -38,7 +38,8 @@ test("every tab renders on demo data without errors", async () => {
 
 test("demo pages say they are demo data", async () => {
   const { page } = await openDemo();
-  assert.ok(await page.locator("#demoNote").isVisible());
+  // Issue #62: the Demo bar replaced the #demoNote chip.
+  assert.ok(await page.getByRole("region", { name: "Demo" }).isVisible());
   await page.close();
 });
 
@@ -444,11 +445,12 @@ test("public demo says what it is and links back to the portfolio in the first s
   for (const [width, height] of [[390, 844], [1280, 800]]) {
     for (const query of ["", "?full"]) {
       const { page, errors } = await openDemo({ html, width, height, query });
-      const back = page.locator('a[href="https://chaseholroyd.com/role-radar.html"]');
-      assert.equal(await back.count(), 1, `back link ${width} ${query}`);
+      // Issue #62: the way back is the Demo bar's "← Portfolio" link; the old #showcase strip (and its
+      // "More of my work" link to the portfolio home) is gone, so only one demo mark remains.
+      const back = page.getByRole("region", { name: "Demo" }).locator('a[href="https://chaseholroyd.com/role-radar.html"]').first();
+      assert.ok(await back.isVisible(), `back link ${width} ${query}`);
       const box = await back.boundingBox();
       assert.ok(box && box.y + box.height <= height, `back link in first screen at ${width}`);
-      assert.equal(await page.locator('#showcase a[href="https://chaseholroyd.com/"]').count(), 1);
       const lede = page.locator("#lede");
       assert.ok(await lede.isVisible());
       assert.match(await lede.innerText(), /job-search radar I built/);
@@ -575,7 +577,8 @@ test("light theme chips meet 4.5:1 contrast (RR-P1-5)", async () => {
     const lum = (c: string) => { const v = c.match(/\d+/g)!.slice(0, 3).map((x: any) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
     const r = (el: Element | null) => { const s = getComputedStyle(el!); const a = lum(s.color), b = lum(s.backgroundColor); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); };
     // RR-M4.3: the Experience chip (.fit-strong) is gone; its Fit sub-score is checked in tests/card.test.ts CARD-4.
-    return { demo: r(document.querySelector("#demoNote")), score: r(document.querySelector(".score.hi")) };
+    // Issue #62: the #demoNote chip is gone; the Demo bar's contrast is checked in tests/demo-bar.test.ts DEMO-BAR-6.
+    return { score: r(document.querySelector(".score.hi")) };
   });
   for (const [k, v] of Object.entries(ratio)) assert.ok(v >= 4.5, `${k} ${v.toFixed(2)}`);
   await page.close();
@@ -587,7 +590,7 @@ test("phone controls are at least 44px tall (RR-P1-6)", async () => {
   for (const id of ["inbox", "pipeline", "watch", "filters"]) {
     await openTab(page, id);
     if (id === "pipeline") await page.locator("#addRole summary").click();
-    const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("button, a.btn, select, input:not([type=checkbox]):not([type=radio]), [role=tab], .showcase a, summary")]
+    const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("button, a.btn, select, input:not([type=checkbox]):not([type=radio]), [role=tab], section[aria-label=Demo] a, summary")]
       .filter((el) => el.offsetParent !== null)
       .map((el): [string, number] => [el.id || el.textContent!.trim().slice(0, 20), Math.round(el.getBoundingClientRect().height)])
       .filter(([, h]) => h < 44));
