@@ -71,12 +71,13 @@ test("RR-TS-3 tsconfig.json is strict, noEmit, erasableSyntaxOnly, ES2022+ and t
   assert.ok(Array.isArray(c.types) && c.types.includes("node"), "types should include node");
 });
 
-test("RR-TS-4 package.json: typecheck and build scripts, TS dev deps, no runtime deps, tests run as .ts", () => {
+test("RR-TS-4 package.json: typecheck and build scripts, TS dev deps, only the MCP server's runtime deps, tests run as .ts", () => {
   const pkg = readJson("package.json");
   assert.match(pkg.scripts?.typecheck || "", /\btsc\b.*-p\s+\./, "scripts.typecheck should be `tsc -p .`");
   assert.ok(pkg.scripts?.build, "scripts.build missing");
   for (const d of ["typescript", "esbuild", "@types/node"]) assert.ok(pkg.devDependencies?.[d], `devDependencies.${d} missing`);
-  assert.deepEqual(Object.keys(pkg.dependencies || {}), [], "no runtime dependencies allowed");
+  // Issue #59: the stdio MCP server (mcp/server.ts) is the only runtime; these two deps are all it may pull in.
+  assert.deepEqual(Object.keys(pkg.dependencies || {}).sort(), ["@modelcontextprotocol/sdk", "js-yaml"], "runtime deps are only the MCP server's");
   assert.match(pkg.scripts?.test || "", /tests\/\*\.test\.ts/, "npm test should run tests/*.test.ts");
   assert.doesNotMatch(pkg.scripts?.test || "", /\.test\.mjs/, "npm test should no longer glob .mjs tests");
 });

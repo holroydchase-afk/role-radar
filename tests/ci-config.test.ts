@@ -44,3 +44,8 @@ test("RR-CI-3 pages deploys only after ci succeeds on a push to main", () => {
   assert.ok(deploy, "a deploy-pages job exists");
   assert.ok(([] as string[]).concat(deploy[1].needs || []).includes("build"), "deploy needs the gated build job");
 });
+
+test("RR-CI-4 the browser-test job runs on an OS Playwright supports (ubuntu-latest moved to 26.04, which Playwright 1.56 can't install on)", () => {
+  const job = (wf("ci.yml").jobs as Record<string, Job & { "runs-on"?: string }>).test;
+  assert.equal(job["runs-on"], "ubuntu-24.04");
+});

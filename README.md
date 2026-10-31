@@ -113,6 +113,23 @@ To run your own copy with your own criteria, see [docs/SETUP.md](docs/SETUP.md).
 
 The demo runs the real page against an in-memory database ([`demo/mock-claude.js`](demo/mock-claude.js)) seeded with fictional companies and people ([`demo/seed.json`](demo/seed.json)). In production, the page is a private Claude artifact with a small database, and the scan is a scheduled Claude run.
 
+## Use it from Claude (MCP)
+
+A small local MCP server lets Claude score any posting against your `criteria.yaml`, right in a chat. Add it to Claude Code once:
+
+```sh
+claude mcp add role-radar -- node <path-to-repo>/mcp/server.ts
+```
+
+- `score_job`: the 0 to 100 score, its parts, and what moved it
+- `match_job`: whether the role passes the hard rules (title, location, excluded companies, red flags), and which one it fails
+- `explain_score`: the score with its one-line breakdown (`45 sector + 35 experience + 10 comp`)
+- `get_criteria`: the criteria being used
+
+It runs over stdio only and makes no network calls itself; what the tools return (including your criteria from `get_criteria`) goes to Claude like anything else in the chat. Criteria come from the repo's `criteria.yaml`, or from the file named in `ROLE_RADAR_CRITERIA`. Needs Node 22.18 or later.
+
+Then paste a posting and ask: *"Score this posting for me."*
+
 ## Project layout
 
 | Path | What it is |
@@ -125,6 +142,7 @@ The demo runs the real page against an in-memory database ([`demo/mock-claude.js
 | `src/gmail-import.ts` | Reads Gmail search results into recruiter suggestions and pipeline status updates |
 | `src/recruiter-store.ts` | The one place recruiters are read and written; owner-only |
 | `src/skip-feedback.ts` | Turns the owner's recent skips into suggested criteria changes |
+| `mcp/server.ts` | The local MCP server: Claude scores a job against `criteria.yaml` with `src/scoring.ts` |
 | `build/` | `npm run build` output (gitignored): each `src/*.ts` bundled by esbuild into the classic script the page loads, same name and global |
 | `app/capabilities.json` | What the live page may use: its database (with the owner-only recruiter rule) and read-only Gmail |
 | `criteria.yaml` | Example criteria for a demo candidate |

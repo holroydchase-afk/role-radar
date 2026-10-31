@@ -35,7 +35,12 @@ export function buildDemo({ seed: seedOverride, publicDemo = false } = {}) {
   if (publicDemo) {
     const cdn = /<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/js-yaml\/[^"]+"><\/script>/;
     if (!cdn.test(body)) throw new Error("Could not find the js-yaml script tag to inline.");
-    const yaml = read("node_modules/js-yaml/dist/js-yaml.min.js").replace(/<\/script/gi, "<\\/script");
+    // js-yaml 4.3+ ships its min.js without the license header, so put the MIT notice back when it is missing.
+    const { version } = JSON.parse(read("node_modules/js-yaml/package.json"));
+    // The .map file is not shipped, so its sourceMappingURL comment would only 404.
+    const min = read("node_modules/js-yaml/dist/js-yaml.min.js").replace(/\n?\/\/# sourceMappingURL=\S+\s*$/, "");
+    const notice = /@license/.test(min.slice(0, 500)) ? "" : `/*! js-yaml ${version} https://github.com/nodeca/js-yaml @license MIT */\n`;
+    const yaml = (notice + min).replace(/<\/script/gi, "<\\/script");
     body = body.replace(cdn, () => `<script>${yaml}</script>`);
   }
   return head + body + "\n</body></html>\n";

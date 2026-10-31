@@ -596,10 +596,21 @@ test("phone controls are at least 44px tall (RR-P1-6)", async () => {
   await page.close();
 });
 
+test("public demo inlines js-yaml without a dangling sourceMappingURL (RR-P2-9b)", () => {
+  const html = buildDemo({ publicDemo: true });
+  assert.doesNotMatch(html, /sourceMappingURL=js-yaml/, "the .map file is not shipped, so the comment would 404");
+});
+
 test("public demo works with the CDN blocked: js-yaml is inlined (RR-P2-9)", async () => {
   const html = buildDemo({ publicDemo: true });
   assert.doesNotMatch(html, /cdnjs\.cloudflare\.com\/ajax\/libs\/js-yaml/);
-  assert.match(html, /js-yaml 4\.1\.0 .*@license MIT/);
+  // The js-yaml version package.json pins exact is the one installed, and its inlined <script> opens with the MIT notice.
+  const pinned = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).dependencies["js-yaml"];
+  assert.match(pinned, /^\d+\.\d+\.\d+$/, "js-yaml must be pinned to an exact version");
+  const installed = JSON.parse(readFileSync(new URL("../node_modules/js-yaml/package.json", import.meta.url), "utf8")).version;
+  assert.equal(installed, pinned);
+  const v = pinned.replace(/\./g, "\\.");
+  assert.match(html, new RegExp(`<script>/\\*! js-yaml ${v} https://github\\.com/nodeca/js-yaml @license MIT \\*/\\n!function`));
   const { page, errors } = await openDemo({ html, blockYaml: true });
   await openTab(page, "criteria");
   assert.ok((await page.locator("#digestPreview li").count()) > 0);
