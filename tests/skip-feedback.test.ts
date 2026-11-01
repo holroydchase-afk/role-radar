@@ -104,3 +104,23 @@ test("applyToYaml refuses what it can't place, and quotes values YAML would misr
   const yes = SF.applyToYaml(text, { op: "add", path: ["hard_exclude", "companies"], value: "Yes" }, yaml.load)!;
   assert.deepEqual(yaml.load(yes).hard_exclude.companies, ["Yes"]);
 });
+
+// RR-SET (docs/settings.md): the Search settings card writes level chips through applyToYaml.
+test("SET-8 applyToYaml 'set' with an array writes a flow list, keeps the trailing comment, and leaves every other line byte-identical", () => {
+  const lines = text.split("\n");
+  const set = (path: string[], value: unknown) => SF.applyToYaml(text, { op: "set", path, value }, yaml.load);
+  const diff = (out: string) => out.split("\n").flatMap((l, i) => (l !== lines[i] ? [l] : []));
+  const a = set(["role", "levels"], ["mid", "senior", "staff"]);
+  assert.ok(a, "an array set on a flow list is placed (not refused)");
+  assert.equal(a.split("\n").length, lines.length);
+  assert.deepEqual(diff(a), ["  levels: [mid, senior, staff]"]);
+  assert.deepEqual(yaml.load(a).role.levels, ["mid", "senior", "staff"]);
+  const b = set(["work", "hybrid_ok_near"], ["Denver", "Boulder"]);
+  assert.ok(b, "placed");
+  assert.deepEqual(diff(b), ["  hybrid_ok_near: [Denver, Boulder]        # the only place hybrid is fine"]);
+  // Items YAML would misread are quoted inside the list, and the result still loads to the same array.
+  const c = set(["role", "levels"], ["senior", "on-call: weekends", "Yes"]);
+  assert.ok(c, "placed");
+  assert.deepEqual(yaml.load(c).role.levels, ["senior", "on-call: weekends", "Yes"]);
+  assert.equal(diff(c).length, 1);
+});

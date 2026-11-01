@@ -228,7 +228,11 @@ export function applyToYaml(text: unknown, change: Change | null | undefined, lo
   const m = line.match(/^(\s*(?:- )?[^:#]+:)([ \t]*)([^#]*?)([ \t]*#.*)?$/);
   if (!m) return null;
   const [, head, gap, value, comment = ""] = m;
-  if (change.op === "set") {
+  if (change.op === "set" && Array.isArray(change.value)) {
+    // A list is written as a flow list, [a, b, c]; a block list (items on the lines below) is refused.
+    if (!value.trim() && lines.slice(hit.at + 1, hit.end).some((l) => !blank(l))) return null;
+    lines[hit.at] = head + (gap || " ") + "[" + change.value.map(quote).join(", ") + "]" + comment;
+  } else if (change.op === "set") {
     lines[hit.at] = head + (gap || " ") + quote(change.value) + comment;
   } else if (change.op === "add") {
     if (/^\[.*\]$/.test(value.trim())) {
@@ -246,7 +250,8 @@ export function applyToYaml(text: unknown, change: Change | null | undefined, lo
     try {
       const d = load(out), path = change.path;
       const node = path.reduce<unknown>((x, k) => (x == null ? x : typeof k === "object" ? arr<{ id?: unknown } | null>(x).find((y) => y && y.id === k.id) : (x as Record<string, unknown>)[k]), d);
-      const ok = change.op === "set" ? node === change.value : arr(node).some((v) => lc(v) === lc(change.value));
+      const ok = change.op === "set" ? (Array.isArray(change.value) ? JSON.stringify(node) === JSON.stringify(change.value) : node === change.value)
+        : arr(node).some((v) => lc(v) === lc(change.value));
       if (!ok) return null;
     } catch (_) { return null; }
   }

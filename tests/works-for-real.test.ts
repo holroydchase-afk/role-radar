@@ -78,7 +78,9 @@ test("RR-M3.2-3 a new user's first Save works and the criteria persist across ta
   await toastMatches(page, /criteria saved/);
   await page.click("#tab-inbox");
   await openTab(page, "criteria");
-  await page.getByRole("heading", { name: /sector weights/i }).waitFor({ timeout: 3000 });
+  // SET-1 folded "Sector weights" into the Search settings card: each saved sector is a weight control there.
+  await page.getByRole("heading", { name: /search settings/i }).waitFor({ timeout: 3000 });
+  await page.locator("#settings [role=radiogroup][data-sector]").first().waitFor({ timeout: 3000 });
   assert.deepEqual(yaml.load(await page.locator("#critText").inputValue()), yaml.load(read("criteria.yaml")));
   assert.deepEqual(errors, []);
   await page.close();

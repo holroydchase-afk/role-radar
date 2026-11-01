@@ -197,13 +197,38 @@ test("RR-R2-2 the Undo toast stays while the pointer or focus is on it", async (
   await page.close();
 });
 
+// SET-1 replaced the "At a glance" card with the Search settings card (#settings), so the summary is now the
+// values its controls show. Same intent: a blocked save must not make the saved criteria look wiped.
+async function settingsShown(page: Page) {
+  return page.evaluate(() => {
+    const v = (s: string) => (document.querySelector(s) as HTMLInputElement | null)?.value ?? null;
+    const t = (s: string) => document.querySelector(s)?.textContent?.trim() ?? null;
+    return {
+      payMin: v("#set-pay-min"), payMax: v("#set-pay-max"), payText: t("#set-pay-val"), prio: v("#set-prio"),
+      levels: [...document.querySelectorAll('#settings button[data-level][aria-pressed="true"]')].map((b) => (b as HTMLElement).dataset.level),
+      sectors: [...document.querySelectorAll("#settings [role=radiogroup][data-sector]")].map((g) =>
+        [(g as HTMLElement).dataset.sector, (g.querySelector("input:checked") as HTMLInputElement | null)?.value ?? null]),
+      home: v("#set-home"), minScore: v("#set-minscore"), digest: v("#set-digest"), more: t("#set-more"),
+    };
+  });
+}
+
 test("RR-R2-3 after a blocked save the summary still shows the saved criteria", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
-  const glance = await page.locator("div.ccard", { hasText: "At a glance" }).innerText();
+  await page.locator("#settings").waitFor();
+  const saved = await settingsShown(page);
+  // Guard: the snapshot is the saved criteria.yaml, not the controls' empty defaults.
+  assert.equal(saved.payMin, "150000");
+  assert.equal(saved.payMax, "185000");
+  assert.equal(saved.home, "CO");
+  assert.ok(saved.sectors.length > 0 && saved.sectors.every(([, w]) => w !== null), "every sector shows its saved weight");
   await page.locator("#critText").fill("foo: 1\n");
   await page.click("#critForm button[type=submit]");
-  assert.equal(await page.locator("div.ccard", { hasText: "At a glance" }).innerText(), glance);
+  await page.locator("#critErr").waitFor();
+  assert.deepEqual(await settingsShown(page), saved, "the settings card shows the saved values, not the blocked draft");
+  assert.match(await page.locator("#settings").innerText(), /Fix the text below first\./, "and says why its controls are off");
+  assert.equal(await page.locator("#critText").inputValue(), "foo: 1\n", "the blocked draft stays in the editor to fix");
   assert.doesNotMatch(await page.locator("#view").innerText(), /No sectors yet/);
   await page.close();
 });

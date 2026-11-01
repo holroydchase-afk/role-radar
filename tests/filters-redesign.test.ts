@@ -58,7 +58,8 @@ test("RR-FS-2 each tab has its own default sort: New and All by match, Pipeline 
 test("RR-FS-3 four quick chips, Last 24 hrs first; a chip toggles, shows pressed and narrows the list", async () => {
   const { page, errors } = await openDemo(LAPTOP);
   await page.click("#tab-inbox");
-  assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Strong fit", "Good values", "Good culture"]);
+  // RR-FA FA-5 (docs/settings.md) adds "Remote (US)"; placed last here so Last 24 hrs stays first (order to confirm in review).
+  assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Strong fit", "Good values", "Good culture", "Remote (US)"]);
   const before = (await cos(page)).length;
   const day = page.locator('#fbar [data-chip="day"]');
   await day.click();
@@ -139,13 +140,14 @@ test("RR-FS-6 a view saved by the old page (sort 'posted', culture 'good+', stat
   await page.close();
 });
 
-test("RR-FS-7 Sort offers four choices, marks this tab's default, and remembers the pick per tab across reloads", async () => {
+// FA-7 (docs/settings.md) adds a fifth sort, "Highest pay", after the original four.
+test("RR-FS-7 Sort offers five choices (FA-7 adds Highest pay), marks this tab's default, and remembers the pick per tab across reloads", async () => {
   const { page, errors } = await openDemo(LAPTOP);
   await page.click("#tab-inbox");
   await page.click("#fsort");
   assert.equal(await page.locator("#fsort").getAttribute("aria-expanded"), "true");
   const labels = await page.locator("#fbar .sorts label").allInnerTexts();
-  assert.deepEqual(labels.map((l) => l.split("\n")[0].trim()), ["Best match", "Newest", "Recently changed", "Follow-up date"]);
+  assert.deepEqual(labels.map((l) => l.split("\n")[0].trim()), ["Best match", "Newest", "Recently changed", "Follow-up date", "Highest pay"]);
   assert.match(labels[0], /default here/);
   await page.check("#fsort-found");
   await settle(page);

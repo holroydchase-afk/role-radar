@@ -208,7 +208,9 @@ test("the Criteria tab explains the fit ratings", async () => {
   const card = page.locator("div.ccard", { has: page.locator("h2", { hasText: "Fit ratings" }) });
   assert.match(await card.innerText(), /\+2\s+calm pace/);
   assert.match(await card.innerText(), /−1\s+launch crunch risk/);
-  assert.match(await page.locator("div.ccard", { hasText: "At a glance" }).innerText(), /Home state\s+CO → UT/);
+  // SET-1: the Search settings card replaced "At a glance"; home state CO with the planned move to UT still shows.
+  assert.equal(await page.locator("#settings").getByLabel("Home state").inputValue(), "CO");
+  assert.match(await page.locator("#set-more").innerText(), /Moving to UT/);
   await page.close();
 });
 
@@ -683,15 +685,16 @@ test("Recruiters tab says its number is next steps due (RR-P2-12)", async () => 
   await page.close();
 });
 
-test("Criteria 'At a glance' reads as plain words (RR-P2-13)", async () => {
+// SET-1 replaced "At a glance" with the Search settings card; its values must still read as plain words, not YAML ids.
+test("Criteria Search settings reads as plain words (RR-P2-13)", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
-  const kv = page.locator(".kv b");
-  const font = await kv.first().evaluate((el) => getComputedStyle(el).fontFamily);
-  assert.doesNotMatch(font, /Plex Mono/);
-  const text = (await kv.allInnerTexts()).join(" | ");
-  assert.match(text, /Fully remote, US/);
-  assert.match(text, /^Senior, staff/);
+  const more = page.locator("#set-more");
+  const levels = page.locator('#settings button[data-level][aria-pressed="true"]');
+  for (const el of [more, levels.first()]) assert.doesNotMatch(await el.evaluate((e) => getComputedStyle(e).fontFamily), /Plex Mono/);
+  assert.match(await more.innerText(), /Work: Fully remote, US/);
+  assert.doesNotMatch(await more.innerText(), /fully_remote_us/);
+  assert.match((await levels.allInnerTexts()).join(", "), /^Senior, Staff/);
   await page.close();
 });
 
