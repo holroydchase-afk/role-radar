@@ -312,12 +312,19 @@ test("FA-9 2,000 roles with Work and Pay filters and the Highest pay sort stay i
   await page.waitForFunction((n) => document.querySelectorAll("#view article.job").length === n, want, { timeout: 10000 });
   const allMs = Date.now() - t1;
   assert.match(await page.locator("#fcount").innerText(), /Highest pay/);
-  // One more Work box: a single re-render, held to the one-keystroke budget.
+  // One more Work box: a single re-render, held to the one-keystroke budget. Like RR-H-21's keystroke, the clock
+  // covers one key press, the app's change handler and the re-render up to the card count changing. Finding and
+  // focusing the box happens before the clock starts: locator.check() re-resolves the selector and runs Playwright's
+  // actionability checks over ~1,000 cards, which cost ~130ms locally and ~2.5x that on CI (QA-R1, PR #68).
   await sheet(page);
+  await box(page, "onsite").focus();
+  assert.equal(await box(page, "onsite").isChecked(), false, "On-site starts unticked");
   const t2 = Date.now();
-  await box(page, "onsite").check();
+  await page.keyboard.press("Space");
   await page.waitForFunction((n) => document.querySelectorAll("#view article.job").length > n, want, { timeout: 10000 });
   const tickMs = Date.now() - t2;
+  assert.equal(await box(page, "onsite").isChecked(), true, "Space ticked On-site");
+  assert.deepEqual(await ticked(page), ["remote_us", "hybrid", "onsite"], "the saved Work boxes plus On-site");
   console.log(`# FA-9 open ${openMs}ms, All tab filtered and sorted ${allMs}ms, one Work box ${tickMs}ms (want ${want} roles)`);
   assert.ok(openMs < 8000, `opening took ${openMs}ms`);
   assert.ok(allMs < 2000, `All roles, filtered and sorted by pay, took ${allMs}ms`);
