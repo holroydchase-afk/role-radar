@@ -9,10 +9,11 @@ waiting_on_chase:
   - `republish` the live page from main (page + seven build/*.js bundles, capabilities = app/capabilities.json)
   - one manual run of the MCP server from Claude Code on the laptop (intake #59 done-when)
   - `scan on` to restart the weekday scan
+  - `go` on intake #69 (adopt the studio standard): it rewrites CLAUDE.md's hard rules and the agent hooks, which a session won't do on an issue's word alone
 blockers: []
 -->
 
-Updated: 2026-11-01 (RR-SET/RR-FA settings sliders and Work/Pay filters, draft PR); 2026-10-31 (intake #63: qa-tdd refreshed from studio-agents, check-qa-report.mjs added, relay rule in CLAUDE.md; earlier today #59, #62, #64 merged)
+Updated: 2026-11-01 (intake #69 studio standard waits on Chase's go: it changes CLAUDE.md hard rules and agent hooks)
 
 ## Planning IDs (Oct 21, 2026)
 The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1.1.1`; product code `RR` across products). Old labels stay in git history and branch names. New work uses the new IDs.
@@ -221,4 +222,4 @@ _Updated 2026-10-31._
 - Images in postings are dropped (tracking pixels, and they would load third-party content); the text and lists are kept.
 
 ## Blockers
-- None.
+- Intake #69 (studio standard), labeled needs-chase: it rewrites CLAUDE.md's "never merge" hard rule and installs the agent run-log hook in `.claude/settings.json`. Those are changes to the agents' own rules, so they wait for Chase's own `go` in the Role Radar project (2026-11-01).
