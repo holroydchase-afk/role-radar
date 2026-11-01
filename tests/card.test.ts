@@ -310,7 +310,7 @@ test("CARD-8 a card whose follow-up is due shows the action reason (Follow-up du
   await page.close();
 });
 
-test("CARD-9 one meta line: location · pay · one date for the status, no chips (UX-H-R10)", async () => {
+test("CARD-9 UX-R4 one meta line: [location, only when there is no work pill] · pay · one date for the status, no chips (UX-H-R10)", async () => {
   const { page, errors } = await openDemo({ ...LAPTOP });
   const bad: string[] = [];
   const check = async (id: string, label: RegExp) => {
@@ -325,7 +325,8 @@ test("CARD-9 one meta line: location · pay · one date for the status, no chips
     const extra = /^Follow-up due /.test(m.reasonText) ? (m.reasonText.match(DATE) || []).length : 0;
     if ((m.text.match(DATE) || []).length - extra > 1) bad.push(`${id}: ${(m.text.match(DATE) || []).length - extra} dates on the card`);
   };
-  await check("card-hi", /Remote, US.*\$170K–\$200K.*Found /);
+  // UX-R4: card-hi shows a "Remote (US)" pill, so its meta line drops "Remote, US" and starts with the pay.
+  await check("card-hi", /^\$170K–\$200K · Found /);
   await check("greenhouse-1001", /Found /);
   await check("card-cult", /(Viewed|Found) /);
   await openTab(page, "pipeline");

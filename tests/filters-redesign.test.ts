@@ -55,11 +55,11 @@ test("RR-FS-2 each tab has its own default sort: New and All by match, Pipeline 
   await page.close();
 });
 
-test("RR-FS-3 four quick chips, Last 24 hrs first; a chip toggles, shows pressed and narrows the list", async () => {
+test("RR-FS-3 UX-R1 five quick chips, Last 24 hrs first and Remote (US) second; a chip toggles, shows pressed and narrows the list", async () => {
   const { page, errors } = await openDemo(LAPTOP);
   await page.click("#tab-inbox");
-  // RR-FA FA-5 (docs/settings.md) adds "Remote (US)"; placed last here so Last 24 hrs stays first (order to confirm in review).
-  assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Strong fit", "Good values", "Good culture", "Remote (US)"]);
+  // RR-FA FA-5 (docs/settings.md) adds "Remote (US)"; UX-R1 (docs/reviews/2026-11-01-settings-filters.md) puts it 2nd so it is on screen at 390px.
+  assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Remote (US)", "Strong fit", "Good values", "Good culture"]);
   const before = (await cos(page)).length;
   const day = page.locator('#fbar [data-chip="day"]');
   await day.click();

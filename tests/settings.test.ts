@@ -22,7 +22,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open } from "../scripts/browser.mjs";
+import { openDemo as open , openAdvanced } from "../scripts/browser.mjs";
 
 const read = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 const SPEC = read("criteria.yaml");
@@ -38,7 +38,10 @@ after(async () => { await browser?.close(); });
 async function openCriteria(spec?: string, opts: Parameters<typeof open>[1] = {}) {
   const seed = baseSeed();
   if (spec !== undefined) seed.meta.criteria.spec = spec;
-  return open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#critText", query: "?tab=criteria", ...opts });
+  // UX-R5 folds the editor under Advanced: wait for the settings card, then unfold it so #critText is usable.
+  const r = await open(browser, { html: buildDemo({ seed }), file: FILE, ready: "#settings", query: "?tab=criteria", ...opts });
+  await openAdvanced(r.page);
+  return r;
 }
 /** Fails fast, with a plain message, while the card doesn't exist yet. */
 async function card(page: Page) {

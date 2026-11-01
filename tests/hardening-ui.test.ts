@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open, openTab } from "../scripts/browser.mjs";
+import { openDemo as open, openTab, openAdvanced } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-hardening.html" });
@@ -31,6 +31,7 @@ test("RR-UX-2 on a phone the tab bar doesn't cover a fifth of the screen while s
 test("RR-UX-3 saving criteria that would drop the sections the scan reads is blocked", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   const before = await page.locator("#critText").inputValue();
   await page.locator("#critText").fill("foo: 1\n");
   await page.click("#critForm button[type=submit]");
@@ -52,6 +53,7 @@ test("RR-UX-3 saving criteria that would drop the sections the scan reads is blo
 test("RR-UX-4 a YAML error names the line, says nothing was saved and puts focus on the editor", async () => {
   const { page } = await openDemo({ width: 390, height: 844 });
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   await page.locator("#critText").fill("role:\n  title_include: [Senior\nsectors: x\n");
   await page.click("#critForm button[type=submit]");
   assert.match(await toastText(page), /^Line \d+ has a YAML error\. Nothing was saved\.$/);
@@ -90,6 +92,7 @@ test("RR-UX-6/7 the demo label says what's made up and that changes reset on rel
   assert.match(await drawer.innerText(), /made-up sample data/i);
   assert.match(await drawer.innerText(), /reload to start over/);
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   await page.click("#critForm button[type=submit]");
   assert.match(await toastText(page), /for this visit/);
   await page.close();
@@ -216,6 +219,7 @@ async function settingsShown(page: Page) {
 test("RR-R2-3 after a blocked save the summary still shows the saved criteria", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   await page.locator("#settings").waitFor();
   const saved = await settingsShown(page);
   // Guard: the snapshot is the saved criteria.yaml, not the controls' empty defaults.

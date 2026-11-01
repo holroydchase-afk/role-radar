@@ -74,3 +74,15 @@ export async function openTab(page, id) {
  * @returns {Promise<string | null>}
  */
 export const currentTab = (page) => page.locator("#view").getAttribute("data-tab");
+
+/**
+ * Unfolds the Criteria tab's "Advanced: edit as text" (UX-R5 folds it by default) so #critText can be read and typed
+ * in. Does nothing when it is already open or when there is no fold (no criteria saved yet: the editor is the page).
+ * @param {import("playwright").Page} page
+ */
+export async function openAdvanced(page) {
+  await page.waitForSelector("#critText", { state: "attached", timeout: 3000 });
+  const adv = page.locator("#critAdv");
+  if ((await adv.count()) && !(await adv.evaluate((d) => /** @type {HTMLDetailsElement} */ (d).open))) await adv.locator(":scope > summary").click();
+  await page.locator("#critText").waitFor({ state: "visible", timeout: 3000 });
+}

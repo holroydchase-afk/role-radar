@@ -266,7 +266,8 @@ test("DCL-11 UX-H-AC14 the PR #57 filter bar (search, Sort, Filters, its four ch
     await page.click(`#tab-${id}`);
     await settle(page);
     for (const sel of ["#q", "#fsort", "#ftoggle"]) assert.ok(await page.locator(sel).isVisible(), `${id}: ${sel}`);
-    assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Strong fit", "Good values", "Good culture", "Remote (US)"], `${id}: chips`);
+    // UX-R1: Remote (US) second, so it is fully on screen at 390px.
+    assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Remote (US)", "Strong fit", "Good values", "Good culture"], `${id}: chips`);
   }
   assert.deepEqual(errors, []);
   await page.close();

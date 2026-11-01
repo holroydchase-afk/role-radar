@@ -425,6 +425,10 @@ body:has(> .demo-bar){margin:0}
 #set-more a{display:inline-flex;align-items:center;min-height:44px}
 #settings input[type=range]{width:100%;min-height:44px;padding:0;background:none;border:0;accent-color:var(--accent)}
 .pbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pbox input{width:100%;box-sizing:border-box;min-height:44px;font-variant-numeric:tabular-nums}
+/* A "$" inside each pay box, so 150000 reads as dollars (UX-R7). */
+.pbox .usd{position:relative;display:block}.pbox .cur{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}.pbox .usd input{padding-left:22px}
+/* Advanced: the YAML editor, folded away under the readable cards (UX-R5). */
+details.adv>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px}details.adv>summary::-webkit-details-marker{display:none}details.adv>summary::before{content:"\25B8";font-size:.8em}details.adv[open]>summary::before{content:"\25BE"}details.adv>summary h2{margin:0}details.adv[open]>summary{margin-bottom:10px}details.adv>form{display:grid;gap:10px}
 .lvls{display:flex;flex-wrap:wrap;gap:6px}.lvls .chipbtn{min-height:44px}
 .lvls .chipbtn:disabled,.seg input:disabled+span{opacity:.55;cursor:default}
 .secs{display:grid;gap:2px}
@@ -531,7 +535,8 @@ const R2_MIN=100000, R2_MAX=400000, R2_STEP=5000;
 const DEF_SORT={inbox:"fit",pipeline:"updated",all:"fit"};
 // Quick chips: each sets one view key (RR-FS-3). The Filters sheet holds the rest.
 // "Remote (US)" sets the Work filter to just remote_us (RR-FA FA-5), so it reads pressed only while that is the one box ticked.
-const CHIPS=[["day","Last 24 hrs","found","1"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"],["remote","Remote (US)","work","remote_us"]];
+// Remote (US) second, so it is fully on screen at 390px (UX-R1).
+const CHIPS=[["day","Last 24 hrs","found","1"],["remote","Remote (US)","work","remote_us"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
 const chipOn=([,,k,v])=>k==="work"?view.work.length===1&&view.work[0]===v:view[k]===v;
 const SHEET_KEYS=["lane","found","source","tag","conflict","status","sent"];
 // Gmail import: the viewer's Gmail connector, read-only (search_threads, batch_get_threads).
@@ -847,7 +852,8 @@ function jobCard(j){
   const skip=!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">${WITHDRAW.includes(s)?"Withdraw":"Skip"}</button>`:"";
   const details=`<button class="btn" type="button" data-details="${id}" aria-haspopup="dialog" aria-controls="detailsSheet">Details</button>`;
   const w=wpOf(j), loc=String(j.location??"").trim();
-  const meta=[loc&&esc(loc),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
+  // With a work pill, the location would say it twice (UX-R4); the full location stays in Details.
+  const meta=[!w.label&&loc&&esc(loc),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
@@ -886,7 +892,7 @@ function detailsBody(j){
       ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
       ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}</section>
     <section class="ds-sec"><label for="ds-st">Status</label><select id="ds-st" data-setstatus="${id}">${stOpts}</select>
-      ${datesLine(j)}${src?`<p class="hint">Found via ${esc(src)}</p>`:""}
+      ${datesLine(j)}${String(j.location??"").trim()?`<p class="hint">Location: ${esc(String(j.location).trim())}</p>`:""}${src?`<p class="hint">Found via ${esc(src)}</p>`:""}
       ${j.emailNote?`<p class="hint">Inbox: ${esc(j.emailNote)}</p>`:""}
       ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="hint">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}</section>
     <div class="fields">
@@ -958,9 +964,10 @@ function filterBar(base=[]){
       </div>
       ${workGroup(base)}
       <fieldset class="fgrp" id="fv-pay"><legend>Pay <span class="fval" id="fv-pay-val">${esc(payText())}</span></legend>
-        ${range2Html("fv-pay",view.payLo===""?R2_MIN:view.payLo,view.payHi===""?R2_MAX:view.payHi,["Lowest pay","Highest pay"])}
+        ${range2Html("fv-pay",view.payLo===""?R2_MIN:view.payLo,view.payHi===""?R2_MAX:view.payHi,["Pay from","Pay up to"])}
         <div class="r2ends" aria-hidden="true"><span>${kUsd(R2_MIN)}</span><span>${kUsd(R2_MAX)}+</span></div>
-        <label class="chk" for="fv-nopay"><input type="checkbox" id="fv-nopay"${view.noPay==="0"?"":" checked"}>Include roles with no pay listed</label>
+        <label class="chk" for="fv-nopay"><input type="checkbox" id="fv-nopay" aria-describedby="fv-nopay-hint"${view.noPay==="0"?"":" checked"}${payRange()?"":" disabled"}>Include roles with no pay listed</label>
+        <p class="hint" id="fv-nopay-hint"${payRange()?" hidden":""}>Set a pay range first.</p>
       </fieldset>
       <div class="sbar">${set.length?`<button class="btn" type="button" id="freset">Reset</button>`:""}<button class="primary" type="button" id="fdone">Done</button></div>
     </div>
@@ -1173,8 +1180,9 @@ function settingsCard(){
     <div class="sfield"><div class="shead"><span class="slbl" id="set-pay-lbl">Base pay</span><span class="sval" id="set-pay-val"></span></div>
       ${range2Html("set-pay",R2_MIN,R2_MAX,["Base pay floor","Base pay stretch target"],true)}
       <div class="r2ends" aria-hidden="true"><span>${kUsd(R2_MIN)}</span><span>${kUsd(R2_MAX)}</span></div>
-      <div class="pbox"><label for="set-pay-min">Min (floor)<input type="number" id="set-pay-min" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}"></label>
-        <label for="set-pay-max">Max (stretch target)<input type="number" id="set-pay-max" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}"></label></div>
+      <div class="pbox"><label for="set-pay-min">Floor<span class="usd"><span class="cur" aria-hidden="true">$</span><input type="number" id="set-pay-min" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-pay-unit"></span></label>
+        <label for="set-pay-max">Stretch target<span class="usd"><span class="cur" aria-hidden="true">$</span><input type="number" id="set-pay-max" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-pay-unit"></span></label></div>
+      <p class="hint" id="set-pay-unit">In dollars, e.g. 150000</p>
       <p class="hint">Roles whose pay tops out under the floor are skipped. Pay that reaches the stretch target adds 10 to the score.</p>${miss("pay")}</div>
     <div class="sfield"><div class="shead"><label class="slbl" for="set-prio">Priority-sector floor</label><output class="sval" id="set-prio-val" for="set-prio"></output></div>
       <input type="range" id="set-prio" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-prio-hint">
@@ -1219,7 +1227,7 @@ function syncSettings(){
   hi=Math.max(hi,Math.min(R2_MAX,lo+R2_STEP)); lo=Math.min(lo,hi-R2_STEP);
   if(!r2Drag||r2Drag.p!=="set-pay") r2Paint("set-pay",lo,hi,!ok.pay);
   [["#set-pay-min",lo],["#set-pay-max",hi]].forEach(([id,v])=>{ const el=$(id); if(document.activeElement!==el) el.value=String(v); el.disabled=!ok.pay; });
-  $("#set-pay-val").textContent=ok.pay||broken?`${kUsd(lo)} – ${kUsd(hi)}`:"";
+  $("#set-pay-val").textContent=ok.pay||broken?`Floor ${kUsd(lo)} · Target ${kUsd(hi)}`:"";
   // Priority-sector floor.
   const pr=$("#set-prio"), pv=num(c.priority_sector_floor_usd)?c.priority_sector_floor_usd:R2_MIN;
   pr.value=String(pv); pr.disabled=!ok.prio; pr.setAttribute("aria-valuetext",kUsd(pv)); $("#set-prio-val").textContent=num(c.priority_sector_floor_usd)?kUsd(pv):"";
@@ -1264,6 +1272,8 @@ R2_ON["set-pay"]=(lo,hi,final,w)=>{
 R2_ON["fv-pay"]=(lo,hi,final)=>{
   view.payLo=lo>R2_MIN?lo:""; view.payHi=hi<R2_MAX?hi:"";
   const o=$("#fv-pay-val"); if(o) o.textContent=payText();
+  // Include-no-pay only matters once a range is set (UX-R3).
+  const np=$("#fv-nopay"), nh=$("#fv-nopay-hint"); if(np) np.disabled=!payRange(); if(nh) nh.hidden=!!payRange();
   if(!final) return;
   saveView(); const a=document.activeElement&&document.activeElement.id; render(); if(a) $("#"+a)?.focus({preventScroll:true});
 };
@@ -1435,6 +1445,9 @@ async function gsApply(){
 }
 // The repo's example criteria.yaml, embedded below the script for a first-time user (tests keep it in sync).
 const exampleCriteria=()=>($("#exampleCriteria")?.textContent||"").replace(/^\n/,"");
+// Advanced stays open once opened (or opened for a fix or a suggestion) until it is closed again.
+let advOpen=false;
+document.addEventListener("toggle",e=>{ if(e.target&&e.target.id==="critAdv") advOpen=e.target.open; },true);
 function renderCriteria(){
   const text=critDraft??(criteria&&criteria.spec)??"";
   const p=text?parseSpec(text):{data:null,err:""};
@@ -1451,7 +1464,10 @@ function renderCriteria(){
   const shown=critErr||p.err?parseSpec((criteria&&criteria.spec)||"").data:p.data;
   return `<div class="crit">${settingsCard()}
     <div class="ccard"><h2>Digest preview</h2><p class="sub" style="margin:0">How tomorrow's digest would rank the roles in New with these criteria. Change a setting and watch it change.</p><div id="digestPreview">${digestPreview(p.data)}</div></div>
-    <form class="ccard" id="critForm"><h2>Advanced: edit as text</h2>
+    <div class="ccard alerts" id="alerts"><h2>Alerts</h2><p class="sub" style="margin:0">What pings your phone, set by the <span class="mono">alerts</span> block under Advanced. Change a level or a score and watch this change.</p><div id="alertsPreview">${alertsPreview(p.data)}</div></div>
+    ${critSummary(shown)}
+    <details class="ccard adv" id="critAdv"${advOpen||!(criteria&&criteria.spec)||critErr||p.err||!window.jsyaml||(critFrom&&critDraft!==null)?" open":""}><summary><h2>Advanced: edit as text</h2></summary>
+    <form id="critForm">
       <p class="sub" style="margin:0">Your <span class="mono">criteria.yaml</span>. The scan reads it before every run. Change a weight, add a company to <span class="mono">hard_exclude</span>, or move the comp floor, then save.${when?` Last saved ${esc(when)}.`:""}</p>
       ${critFrom&&critDraft!==null?`<p class="fromskips" id="fromSkips" role="status">From your skips: <b>${esc(critFrom.text)}</b>. ${esc(critFrom.why)} Nothing changes until you save.</p>`:""}
       ${critErr||p.err?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr||p.err)}</p>`:""}
@@ -1459,9 +1475,8 @@ function renderCriteria(){
       <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
       <textarea id="critText" class="code" spellcheck="false" autocapitalize="off" autocomplete="off"${critErr||p.err?` aria-invalid="true" aria-describedby="critErr"`:""}>${esc(text)}</textarea>
       <div class="ctl"><button class="primary" type="submit">Save criteria</button>${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
-    </form>
-    <div class="ccard alerts" id="alerts"><h2>Alerts</h2><p class="sub" style="margin:0">What pings your phone, set by the <span class="mono">alerts</span> block above. Change a level or a score and watch this change.</p><div id="alertsPreview">${alertsPreview(p.data)}</div></div></div>
-    ${critSummary(shown)}</div>`;
+    </form></details>
+  </div>`;
 }
 // Events the alert rules would see in the data on this page: new roles (with score), status moves, due follow-ups, recent recruiter contact.
 function alertEvents(spec){

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { buildDemo } from "../scripts/build-demo.mjs";
-import { openDemo as open, openTab } from "../scripts/browser.mjs";
+import { openDemo as open, openTab, openAdvanced } from "../scripts/browser.mjs";
 
 let browser: Browser;
 const openDemo = (opts = {}) => open(browser, { ...opts, file: "dist/test-demo.html" });
@@ -66,6 +66,7 @@ test("Details explains each score with the criteria rules", async () => {
 test("digest preview re-ranks live as the criteria are edited", async () => {
   const { page } = await openDemo();
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   const first = () => page.locator("#digestPreview li").first().innerText();
   assert.match(await first(), /Gridlark.*\n.*dream role/, "a dream-role anchor tops the digest");
   const text = await page.locator("#critText").inputValue();
@@ -81,6 +82,7 @@ test("digest preview re-ranks live as the criteria are edited", async () => {
 test("alerts preview lists the rules and updates live as the criteria are edited", async () => {
   const { page, errors } = await openDemo();
   await openTab(page, "criteria");
+  await openAdvanced(page); // UX-R5: the editor is folded under Advanced
   const preview = () => page.locator("#alertsPreview").innerText();
   assert.match(await preview(), /recruiter or hiring manager emails or replies: alert right away/);
   assert.match(await preview(), /scoring 85\+: alert right away/);
