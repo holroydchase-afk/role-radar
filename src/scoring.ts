@@ -335,3 +335,67 @@ export function scoreSplit(result: ScoreResult, job?: Job | null): ScoreSplit {
     cultureRated: !!(job && job.cultureSignals) || result.culture.good.length + result.culture.red.length > 0,
   };
 }
+
+// ---- Workplace: where the work happens, from the scan's workplace id or the location text (RR-FA, docs/settings.md). ----
+type WorkplaceId = "remote_us" | "remote_metro" | "remote_non_us" | "hybrid" | "onsite" | "unknown";
+export interface Workplace { id: WorkplaceId; city?: string; label: string }
+/** The ids the scan writes on job.workplace (from 2026-11-01), in the order the Work filter lists them. */
+const WORKPLACE_IDS: readonly WorkplaceId[] = ["remote_us", "remote_metro", "remote_non_us", "hybrid", "onsite"];
+const WP_LABEL: Record<WorkplaceId, string> = { remote_us: "Remote (US)", remote_metro: "Remote near a city", remote_non_us: "Remote outside US", hybrid: "Hybrid", onsite: "On-site", unknown: "" };
+const US_STATES = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC".split(" ");
+const US_STATE_NAMES = /^(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington state|west virginia|wisconsin|wyoming)$/;
+/** Big US metros a "remote" posting is often tied to, for locations that name only the city. */
+const METROS = ["san francisco", "bay area", "new york", "nyc", "seattle", "boston", "chicago", "austin", "denver", "los angeles", "atlanta", "washington, dc", "miami", "dallas", "houston", "philadelphia", "portland", "salt lake city", "san jose", "palo alto", "mountain view", "oakland", "san diego", "minneapolis", "phoenix", "raleigh", "nashville", "pittsburgh", "detroit", "boulder"];
+const NON_US = /\b(canada|toronto|vancouver|montreal|uk|united kingdom|england|london|ireland|dublin|india|bengaluru|bangalore|europe|emea|apac|latam|germany|berlin|france|paris|spain|netherlands|amsterdam|poland|portugal|israel|australia|sydney|singapore|japan|mexico|brazil|argentina|colombia|philippines|south africa)\b/;
+const US = /\b(us|usa|u\.s\.?a?|united states|north america|nationwide)\b/;
+const HYBRID = /\bhybrid\b/;
+const ONSITE = /\b(on-?site|onsite|in[- ]office|in the office|office[- ]based)\b/;
+const REMOTE = /\b(remote|anywhere|distributed|work from home|wfh)\b/;
+const titleCase = (s: string): string => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+/** A place name that is the country or a state, not a city. */
+const notCity = (s: string): boolean => {
+  const t = s.trim().toLowerCase().replace(/[.)]+$/, "");
+  return !t || US.test(t) && t.replace(US, "").trim() === "" || US_STATES.includes(t.toUpperCase()) || US_STATE_NAMES.test(t) || REMOTE.test(t) || NON_US.test(t) || /\d/.test(t);
+};
+/** The city a "remote" location is tied to: "San Francisco, CA (Remote)", "Remote - New York", "within 50 miles of Chicago". */
+function remoteCity(loc: string): string | undefined {
+  const pick = (s: string | undefined): string | undefined => {
+    const first = String(s || "").split(/[,;|/]/)[0].trim();
+    return first && !notCity(first) && /^[A-Za-z][A-Za-z .'-]{1,40}$/.test(first) ? titleCase(first) : undefined;
+  };
+  const near = loc.match(/\b(?:within|in)\s+(?:a\s+)?\d{1,3}\s*(?:-|\s)?(?:mi|miles?|km)\b\s*(?:of|from)\s+([^,;()|]+)/i);
+  if (near) return pick(near[1]);
+  const paren = loc.match(/^(.+?)\s*\(\s*remote\s*\)\s*$/i);
+  if (paren) return pick(paren[1]);
+  const dash = loc.match(/^remote\s*[-–—:]\s*(.+)$/i);
+  if (dash) return pick(dash[1]);
+  const cityState = loc.match(/(?:^|[,;(]\s*|remote\s*[-–—,]\s*)([A-Z][A-Za-z .'-]+?),\s*([A-Z]{2})\b/);
+  if (cityState && US_STATES.includes(cityState[2])) return pick(cityState[1]);
+  const low = loc.toLowerCase(), metro = METROS.find((m) => new RegExp("\\b" + m.replace(/[.,]/g, "\\$&") + "\\b").test(low));
+  return metro ? titleCase(metro.replace(/,.*$/, "")).replace(/^Nyc$/, "New York") : undefined;
+}
+const wpOut = (id: WorkplaceId, city?: string): Workplace => (id === "remote_metro" && city ? { id, city, label: "Remote near " + city } : { id, label: WP_LABEL[id] });
+
+/** Where a role is worked. A known job.workplace from the scan wins (job.workplaceCity names the city for remote_metro);
+ *  otherwise the location text decides. Hybrid and on-site words beat "remote"; "site-to-site" is not on-site. */
+export function workplaceOf(job: Job | null | undefined): Workplace {
+  const j = job || {};
+  const w = j.workplace;
+  if (typeof w === "string" && (WORKPLACE_IDS as readonly string[]).includes(w)) {
+    const city = typeof j.workplaceCity === "string" && j.workplaceCity.trim() ? j.workplaceCity.trim() : undefined;
+    return wpOut(w as WorkplaceId, city);
+  }
+  const raw = typeof j.location === "string" ? j.location.trim() : "";
+  if (!raw) return wpOut("unknown");
+  const loc = raw.toLowerCase().replace(/site-to-site/g, "site to site").replace(/\s+/g, " ");
+  if (HYBRID.test(loc)) return wpOut("hybrid");
+  if (ONSITE.test(loc)) return wpOut("onsite");
+  if (!REMOTE.test(loc)) return wpOut("unknown");
+  if (NON_US.test(loc) && !US.test(loc)) return wpOut("remote_non_us");
+  // A US-wide part ("Remote, US; New York, NY") keeps it US-wide.
+  // Naming the country ("Remote, US (HQ in Boston)") keeps it US-wide unless a distance limit is stated.
+  const limit = /\b(?:within|in)\s+(?:a\s+)?\d{1,3}\s*(?:-|\s)?(?:mi|miles?|km)\b/.test(loc);
+  const usWide = (US.test(loc) && !limit) || raw.split(/;|\|/).some((part) => REMOTE.test(part.toLowerCase()) && !remoteCity(part.trim()));
+  const city = usWide ? undefined : remoteCity(raw);
+  return city ? wpOut("remote_metro", city) : wpOut("remote_us");
+}

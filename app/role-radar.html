@@ -60,14 +60,14 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.9rem;letter-spacing:
   #moreSheet{position:fixed;top:auto;left:0;right:0;bottom:0;width:auto;border:0;border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:80vh;overflow:auto;box-shadow:0 -8px 24px rgba(0,0,0,.18)}
   #mscrim{background:rgba(23,32,29,.42)}}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.list{display:grid;gap:12px}
+.list{display:flex;flex-direction:column;gap:12px}
 .job{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:8px;min-width:0}
 .job .top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
 .job .head{min-width:0}
 /* Very long unbroken text (a pasted URL, a run of letters) wraps inside the card instead of widening the page. */
 .job,.ruled .row,.prog .row{overflow-wrap:anywhere}.job .chip{white-space:normal}
 /* Long lists (200+ cards): cards off screen skip layout until scrolled near (RR-H-21). */
-.list.long>.job{content-visibility:auto;contain-intrinsic-size:auto 340px}
+.list.long>.job{content-visibility:auto;contain-intrinsic-size:auto 200px}
 .job .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 /* One label style: sentence case, 0.8rem/600. Only the demo-data chip stays uppercase. */
 .job .co{font:600 .8rem var(--f-body);color:var(--muted)}
@@ -401,6 +401,68 @@ body:has(> .demo-bar){margin:0}
 @media (max-width:600px){.main{gap:8px}.fbar{margin-bottom:8px;padding-block:6px}
   .wrap{padding-top:4px}h1{font-size:1.5rem;line-height:1.15}
   .lede{font-size:.875rem;line-height:1.4}header .sub{font-size:.84rem;line-height:1.4}#tabs{padding-block:2px}}
+/* Two-handle range (.range2, RR-SET and RR-FA): one track, the filled part between the handles, 44px handles.
+   The element's box is the track itself (handles overhang by half their width, inside the side margin). */
+.range2{position:relative;height:44px;margin:0 22px;touch-action:none;cursor:pointer;-webkit-user-select:none;user-select:none}
+.range2 .rail,.range2 .fill{position:absolute;top:50%;height:6px;margin-top:-3px;border-radius:999px}
+.range2 .rail{left:0;right:0;background:var(--line)}
+.range2 .fill{background:var(--accent)}
+.range2 .r2h{position:absolute;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;display:grid;place-items:center;border-radius:50%;cursor:grab;touch-action:none;outline:none;z-index:1}
+.range2 .r2h.top{z-index:2}
+.range2 .r2h::before{content:"";width:24px;height:24px;box-sizing:border-box;border-radius:50%;background:var(--surface);border:2px solid var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.range2 .r2h:focus-visible::before{outline:2px solid var(--accent);outline-offset:3px}
+.range2 .r2h:active{cursor:grabbing}
+.range2.off{cursor:default}.range2.off .fill{background:var(--muted)}.range2.off .r2h{cursor:default}.range2.off .r2h::before{border-color:var(--muted);box-shadow:none}
+.r2ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:-6px}
+/* Search settings card (RR-SET). */
+#settings{scroll-margin-top:16px}#settings:focus{outline:none}
+#settings .sfield{display:grid;gap:6px;min-width:0;border:0;margin:0;padding:10px 0 0;border-top:1px solid var(--line)}
+#settings .sfield>legend{float:left;width:100%;padding:0;margin:0 0 6px}
+#settings .shead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+#settings .slbl{font:600 .92rem var(--f-body);color:var(--ink)}
+#settings .sval{font:500 .92rem var(--f-body);font-variant-numeric:tabular-nums;color:var(--ink)}
+#settings .hint{margin:0}
+#set-more a{display:inline-flex;align-items:center;min-height:44px}
+#settings input[type=range]{width:100%;min-height:44px;padding:0;background:none;border:0;accent-color:var(--accent)}
+.pbox{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pbox input{width:100%;box-sizing:border-box;min-height:44px;font-variant-numeric:tabular-nums}
+/* A "$" inside each pay box, so 150000 reads as dollars (UX-R7). */
+.pbox .usd{position:relative;display:block}.pbox .cur{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}.pbox .usd input{padding-left:22px}
+/* Advanced: the YAML editor, folded away under the readable cards (UX-R5). */
+details.adv>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px}details.adv>summary::-webkit-details-marker{display:none}details.adv>summary::before{content:"\25B8";font-size:.8em}details.adv[open]>summary::before{content:"\25BE"}details.adv>summary h2{margin:0}details.adv[open]>summary{margin-bottom:10px}details.adv>form{display:grid;gap:10px}
+.lvls{display:flex;flex-wrap:wrap;gap:6px}.lvls .chipbtn{min-height:44px}
+.lvls .chipbtn:disabled,.seg input:disabled+span{opacity:.55;cursor:default}
+.secs{display:grid;gap:2px}
+.secrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:4px 0}
+.secrow .lbl{font-size:.9rem;min-width:0}.secrow .snote{grid-column:1/-1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.seg label{display:block;position:relative;color:var(--ink);font:500 .82rem var(--f-body);cursor:pointer}
+.seg label+label{border-left:1px solid var(--line)}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 9px;box-sizing:border-box}
+.seg input:checked+span{background:var(--ink);color:var(--bg)}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-3px}
+@media (max-width:520px){.secrow{grid-template-columns:minmax(0,1fr)}.seg{display:grid;grid-template-columns:repeat(4,1fr)}.seg span{padding:0 4px}}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 16px}
+.sgrid select{width:100%;min-height:44px}
+.snote{font:500 .82rem var(--f-body);color:var(--warn);background:var(--warn-soft);border-radius:7px;padding:5px 9px;margin:0}
+.snote[hidden]{display:none}
+/* The Unsaved bar sticks to the bottom of the screen while the settings card is in view. */
+.unsaved{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:var(--ink);color:var(--bg);border-radius:10px;padding:8px 10px 8px 14px;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.unsaved[hidden]{display:none}
+.unsaved span{flex:1 1 auto;font-weight:600}
+.unsaved .primary,.unsaved .btn{min-height:44px}
+.unsaved .btn{color:var(--bg);border-color:var(--bg)}
+/* Filters sheet: Work boxes and Pay (RR-FA). */
+.fbar .fgrp{border:0;margin:0;padding:0;display:grid;gap:6px;min-width:0}
+.fbar .fgrp>legend{font:600 .82rem var(--f-body);color:var(--muted);padding:0;margin:0 0 4px;display:flex;gap:8px;width:100%}
+.fbar .fval{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:2px 12px}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.9rem;color:var(--ink);cursor:pointer}
+.chk input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--accent)}
+.chk .n{margin-left:auto;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+/* The work label sits beside the company name, so it never adds a line to the card (CARD-5). */
+.job .corow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.job .wk{font:600 .75rem/1.3 var(--f-body);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;white-space:nowrap}
 </style>
 
 <div class="wrap">
@@ -460,12 +522,22 @@ let config={...DEF_CONFIG};
 let LANES=config.lanes, SKIP_REASONS=config.skipReasons;
 function setConfig(c){config={...DEF_CONFIG,...(c||{})}; LANES=config.lanes; SKIP_REASONS=config.skipReasons;}
 const ATS=["greenhouse","ashby","lever"];
-const DEF_VIEW={q:"",status:"",sent:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",sorts:{}};
-// Four sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7).
-const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"]];
+// work: ticked Work boxes (ids below); payLo/payHi: the Pay filter in dollars, "" at either end of the range;
+// noPay: "0" when roles with no pay listed are left out of a Pay filter (RR-FA, docs/settings.md).
+const DEF_VIEW={q:"",status:"",sent:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",work:[],payLo:"",payHi:"",noPay:"",sorts:{}};
+// Five sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7, RR-FA FA-7).
+const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"],["pay","Highest pay","Top of the pay range first; no pay listed last"]];
+// Where the work happens (scoring.js workplaceOf), in the Work filter's order. "unknown" = the posting doesn't say.
+const WORK=[["remote_us","Remote (US)"],["remote_metro","Remote near a city"],["remote_non_us","Remote outside US"],["hybrid","Hybrid"],["onsite","On-site"],["unknown","Not stated"]];
+const WORK_LABEL=Object.fromEntries(WORK);
+// Pay range sliders (.range2): the Search settings base pay and the Pay filter share one scale.
+const R2_MIN=100000, R2_MAX=400000, R2_STEP=5000;
 const DEF_SORT={inbox:"fit",pipeline:"updated",all:"fit"};
 // Quick chips: each sets one view key (RR-FS-3). The Filters sheet holds the rest.
-const CHIPS=[["day","Last 24 hrs","found","1"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
+// "Remote (US)" sets the Work filter to just remote_us (RR-FA FA-5), so it reads pressed only while that is the one box ticked.
+// Remote (US) second, so it is fully on screen at 390px (UX-R1).
+const CHIPS=[["day","Last 24 hrs","found","1"],["remote","Remote (US)","work","remote_us"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
+const chipOn=([,,k,v])=>k==="work"?view.work.length===1&&view.work[0]===v:view[k]===v;
 const SHEET_KEYS=["lane","found","source","tag","conflict","status","sent"];
 // Gmail import: the viewer's Gmail connector, read-only (search_threads, batch_get_threads).
 let mcp=null, mcpState="checking", gm={state:"idle",items:[],picked:new Set(),msg:""}, gs={state:"idle",items:[],picked:new Set(),msg:""};
@@ -511,7 +583,13 @@ function migrateView(v){
   if(!["1","7","30"].includes(o.found)) o.found="";
   if(o.sent!=="1") o.sent="";
   if(tab!=="all") o.status="";
-  for(const k of Object.keys(DEF_VIEW)) if(k!=="sorts"&&typeof o[k]!=="string") o[k]="";
+  for(const k of Object.keys(DEF_VIEW)) if(!["sorts","work","payLo","payHi"].includes(k)&&typeof o[k]!=="string") o[k]="";
+  // Work, Pay and Include-no-pay (FA-8): unknown ids and values off the scale are dropped.
+  o.work=Array.isArray(o.work)?WORK.map(w=>w[0]).filter(id=>o.work.includes(id)):[];
+  const pv=x=>typeof x==="number"&&x>R2_MIN&&x<R2_MAX&&x%R2_STEP===0?x:"";
+  o.payLo=pv(o.payLo); o.payHi=pv(o.payHi);
+  if(o.payLo!==""&&o.payHi!==""&&o.payHi-o.payLo<R2_STEP){ o.payLo=""; o.payHi=""; }
+  if(o.noPay!=="0") o.noPay="";
   return o;
 }
 const sortOf=(t=tab)=>view.sorts[t]||DEF_SORT[t]||"fit";
@@ -577,9 +655,12 @@ function inTab(j,t){
   if(t==="ruled") return s==="skipped"&&!byRule(j);
   return true;
 }
+let tabCounts=null;
 function counts(){
   const c={home:"",inbox:0,pipeline:0,ruled:0,all:jobs.length,watch:companies.filter(x=>x.status!=="vetoed").length,filters:"",criteria:"",people:recruitersDue()||""};
-  jobs.forEach(j=>{["inbox","pipeline","ruled"].forEach(t=>{if(inTab(j,t))c[t]++;});});
+  // Worked out once per snapshot of the roles: every redraw shows these counts on the tab bar.
+  if(!tabCounts||tabCounts.jobs!==jobs){ const n={inbox:0,pipeline:0,ruled:0}; jobs.forEach(j=>{["inbox","pipeline","ruled"].forEach(t=>{if(inTab(j,t))n[t]++;});}); tabCounts={jobs,n}; }
+  Object.assign(c,tabCounts.n);
   if(jobsState!=="ready") JOB_TABS.forEach(t=>{c[t]="";});
   return c;
 }
@@ -658,9 +739,12 @@ function scoreLine(j){
 // Values and Culture badges: same rules as the scan and intake (criteria.yaml values_fit, culture_fit).
 const RATE_LABEL={great:"Great",good:"Good",neutral:"Neutral",maybe:"Maybe",no:"No",unrated:"Unrated"};
 const RATE_RANK={great:0,good:1,neutral:2,maybe:3,no:4,unrated:5};
+// Worked out once per role object per criteria object, like scoreOf (sorts, filters and cards all read it; RR-H-21, FA-9).
+let fitsMemo=new WeakMap(), fitsSpec=null;
 function fitsOf(j){
   if(!SC||!specData||!SC.valuesFitOf) return null;
-  return {values:SC.valuesFitOf(j,specData),culture:SC.cultureFitOf(j,specData)};
+  if(fitsSpec!==specData){ fitsMemo=new WeakMap(); fitsSpec=specData; }
+  let f=fitsMemo.get(j); if(!f){ f={values:SC.valuesFitOf(j,specData),culture:SC.cultureFitOf(j,specData)}; fitsMemo.set(j,f); } return f;
 }
 function fitRows(j){
   const f=fitsOf(j); if(!f) return "";
@@ -680,6 +764,54 @@ function scoreOf(j){
   let r=scoreMemo.get(j); if(!r){ r=SC.scoreJob(j,specData); scoreMemo.set(j,r); } return r;
 }
 const scoreNum=j=>{const r=scoreOf(j); return r?r.score:typeof j.score==="number"?j.score:null;};
+// Workplace and pay, worked out once per role object (a snapshot replaces the objects), so filtering and the
+// Highest pay sort over 2,000 roles stay inside the RR-H-21 budget (FA-9).
+const wpMemo=new WeakMap(), compMemo=new WeakMap();
+const wpOf=j=>{ let w=wpMemo.get(j); if(!w){ w=SC&&SC.workplaceOf?SC.workplaceOf(j):{id:"unknown",label:""}; wpMemo.set(j,w); } return w; };
+const compOf=j=>{ let c=compMemo.get(j); if(!c){ c={r:SC?SC.parseComp(j.comp):null}; compMemo.set(j,c); } return c.r; };
+// The Pay filter as [low, high] dollars, or null at the full range (no filter).
+const payRange=()=>view.payLo===""&&view.payHi===""?null:[view.payLo===""?0:view.payLo,view.payHi===""?Infinity:view.payHi];
+const kUsd=n=>"$"+Math.round(n/1000)+"K";
+const payText=()=>view.payLo!==""&&view.payHi!==""?`${kUsd(view.payLo)}–${kUsd(view.payHi)}`:view.payLo!==""?`${kUsd(view.payLo)} or more`:view.payHi!==""?`up to ${kUsd(view.payHi)}`:"Any";
+
+// After roles or criteria arrive, the per-role memos fill in idle time, a few ms at a time, so the first filter or
+// sort over a long list (a Work box, Highest pay) finds them ready (RR-H-21, FA-9).
+function warmMemos(){
+  const list=jobs, spec=specData, later=window.requestIdleCallback||(f=>setTimeout(f,16)); let i=0;
+  if(!SC||!spec||!list.length) return;
+  const step=dl=>{ if(list!==jobs||spec!==specData) return; const end=performance.now()+8;
+    while(i<list.length&&(dl&&dl.timeRemaining?dl.timeRemaining()>1:performance.now()<end)){ const j=list[i++]; scoreOf(j); fitsOf(j); wpOf(j); compOf(j); }
+    if(i<list.length) later(step); };
+  later(step);
+}
+// Two-handle range (.range2): one track, the filled segment between the handles, two role=slider handles that move by
+// pointer drag or keys (arrows ±$5K, Page Up/Down ±$25K, Home/End) and never cross. R2_ON[prefix](lo,hi,final) owns the
+// values: the Search settings card writes them to the criteria draft, the Filters sheet to the saved view.
+const r2Snap=v=>Math.min(R2_MAX,Math.max(R2_MIN,Math.round(v/R2_STEP)*R2_STEP));
+const r2Pct=v=>((Math.min(R2_MAX,Math.max(R2_MIN,v))-R2_MIN)/(R2_MAX-R2_MIN)*100).toFixed(3)+"%";
+function range2Html(p,lo,hi,names,off){
+  const h=(w,v,name)=>`<span role="slider" id="${p}-${w}" class="r2h" tabindex="${off?-1:0}" aria-label="${esc(name)}" aria-valuemin="${R2_MIN}" aria-valuemax="${R2_MAX}" aria-valuenow="${v}" aria-valuetext="${kUsd(v)}"${off?` aria-disabled="true"`:""} style="left:${r2Pct(v)}"></span>`;
+  return `<div class="range2${off?" off":""}" data-r2="${p}"><span class="rail"></span><span class="fill" style="left:${r2Pct(lo)};right:calc(100% - ${r2Pct(hi)})"></span>${h("lo",lo,names[0])}${h("hi",hi,names[1])}</div>`;
+}
+function r2Paint(p,lo,hi,off){
+  const r=document.querySelector(`.range2[data-r2="${p}"]`); if(!r) return;
+  r.classList.toggle("off",!!off);
+  const f=r.querySelector(".fill"); f.style.left=r2Pct(lo); f.style.right=`calc(100% - ${r2Pct(hi)})`;
+  [["lo",lo],["hi",hi]].forEach(([w,v])=>{ const el=$(`#${p}-${w}`); el.style.left=r2Pct(v); el.setAttribute("aria-valuenow",String(v)); el.setAttribute("aria-valuetext",kUsd(v));
+    if(off){ el.setAttribute("aria-disabled","true"); el.tabIndex=-1; } else { el.removeAttribute("aria-disabled"); el.tabIndex=0; } });
+}
+const r2Vals=p=>["lo","hi"].map(w=>Number($(`#${p}-${w}`)?.getAttribute("aria-valuenow")));
+/** Moves one handle to v (snapped, kept $5K clear of the other), repaints, and tells the owner. */
+function r2Move(p,w,v,final){
+  let [lo,hi]=r2Vals(p); v=r2Snap(v);
+  if(w==="lo") lo=Math.min(v,hi-R2_STEP); else hi=Math.max(v,lo+R2_STEP);
+  r2Paint(p,lo,hi,false);
+  const top=$(`#${p}-${w}`); document.querySelectorAll(`.range2[data-r2="${p}"] .r2h`).forEach(x=>x.classList.toggle("top",x===top));
+  R2_ON[p]?.(lo,hi,final,w);
+}
+// While a handle is dragged, redraws wait until it is let go (a redraw would drop the pointer).
+let r2Drag=null, renderPending=false;
+const R2_ON={};
 const firstSentence=s=>(String(s||"").trim().match(/^.*?[.!?](?=\s|$)/)||[String(s||"").trim()])[0];
 const descOf=j=>j.descriptionHtml?String(j.descriptionHtml):j.descriptionPlain?String(j.descriptionPlain).split(/\n\s*\n/).map(p=>`<p>${esc(p.trim())}</p>`).join(""):"";
 const FIT_WORD={strong:"Strong",maybe:"Partial",partial:"Partial",stretch:"Stretch"};
@@ -722,7 +854,9 @@ function jobCard(j){
   // leads so Withdraw is never the first verb (UX-H2-R12). Preview lives in Details as "Preview posting".
   const skip=!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">${WITHDRAW.includes(s)?"Withdraw":"Skip"}</button>`:"";
   const details=`<button class="btn" type="button" data-details="${id}" aria-haspopup="dialog" aria-controls="detailsSheet">Details</button>`;
-  const meta=[j.location&&esc(j.location),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
+  const w=wpOf(j), loc=String(j.location??"").trim();
+  // With a work pill, the location would say it twice (UX-R4); the full location stays in Details.
+  const meta=[!w.label&&loc&&esc(loc),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>
@@ -733,7 +867,7 @@ function jobCard(j){
       <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
   return `<article class="job${preview===j._id?" sel":""}" id="${roleAnchor(j._id)}" tabindex="-1">
     <div class="top"><div class="head">
-      <div class="co">${esc(j.company)}</div>
+      <div class="corow"><span class="co">${esc(j.company)}</span>${w.label?`<span class="wk">${esc(w.label)}</span>`:""}</div>
       <h2>${desc?`<a href="${url?esc(url):"#preview"}"${url?` target="_blank" rel="noopener"`:` role="button"`} data-preview="${id}">${esc(title)}</a>`:url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}">${esc(title)}</a>`:esc(title)}</h2>
     </div>${scoreTile}</div>
     ${subScores(j)}
@@ -761,7 +895,7 @@ function detailsBody(j){
       ${j.fitNote?`<p class="note">${esc(j.fitNote)}</p>`:""}
       ${cf?`<p class="cnote">Overlaps ${esc(cf.names.join(", "))}${cf.note?`: ${esc(cf.note)}`:""}</p>`:""}</section>
     <section class="ds-sec"><label for="ds-st">Status</label><select id="ds-st" data-setstatus="${id}">${stOpts}</select>
-      ${datesLine(j)}${src?`<p class="hint">Found via ${esc(src)}</p>`:""}
+      ${datesLine(j)}${String(j.location??"").trim()?`<p class="hint">Location: ${esc(String(j.location).trim())}</p>`:""}${src?`<p class="hint">Found via ${esc(src)}</p>`:""}
       ${j.emailNote?`<p class="hint">Inbox: ${esc(j.emailNote)}</p>`:""}
       ${s==="skipped"&&(j.skipReason||j.skipNote)?`<p class="hint">Ruled out${ruledAt(j)?` ${fmtDate(ruledAt(j))}`:""}: ${esc([j.skipReason,j.skipNote].filter(Boolean).join(". "))}</p>`:""}</section>
     <div class="fields">
@@ -792,22 +926,24 @@ function closeDetails(focus=true){
 }
 // Cards are reused between redraws while nothing they show has changed, so search and tab switches move
 // existing cards instead of rebuilding thousands of them (RR-H-21).
-const cardCache=new Map(); let cardCtx=null;
+// Roles are never changed in place (each snapshot brings new objects), so a role's JSON is worked out once.
+const cardCache=new Map(), cardJson=new WeakMap(); let cardCtx=null;
 function cardEls(list){
   const ctx=[specData,config,filters,LANES,today()];
   if(!cardCtx||ctx.some((x,i)=>x!==cardCtx[i])){ cardCache.clear(); cardCtx=ctx; }
-  const keyOf=j=>JSON.stringify(j)+"|"+(preview===j._id)+(skipOpen===j._id);
-  const keys=list.map(keyOf), miss=list.filter((j,i)=>{const c=cardCache.get(j._id); return !c||c.key!==keys[i];});
-  if(miss.length){ const t=document.createElement("template"); t.innerHTML=miss.map(jobCard).join(""); [...t.content.children].forEach((el,i)=>cardCache.set(miss[i]._id,{key:keyOf(miss[i]),el})); }
+  const keyOf=j=>{ let k=cardJson.get(j); if(k===undefined){ k=JSON.stringify(j); cardJson.set(j,k); } return k+"|"+(preview===j._id)+(skipOpen===j._id); };
+  const keys=list.map(keyOf), miss=[], mk=[];
+  list.forEach((j,i)=>{ const c=cardCache.get(j._id); if(!c||c.key!==keys[i]){ miss.push(j); mk.push(keys[i]); } });
+  if(miss.length){ const t=document.createElement("template"); t.innerHTML=miss.map(jobCard).join(""); [...t.content.children].forEach((el,i)=>cardCache.set(miss[i]._id,{key:mk[i],el})); }
   return list.map(j=>cardCache.get(j._id).el);
 }
 function opts(list,cur,all){return `<option value="">${all}</option>`+list.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("");}
-function filterBar(){
+function filterBar(base=[]){
   const ic=d=>`<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const sources=[...new Set(jobs.map(j=>j.source||j.ats).filter(Boolean))].sort().map(s=>[s,srcName(s)]);
   const tags=[...new Set(jobs.flatMap(tagsOf))].sort().map(t=>[t,t]);
-  const set=sheetSet(), any=!!view.q||set.length>0||CHIPS.some(([,,k,v])=>view[k]===v), cur=sortOf();
-  const chips=CHIPS.map(([id,label,k,v])=>`<button class="chipbtn" type="button" data-chip="${id}" aria-pressed="${view[k]===v}">${view[k]===v?ic('<path d="M5 12l5 5L20 7"/>'):""}${label}</button>`).join("")
+  const set=sheetSet(), any=!!view.q||set.length>0||CHIPS.some(chipOn), cur=sortOf();
+  const chips=CHIPS.map(c=>{const on=chipOn(c); return `<button class="chipbtn" type="button" data-chip="${c[0]}" aria-pressed="${on}">${on?ic('<path d="M5 12l5 5L20 7"/>'):""}${c[1]}</button>`;}).join("")
     +set.map(([k,label])=>`<button class="chipbtn unset" type="button" data-unset="${k}" aria-label="Remove filter ${esc(label)}">${esc(label)}${ic('<path d="M6 6l12 12M18 6L6 18"/>')}</button>`).join("");
   return `<form class="fbar" id="fbar">
     <div class="frow">
@@ -831,12 +967,24 @@ function filterBar(){
         <label for="fv-conflict">Product conflict<select id="fv-conflict" data-v="conflict">${opts([["flag","Flagged"],["clear","No conflict"]],view.conflict,"Any")}</select></label>
         ${tab==="all"?`<label for="fv-status">Status<select id="fv-status" data-v="status">${opts(STATUSES,view.status,"Any")}</select></label>`:""}
       </div>
+      ${workGroup(base)}
+      <fieldset class="fgrp" id="fv-pay"><legend>Pay <span class="fval" id="fv-pay-val">${esc(payText())}</span></legend>
+        ${range2Html("fv-pay",view.payLo===""?R2_MIN:view.payLo,view.payHi===""?R2_MAX:view.payHi,["Pay from","Pay up to"])}
+        <div class="r2ends" aria-hidden="true"><span>${kUsd(R2_MIN)}</span><span>${kUsd(R2_MAX)}+</span></div>
+        <label class="chk" for="fv-nopay"><input type="checkbox" id="fv-nopay" aria-describedby="fv-nopay-hint"${view.noPay==="0"?"":" checked"}${payRange()?"":" disabled"}>Include roles with no pay listed</label>
+        <p class="hint" id="fv-nopay-hint"${payRange()?" hidden":""}>Set a pay range first.</p>
+      </fieldset>
       <div class="sbar">${set.length?`<button class="btn" type="button" id="freset">Reset</button>`:""}<button class="primary" type="button" id="fdone">Done</button></div>
     </div>
     <button type="button" id="fscrim" class="${filtersOpen||sortOpen?"on":""}" aria-label="Close" tabindex="-1"></button>
   </form>`;
 }
 const sortName=k=>(SORTS.find(s=>s[0]===k)||SORTS[0])[1];
+// The Work checkbox group (FA-4): one box per workplace, each with how many roles in this tab it covers.
+function workGroup(base){
+  const n={}; base.forEach(j=>{const id=wpOf(j).id; n[id]=(n[id]||0)+1;});
+  return `<fieldset class="fgrp" id="fv-work"><legend>Work</legend><div class="wgrid">${WORK.map(([id,l])=>`<label class="chk" for="fv-work-${id}"><input type="checkbox" name="work" id="fv-work-${id}" value="${id}"${view.work.includes(id)?" checked":""}><span>${l}</span><span class="n">${n[id]||0}</span></label>`).join("")}</div></fieldset>`;
+}
 // Filters set in the sheet, as [key, chip label] (RR-FS-4). Status counts only on the All tab.
 function sheetSet(){
   const out=[];
@@ -847,11 +995,14 @@ function sheetSet(){
   if(view.conflict) out.push(["conflict",view.conflict==="flag"?"Conflict flagged":"No conflict"]);
   if(tab==="all"&&view.status) out.push(["status","Status: "+(STATUS_LABEL[view.status]||view.status)]);
   if(tab==="pipeline"&&view.sent) out.push(["sent","Sent"]);
+  // Just Remote (US) belongs to its quick chip, like Last 24 hrs.
+  if(view.work.length&&!(view.work.length===1&&view.work[0]==="remote_us")) out.push(["work","Work: "+view.work.map(id=>WORK_LABEL[id]).join(", ")]);
+  if(payRange()) out.push(["pay","Pay: "+payText()]);
   return out;
 }
 function closeSheets(focusId){ filtersOpen=false; sortOpen=false; render(); if(focusId) $("#"+focusId)?.focus(); }
 function applyView(list){
-  const q=view.q.trim().toLowerCase();
+  const q=view.q.trim().toLowerCase(), work=view.work.length?new Set(view.work):null, pay=payRange();
   return list.filter(j=>{
     if(q&&!([j.company,j.title,j.notes,j.fitNote,j.nextStep,j.referral,tagsOf(j).join(" ")].join(" ").toLowerCase().includes(q))) return false;
     if(tab==="all"&&view.status&&st(j)!==view.status) return false;
@@ -863,6 +1014,9 @@ function applyView(list){
     if(view.tag&&!tagsOf(j).includes(view.tag)) return false;
     if(view.found){const d=daysSince(j.firstSeen); if(d===null||d>Number(view.found)) return false;}
     if(view.conflict){const c=!!conflictOf(j); if(view.conflict==="flag"&&!c) return false; if(view.conflict==="clear"&&c) return false;}
+    if(work&&!work.has(wpOf(j).id)) return false;
+    // Pay (FA-6): the role's range overlaps the filter; a role with no pay listed shows only while Include is on.
+    if(pay){ const r=compOf(j); if(!r){ if(view.noPay==="0") return false; } else if(r.max<pay[0]||r.min>pay[1]) return false; }
     return true;
   });
 }
@@ -876,7 +1030,9 @@ function sortList(list,t=tab){
     fit:(a,b)=>((sc(b)??-1)-(sc(a)??-1))||cult(a,b)||(rank[(a.fit||"").toLowerCase()]??3)-(rank[(b.fit||"").toLowerCase()]??3)||String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     found:(a,b)=>String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")),
     updated:(a,b)=>String(b.statusAt||b.firstSeen||"").localeCompare(String(a.statusAt||a.firstSeen||"")),
-    followup:(a,b)=>String(a.followUpDue||"9999").localeCompare(String(b.followUpDue||"9999"))};
+    followup:(a,b)=>String(a.followUpDue||"9999").localeCompare(String(b.followUpDue||"9999")),
+    // Highest pay (FA-7): top of the range, then bottom, then Best match; roles with no pay listed last.
+    pay:(a,b)=>{ const ra=compOf(a), rb=compOf(b); return (!ra||!rb?(ra?0:1)-(rb?0:1):(rb.max-ra.max)||(rb.min-ra.min))||by.fit(a,b); }};
   return list.sort(by[sortOf(t)]||by.fit);
 }
 function addRoleForm(){
@@ -893,7 +1049,7 @@ function renderJobs(){
   const base=jobs.filter(j=>inTab(j,tab));
   const list=sortList(applyView(base));
   // Pipeline's "Check Gmail" and "Add a role" sit after the last card, so the first card starts high (UX-H2-R9).
-  const head=base.length?filterBar():"", tail=tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"";
+  const head=base.length?filterBar(base):"", tail=tab==="pipeline"?(TOOLS?gmailStatus():"")+addRoleForm():"";
   let body;
   if(!list.length){
     const msg=base.length?["No roles match these filters","Clear a filter to see more."]:{inbox:["Nothing new right now","The morning scan adds matching roles here. Open one and it's marked viewed; save or skip it to clear it out."],
@@ -998,30 +1154,134 @@ const sentence=t=>String(t).replace(/^\w/,c=>c.toUpperCase());
 // "fully_remote_us" -> "Fully remote, US"
 const workTxt=v=>v?sentence(String(v).replace(/_/g," ").replace(/\s+us$/i,", US")):"—";
 const listTxt=a=>Array.isArray(a)?a.map(x=>esc(x)).join(", "):esc(a??"—");
+// Under the Search settings card: what the criteria never show, how scoring works, and the fit ratings.
 function critSummary(d){
   if(!d) return "";
-  const secs=(Array.isArray(d.sectors)?d.sectors:[]).slice().sort((a,b)=>(b.weight||0)-(a.weight||0));
-  const pip=w=>`<span class="pips w${esc(w)}" role="img" aria-label="weight ${esc(w)} of 3">${[1,2,3].map(i=>`<i class="${i<=w?"on":""}"></i>`).join("")}</span>`;
-  const hx=d.hard_exclude||{}, xs=[...(hx.companies||[]),...(hx.business_models||[])];
-  const r=d.role||{}, w=d.work||{}, c=d.comp||{}, sc=d.scoring||{};
-  return `<div class="ccard"><h2>At a glance</h2><div class="kv">
-      <div><small>Level</small><b>${sentence(listTxt(r.levels))}</b></div>
-      <div><small>Work</small><b>${esc(workTxt(w.remote))}</b></div>
-      ${w.home_state?`<div><small>Home state</small><b>${esc(w.home_state)}${w.planned_move&&w.planned_move.state?` → ${esc(w.planned_move.state)}${w.planned_move.when?` (${esc(w.planned_move.when)})`:""}`:""}</b></div>`:""}
-      <div><small>Base floor</small><b>${money(c.base_floor_usd)}</b></div>
-      <div><small>Priority-sector floor</small><b>${money(c.priority_sector_floor_usd)}</b></div>
-      <div><small>Min score to add</small><b>${esc(sc.min_score_to_add??"—")}</b></div>
-      <div><small>Digest size</small><b>${esc(sc.digest_max_items??"—")}</b></div>
-      ${AL?(()=>{const rs=AL.normalize(d).rules, n=l=>rs.filter(r=>r.level===l).length;return `<div><small>Alerts</small><b><a href="#alerts">${n("loud")} loud, ${n("quiet")} quiet (see Alerts)</a></b></div>`;})():""}
-    </div></div>
-    <div class="ccard"><h2>Sector weights</h2><div>${secs.map(s=>`<div class="sec"><span class="lbl">${esc(s.label||s.id)}</span>${pip(Number(s.weight)||0)}${Array.isArray(s.examples)&&s.examples.length?`<span class="ex">${listTxt(s.examples.slice(0,6))}</span>`:""}</div>`).join("")||`<span class="hint">No sectors yet.</span>`}</div></div>
-    ${xs.length?`<div class="ccard"><h2>Never show</h2><div class="tags">${xs.map(x=>`<span class="xchip">${esc(x)}</span>`).join("")}</div></div>`:""}
+  const hx=d.hard_exclude||{}, xs=[...(Array.isArray(hx.companies)?hx.companies:[]),...(Array.isArray(hx.business_models)?hx.business_models:[])], c=d.comp||{};
+  return `${xs.length?`<div class="ccard"><h2>Never show</h2><div class="tags">${xs.map(x=>`<span class="xchip">${esc(x)}</span>`).join("")}</div></div>`:""}
     <div class="ccard"><h2>Scoring</h2><p class="formula">sector = weight × 15 (0–45)
 experience = strong 35 · partial 20 · stretch 5
 culture signals = +10 good, −10 per red flag
 comp = +10 if the range reaches ${money(c.stretch_target_usd)}</p></div>
     ${fitCard(d)}`;
 }
+
+// ── Search settings (RR-SET, docs/settings.md) ──────────────────────────────────────────────────────────────
+// Fields and sliders for the values Chase changes most. Each change rewrites one line of the criteria draft through
+// skip-feedback.js applyToYaml (comments and every other line kept), refreshes the digest preview and shows the
+// Unsaved bar; nothing is written to the database until Save, which runs the editor's own save and checks.
+// Controls update in place (syncSettings), so a redraw never steals focus or drops a drag.
+const LEVELS=["mid","senior","staff","principal","lead"];
+const SEC_WEIGHTS=["Off","Allowed","Good","Priority"];
+const US_STATES=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["DC","District of Columbia"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"]];
+const SET_MISS="Not in your criteria yet. Add it under Advanced.";
+function settingsCard(){
+  const miss=k=>`<p class="snote" data-miss="${k}" hidden>${SET_MISS}</p>`;
+  const slider=(id,label,min,max,step,k)=>`<div class="sfield"><div class="shead"><label class="slbl" for="${id}">${label}</label><output class="sval" id="${id}-val" for="${id}"></output></div>
+      <input type="range" id="${id}" min="${min}" max="${max}" step="${step}">${miss(k)}</div>`;
+  return `<form class="ccard" id="settings" tabindex="-1" novalidate aria-labelledby="setTitle"><h2 id="setTitle">Search settings</h2>
+    <p class="sub" style="margin:0">Changes go into your criteria below. The scan keeps using the saved ones until you save.</p>
+    <p class="err" id="setBroken" hidden></p>
+    <div class="sfield"><div class="shead"><span class="slbl" id="set-pay-lbl">Base pay</span><span class="sval" id="set-pay-val"></span></div>
+      ${range2Html("set-pay",R2_MIN,R2_MAX,["Base pay floor","Base pay stretch target"],true)}
+      <div class="r2ends" aria-hidden="true"><span>${kUsd(R2_MIN)}</span><span>${kUsd(R2_MAX)}</span></div>
+      <div class="pbox"><label for="set-pay-min">Floor<span class="usd"><span class="cur" aria-hidden="true">$</span><input type="number" id="set-pay-min" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-pay-unit"></span></label>
+        <label for="set-pay-max">Stretch target<span class="usd"><span class="cur" aria-hidden="true">$</span><input type="number" id="set-pay-max" inputmode="numeric" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-pay-unit"></span></label></div>
+      <p class="hint" id="set-pay-unit">In dollars, e.g. 150000</p>
+      <p class="hint">Roles whose pay tops out under the floor are skipped. Pay that reaches the stretch target adds 10 to the score.</p>${miss("pay")}</div>
+    <div class="sfield"><div class="shead"><label class="slbl" for="set-prio">Priority-sector floor</label><output class="sval" id="set-prio-val" for="set-prio"></output></div>
+      <input type="range" id="set-prio" min="${R2_MIN}" max="${R2_MAX}" step="${R2_STEP}" aria-describedby="set-prio-hint">
+      <p class="hint" id="set-prio-hint">Priority sectors may pay down to this. It never goes above the base floor.</p>${miss("prio")}</div>
+    <fieldset class="sfield"><legend class="slbl">Levels</legend>
+      <div class="lvls">${LEVELS.map(l=>`<button type="button" class="chipbtn" data-level="${l}" aria-pressed="false">${sentence(l)}</button>`).join("")}</div>
+      <p class="hint" id="lvlMsg" role="status"></p>${miss("levels")}</fieldset>
+    <fieldset class="sfield"><legend class="slbl">Sectors</legend>
+      <p class="hint" style="margin:0">Off ignores a sector; Priority ranks it first and lets it use the priority floor.</p>
+      <div id="set-secs" class="secs"></div></fieldset>
+    <div class="sgrid">
+      <div class="sfield"><label class="slbl" for="set-home">Home state</label><select id="set-home"><option value="">Choose a state</option>${US_STATES.map(([c,n])=>`<option value="${c}">${n} (${c})</option>`).join("")}</select>${miss("home")}</div>
+      ${slider("set-minscore","Min score to add",0,100,5,"min")}
+      ${slider("set-digest","Digest size",1,20,1,"dig")}
+    </div>
+    <p class="hint" id="set-more" style="margin:0"></p>
+  </form>
+  <div class="unsaved" id="unsavedBar" role="region" aria-label="Unsaved changes" hidden><span>Unsaved changes</span><button class="primary" type="button" id="setSave">Save</button><button class="btn" type="button" id="setDiscard">Discard</button></div>`;
+}
+const secRow=(s,i)=>`<div class="secrow"><span class="lbl" id="sl-${i}">${esc(s.label||s.id)}</span>
+  <div class="seg" role="radiogroup" data-sector="${esc(s.id)}" aria-labelledby="sl-${i}">${SEC_WEIGHTS.map((l,n)=>`<label><input type="radio" role="radio" name="sec-${i}" value="${n}"><span>${l}</span></label>`).join("")}</div>
+  <p class="snote" data-miss="sec-${i}" hidden>${SET_MISS}</p></div>`;
+const setText=()=>critDraft??(criteria&&criteria.spec)??"";
+/** Paints every control from the draft (or, while the draft is broken, from the saved criteria, all disabled). */
+function syncSettings(){
+  const f=$("#settings"); if(!f) return;
+  const text=setText(), p=text?parseSpec(text):{data:null,err:""};
+  const reader=!!window.jsyaml&&!!SF, broken=!reader||!!p.err||!!critErr||!p.data;
+  const d=(broken?parseSpec((criteria&&criteria.spec)||"").data:p.data)||{};
+  const c=d.comp||{}, r=d.role||{}, w=d.work||{}, sc=d.scoring||{}, secs=(Array.isArray(d.sectors)?d.sectors:[]).filter(x=>x&&x.id!=null);
+  const num=x=>typeof x==="number"&&isFinite(x);
+  const can=(path,v)=>!broken&&v!=null&&!!SF.applyToYaml(text,{op:"set",path,value:v});
+  const levels=Array.isArray(r.levels)?r.levels.map(String):typeof r.levels==="string"?[r.levels]:null;
+  const ok={pay:num(c.base_floor_usd)&&num(c.stretch_target_usd)&&can(["comp","base_floor_usd"],c.base_floor_usd)&&can(["comp","stretch_target_usd"],c.stretch_target_usd),
+    prio:num(c.priority_sector_floor_usd)&&can(["comp","priority_sector_floor_usd"],c.priority_sector_floor_usd),
+    levels:!!levels&&can(["role","levels"],levels), home:typeof w.home_state==="string"&&can(["work","home_state"],w.home_state),
+    min:num(sc.min_score_to_add)&&can(["scoring","min_score_to_add"],sc.min_score_to_add), dig:num(sc.digest_max_items)&&can(["scoring","digest_max_items"],sc.digest_max_items)};
+  secs.forEach((s,i)=>{ ok["sec-"+i]=num(s.weight)&&can(["sectors",{id:String(s.id)},"weight"],s.weight); });
+  const bk=$("#setBroken"); bk.hidden=!broken; bk.textContent=reader?"Fix the text below first.":"The YAML reader didn't load, so these settings are off. Edit the text below.";
+  // Base pay: two handles and the Min/Max boxes.
+  let hi=num(c.stretch_target_usd)?r2Snap(c.stretch_target_usd):R2_MAX, lo=num(c.base_floor_usd)?r2Snap(c.base_floor_usd):R2_MIN;
+  hi=Math.max(hi,Math.min(R2_MAX,lo+R2_STEP)); lo=Math.min(lo,hi-R2_STEP);
+  if(!r2Drag||r2Drag.p!=="set-pay") r2Paint("set-pay",lo,hi,!ok.pay);
+  [["#set-pay-min",lo],["#set-pay-max",hi]].forEach(([id,v])=>{ const el=$(id); if(document.activeElement!==el) el.value=String(v); el.disabled=!ok.pay; });
+  $("#set-pay-val").textContent=ok.pay||broken?`Floor ${kUsd(lo)} · Target ${kUsd(hi)}`:"";
+  // Priority-sector floor.
+  const pr=$("#set-prio"), pv=num(c.priority_sector_floor_usd)?c.priority_sector_floor_usd:R2_MIN;
+  pr.value=String(pv); pr.disabled=!ok.prio; pr.setAttribute("aria-valuetext",kUsd(pv)); $("#set-prio-val").textContent=num(c.priority_sector_floor_usd)?kUsd(pv):"";
+  // Levels.
+  const lv=(levels||[]).map(x=>x.toLowerCase());
+  f.querySelectorAll("button[data-level]").forEach(b=>{ b.setAttribute("aria-pressed",String(lv.includes(b.dataset.level))); b.disabled=!ok.levels; });
+  // Sectors: rows are rebuilt only when the list of sectors changes.
+  const box=$("#set-secs"), key=JSON.stringify(secs.map(s=>[s.id,s.label]));
+  if(box.dataset.key!==key){ box.dataset.key=key; box.innerHTML=secs.length?secs.map(secRow).join(""):`<p class="hint" style="margin:0">Your criteria list no sectors. Add them under Advanced.</p>`; }
+  secs.forEach((s,i)=>{ const wt=num(s.weight)?Math.max(0,Math.min(3,Math.round(s.weight))):-1;
+    box.querySelectorAll(`input[name="sec-${i}"]`).forEach(x=>{ x.checked=Number(x.value)===wt; x.disabled=!ok["sec-"+i]; }); });
+  // Home state, min score, digest size.
+  const hm=$("#set-home"), code=typeof w.home_state==="string"?w.home_state:"";
+  if(code&&![...hm.options].some(o=>o.value===code)) hm.add(new Option(code,code));
+  hm.value=code; hm.disabled=!ok.home;
+  [["#set-minscore",sc.min_score_to_add,"min"],["#set-digest",sc.digest_max_items,"dig"]].forEach(([id,v,k])=>{ const el=$(id); if(num(v)) el.value=String(v); el.disabled=!ok[k]; $(id+"-val").textContent=num(v)?String(v):""; });
+  f.querySelectorAll("[data-miss]").forEach(n=>{ n.hidden=broken||!!ok[n.dataset.miss]; });
+  // What the card doesn't set, in words, and the way to the Alerts card.
+  const pm=w.planned_move&&w.planned_move.state?` · Moving to ${esc(w.planned_move.state)}${w.planned_move.when?` (${esc(w.planned_move.when)})`:""}`:"";
+  const al=AL?(()=>{const rs=AL.normalize(d).rules, n=l=>rs.filter(x=>x.level===l).length; return ` · <a href="#alerts">Alerts: ${n("loud")} loud, ${n("quiet")} quiet</a>`;})():"";
+  $("#set-more").innerHTML=`Work: ${esc(workTxt(w.remote))}${pm}${al}`;
+}
+function syncBar(){ const b=$("#unsavedBar"); if(b) b.hidden=!(critDraft!==null&&critDraft!==((criteria&&criteria.spec)||"")); }
+function previewSoon(){ clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(setText()).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},150); }
+/** Applies [path, value] changes to the draft, all or none. A change applyToYaml can't place is refused with a toast. */
+function setApply(changes){
+  if(!SF||!window.jsyaml) return false;
+  const before=setText(); let t=before;
+  for(const [path,value] of changes){ const n=SF.applyToYaml(t,{op:"set",path,value},x=>window.jsyaml.load(x)); if(n===null){ toast("Couldn't change that here. Edit it under Advanced."); syncSettings(); return false; } t=n; }
+  if(t!==before){ critDraft=t; critErr=""; const ta=$("#critText"); if(ta) ta.value=t; previewSoon(); }
+  syncSettings(); syncBar(); return true;
+}
+const draftData=()=>(parseSpec(setText()).data)||{};
+R2_ON["set-pay"]=(lo,hi,final,w)=>{
+  const c=draftData().comp||{}, ch=[];
+  if(w==="lo"&&lo!==c.base_floor_usd) ch.push([["comp","base_floor_usd"],lo]);
+  if(w==="hi"&&hi!==c.stretch_target_usd) ch.push([["comp","stretch_target_usd"],hi]);
+  // The priority-sector floor never sits above the base floor (SET-4).
+  if(w==="lo"&&typeof c.priority_sector_floor_usd==="number"&&c.priority_sector_floor_usd>lo) ch.push([["comp","priority_sector_floor_usd"],lo]);
+  if(ch.length) setApply(ch);
+};
+R2_ON["fv-pay"]=(lo,hi,final)=>{
+  view.payLo=lo>R2_MIN?lo:""; view.payHi=hi<R2_MAX?hi:"";
+  const o=$("#fv-pay-val"); if(o) o.textContent=payText();
+  // Include-no-pay only matters once a range is set (UX-R3).
+  const np=$("#fv-nopay"), nh=$("#fv-nopay-hint"); if(np) np.disabled=!payRange(); if(nh) nh.hidden=!!payRange();
+  if(!final) return;
+  saveView(); const a=document.activeElement&&document.activeElement.id; render(); if(a) $("#"+a)?.focus({preventScroll:true});
+};
 function fitCard(d){
   const cf=d.culture_fit||{}, checks=Array.isArray(cf.checks)?cf.checks:[], b=cf.bands||{great:6,good:3,maybe:-3};
   const vw=(d.values_fit&&d.values_fit.by_weight)||{3:"great",2:"good",1:"neutral",0:"no"};
@@ -1190,6 +1450,9 @@ async function gsApply(){
 }
 // The repo's example criteria.yaml, embedded below the script for a first-time user (tests keep it in sync).
 const exampleCriteria=()=>($("#exampleCriteria")?.textContent||"").replace(/^\n/,"");
+// Advanced stays open once opened (or opened for a fix or a suggestion) until it is closed again.
+let advOpen=false;
+document.addEventListener("toggle",e=>{ if(e.target&&e.target.id==="critAdv") advOpen=e.target.open; },true);
 function renderCriteria(){
   const text=critDraft??(criteria&&criteria.spec)??"";
   const p=text?parseSpec(text):{data:null,err:""};
@@ -1204,18 +1467,21 @@ function renderCriteria(){
     </form></div>`;
   // While a draft is broken or was blocked, the summary keeps showing what is saved, so nothing looks wiped.
   const shown=critErr||p.err?parseSpec((criteria&&criteria.spec)||"").data:p.data;
-  return `<div class="crit">${critSummary(shown)}
-    <form class="ccard" id="critForm"><h2>criteria.yaml</h2>
-      <p class="sub" style="margin:0">The scan reads this before every run. Change a weight, add a company to <span class="mono">hard_exclude</span>, or move the comp floor, then save.${when?` Last saved ${esc(when)}.`:""}</p>
+  return `<div class="crit">${settingsCard()}
+    <div class="ccard"><h2>Digest preview</h2><p class="sub" style="margin:0">How tomorrow's digest would rank the roles in New with these criteria. Change a setting and watch it change.</p><div id="digestPreview">${digestPreview(p.data)}</div></div>
+    <div class="ccard alerts" id="alerts"><h2>Alerts</h2><p class="sub" style="margin:0">What pings your phone, set by the <span class="mono">alerts</span> block under Advanced. Change a level or a score and watch this change.</p><div id="alertsPreview">${alertsPreview(p.data)}</div></div>
+    ${critSummary(shown)}
+    <details class="ccard adv" id="critAdv"${advOpen||!(criteria&&criteria.spec)||critErr||p.err||!window.jsyaml||(critFrom&&critDraft!==null)?" open":""}><summary><h2>Advanced: edit as text</h2></summary>
+    <form id="critForm">
+      <p class="sub" style="margin:0">Your <span class="mono">criteria.yaml</span>. The scan reads it before every run. Change a weight, add a company to <span class="mono">hard_exclude</span>, or move the comp floor, then save.${when?` Last saved ${esc(when)}.`:""}</p>
       ${critFrom&&critDraft!==null?`<p class="fromskips" id="fromSkips" role="status">From your skips: <b>${esc(critFrom.text)}</b>. ${esc(critFrom.why)} Nothing changes until you save.</p>`:""}
       ${critErr||p.err?`<p class="err" id="critErr" role="alert" style="scroll-margin-top:16px">${esc(critErr||p.err)}</p>`:""}
       ${!window.jsyaml?`<p class="err">The YAML reader didn't load, so the summary and preview are off. You can still edit and save.</p>`:""}
       <label for="critText" class="sr" style="position:absolute;left:-9999px">Criteria YAML</label>
       <textarea id="critText" class="code" spellcheck="false" autocapitalize="off" autocomplete="off"${critErr||p.err?` aria-invalid="true" aria-describedby="critErr"`:""}>${esc(text)}</textarea>
       <div class="ctl"><button class="primary" type="submit">Save criteria</button>${critDraft!==null?`<button class="btn" type="button" id="critReset">Discard changes</button>`:""}</div>
-    </form>
-    <div class="ccard"><h2>Digest preview</h2><p class="sub" style="margin:0">How tomorrow's digest would rank the roles in New with the criteria above. Edit a weight and watch it change.</p><div id="digestPreview">${digestPreview(p.data)}</div></div>
-    <div class="ccard alerts" id="alerts"><h2>Alerts</h2><p class="sub" style="margin:0">What pings your phone, set by the <span class="mono">alerts</span> block above. Change a level or a score and watch this change.</p><div id="alertsPreview">${alertsPreview(p.data)}</div></div></div>`;
+    </form></details>
+  </div>`;
 }
 // Events the alert rules would see in the data on this page: new roles (with score), status moves, due follow-ups, recent recruiter contact.
 function alertEvents(spec){
@@ -1416,13 +1682,15 @@ function loadState(){
   return `<div class="empty" role="status" aria-busy="true"><strong>Loading your roles…</strong></div>`;
 }
 function render(){
+  if(r2Drag){ renderPending=true; return; }
+  renderPending=false;
   renderTabs();
   const v=$("#view"); v.dataset.tab=tab;
   if(!db&&!dbChecked){ v.innerHTML=loadState(); return; }
   if(!db){ v.innerHTML=`<div class="empty"><strong>Sign in to see your roles</strong><span>This tracker reads its data from your Claude account, so it needs a signed-in view.</span></div>`; return;}
   if(tab==="watch"){v.innerHTML=renderWatch();return;}
   if(tab==="filters"){v.innerHTML=renderFilters();return;}
-  if(tab==="criteria"){v.innerHTML=renderCriteria();return;}
+  if(tab==="criteria"){v.innerHTML=renderCriteria(); syncSettings(); syncBar(); return;}
   if(tab==="people"){v.innerHTML=renderPeople();return;}
   if(JOB_TABS.includes(tab)&&jobsState!=="ready"){v.innerHTML=loadState();return;}
   if(tab==="ruled"){v.innerHTML=renderRuled();return;}
@@ -1431,9 +1699,26 @@ function render(){
     const l=v.querySelector("#home-pipeline .list"); if(l) l.replaceChildren(...cardEls(homePipeline())); return; }
   // Reused cards keep their focus across a redraw (a #role- link or digest jump stays put when data arrives).
   const fa=document.activeElement, keep=fa&&fa.closest&&fa.closest("#view .list article.job")?fa:null;
-  const r=renderJobs(); v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); }
+  const r=renderJobs(), old=r.shown&&v.querySelector(":scope>.list");
+  if(old){ placeAround(v,old,r.html); old.classList.toggle("long",r.shown>=200); syncList(old,cardEls(r.list)); }
+  else { v.innerHTML=r.html; if(r.shown) { const l=v.querySelector(".list"); l.classList.toggle("long",r.shown>=200); l.replaceChildren(...cardEls(r.list)); } }
   if(keep&&keep.isConnected&&document.activeElement!==keep) keep.focus({preventScroll:true});
   const c=$("#fcount"); if(c){ const n=r.shown===r.total?`${r.total} ${r.total===1?"role":"roles"}`:`${r.shown} of ${r.total} roles`; c.textContent=r.total?`${n} · ${sortName(sortOf())}`:""; }
+}
+// A redraw that still shows a list keeps that list element in place and rebuilds only what sits around it (the
+// filter bar, Pipeline's tail), so the cards that stay are not detached and restyled on every tick (RR-H-21, FA-9).
+function placeAround(v,keep,html){
+  const t=document.createElement("template"); t.innerHTML=html;
+  const kids=[...t.content.childNodes], i=kids.findIndex(n=>n.nodeType===1&&n.classList.contains("list"));
+  for(const n of [...v.childNodes]) if(n!==keep) n.remove();
+  keep.className=kids[i].className; keep.before(...kids.slice(0,i)); keep.after(...kids.slice(i+1));
+}
+// Puts exactly these cards in this order into the list, moving only the ones that changed place.
+function syncList(l,els){
+  const want=new Set(els);
+  for(const c of [...l.childNodes]) if(!want.has(c)) c.remove();
+  let cur=l.firstChild;
+  for(const el of els){ if(el===cur) cur=cur.nextSibling; else l.insertBefore(el,cur); }
 }
 // Skip a full redraw while someone is typing in a form, so edits aren't lost.
 function softRender(){ const a=document.activeElement; if(a&&a.closest&&a.closest("form")&&a.closest("form").id!=="fbar"){renderTabs();return;} render(); }
@@ -1582,17 +1867,31 @@ document.addEventListener("click",async e=>{
   const re=e.target.closest("[data-recedit]");
   if(re){ editRec=editRec===re.dataset.recedit?null:re.dataset.recedit; render(); return; }
   if(e.target.id==="critReset"){ critDraft=null; critErr=""; critFrom=null; render(); return; }
+  // Search settings: level chips (at least one stays on), and the Unsaved bar's Save and Discard (SET-5, SET-11).
+  const lvb=e.target.closest("#settings button[data-level]");
+  if(lvb){ const d=draftData(), cur=(Array.isArray(d.role&&d.role.levels)?d.role.levels:typeof (d.role&&d.role.levels)==="string"?[d.role.levels]:[]).map(String);
+    const id=lvb.dataset.level, on=cur.some(x=>x.toLowerCase()===id), msg=$("#lvlMsg");
+    const next=on?cur.filter(x=>x.toLowerCase()!==id):[...cur,id];
+    if(!next.length){ if(msg) msg.textContent="Keep at least one level."; return; }
+    if(msg) msg.textContent="";
+    const lc=next.map(x=>x.toLowerCase());
+    setApply([[["role","levels"],[...LEVELS.filter(l=>lc.includes(l)),...next.filter(x=>!LEVELS.includes(x.toLowerCase()))]]]); return; }
+  if(e.target.closest("#setSave")){ $("#critForm")?.requestSubmit(); return; }
+  if(e.target.closest("#setDiscard")){ critDraft=null; critErr=""; critFrom=null; render(); $("#settings")?.focus({preventScroll:true}); return; }
   if(e.target.id==="critExample"){ critDraft=exampleCriteria(); critErr=""; render(); $("#critText")?.focus({preventScroll:true}); toast("Example loaded. Change it to fit your search, then Save criteria."); return; }
   if(e.target.id==="reloadPage"){ location.reload(); return; }
   const fb=e.target.closest("#ftoggle,#fsort");
   if(fb){ const f=fb.id==="ftoggle", open=!(f?filtersOpen:sortOpen); filtersOpen=f&&open; sortOpen=!f&&open; render();
     if(open) $(f?"#ffields select":"#fsortSheet input:checked")?.focus(); else $("#"+fb.id)?.focus(); return; }
   if(e.target.id==="fdone"||e.target.id==="fscrim"){ closeSheets(filtersOpen?"ftoggle":"fsort"); return; }
-  if(e.target.id==="freset"){ for(const k of SHEET_KEYS) if(k!=="found"||view.found!=="1") view[k]=""; saveView(); render(); $("#fdone")?.focus(); return; }
+  if(e.target.id==="freset"){ for(const k of SHEET_KEYS) if(k!=="found"||view.found!=="1") view[k]="";
+    if(!chipOn(CHIPS.find(c=>c[0]==="remote"))) view.work=[]; view.payLo=""; view.payHi=""; view.noPay="";
+    saveView(); render(); $("#fdone")?.focus(); return; }
   const ch=e.target.closest("[data-chip]");
-  if(ch){ const c=CHIPS.find(x=>x[0]===ch.dataset.chip); if(c){ view[c[2]]=view[c[2]]===c[3]?"":c[3]; saveView(); render(); $(`[data-chip="${c[0]}"]`)?.focus(); } return; }
+  if(ch){ const c=CHIPS.find(x=>x[0]===ch.dataset.chip); if(c){ if(c[2]==="work") view.work=chipOn(c)?[]:[c[3]]; else view[c[2]]=view[c[2]]===c[3]?"":c[3]; saveView(); render(); $(`[data-chip="${c[0]}"]`)?.focus(); } return; }
   const un=e.target.closest("[data-unset]");
-  if(un){ view[un.dataset.unset]=""; saveView(); render(); ($(".fbar [data-unset]")||$("#ftoggle"))?.focus(); return; }
+  if(un){ const k=un.dataset.unset; if(k==="work") view.work=[]; else if(k==="pay"){ view.payLo=""; view.payHi=""; view.noPay=""; } else view[k]="";
+    saveView(); render(); ($(".fbar [data-unset]")||$("#ftoggle"))?.focus(); return; }
   if(e.target.id==="fclear"){ view={...DEF_VIEW,sorts:view.sorts}; saveView(); render(); $("#q")?.focus(); return; }
   // Home's tiles open the roles behind each number: To do and In progress on All by status, Done on Pipeline
   // filtered to Sent (applied, screen, interviewing, offer), so the list matches the tile (UX-H2-R8).
@@ -1638,16 +1937,32 @@ document.addEventListener("toggle",e=>{
   if(d.open){ openMore.add(id); openMore.delete(id+"-closed"); } else { openMore.delete(id); openMore.add(id+"-closed"); }
 },true);
 document.addEventListener("change",async e=>{
+  if(e.target.closest&&e.target.closest("#settings")){
+    const t=e.target, g=t.closest("[data-sector]");
+    if(g&&t.type==="radio"){ setApply([[["sectors",{id:g.dataset.sector},"weight"],Number(t.value)]]); return; }
+    if(t.id==="set-home"){ if(t.value) setApply([[["work","home_state"],t.value]]); else syncSettings(); return; }
+    // Min/Max boxes: a typed value snaps to $5K, stays in the range and clear of the other handle (SET-3).
+    if(t.id==="set-pay-min"||t.id==="set-pay-max"){ const n=Number(t.value); if(t.value!==""&&isFinite(n)) r2Move("set-pay",t.id==="set-pay-min"?"lo":"hi",n,true); syncSettings(); return; }
+    return;
+  }
   const s=e.target.closest("[data-setstatus]");
   if(s){ const j=jobs.find(x=>x._id===s.dataset.setstatus); if(!j) return;
     // Skipping asks why on the card, so the sheet closes onto it.
     if(s.value==="skipped"){ skipOpen=j._id; closeDetails(); render(); requestAnimationFrame(()=>document.querySelector("[data-skipform] [data-skipwhy]")?.focus()); return; }
     await setStatus(j,s.value,null,{undo:true}); render(); return; }
+  if(e.target.name==="work"&&e.target.closest("#fv-work")){ const on=new Set([...document.querySelectorAll("#fv-work input[name=work]:checked")].map(x=>x.value));
+    view.work=WORK.map(w=>w[0]).filter(id=>on.has(id)); saveView(); render(); $("#fv-work-"+e.target.value)?.focus(); return; }
+  if(e.target.id==="fv-nopay"){ view.noPay=e.target.checked?"":"0"; saveView(); render(); $("#fv-nopay")?.focus(); return; }
   if(e.target.name==="fsort"&&e.target.closest("#fbar")){ view.sorts={...view.sorts,[tab]:e.target.value}; saveView(); closeSheets("fsort"); return; }
   const f=e.target.closest("#fbar [data-v]");
   if(f){ const id=f.id; view[f.dataset.v]=f.value; saveView(); render(); $("#"+id)?.focus(); }
 });
-document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; const has=!!critDraft.trim(); $("#critSave")?.classList.toggle("cta",has); $("#critExample")?.classList.toggle("cta",!has); clearTimeout(digestPreview._t); digestPreview._t=setTimeout(()=>{const spec=parseSpec(critDraft).data, el=$("#digestPreview"), al=$("#alertsPreview"); if(el) el.innerHTML=digestPreview(spec); if(al) al.innerHTML=alertsPreview(spec);},250); return;} if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
+document.addEventListener("input",e=>{ if(e.target.id==="critText"){critDraft=e.target.value; critErr=""; const has=!!critDraft.trim(); $("#critSave")?.classList.toggle("cta",has); $("#critExample")?.classList.toggle("cta",!has); previewSoon(); syncSettings(); syncBar(); return;}
+  // Search settings sliders: each move rewrites its line of the draft (SET-4, SET-7).
+  if(e.target.id==="set-prio"){ const lo=(draftData().comp||{}).base_floor_usd; let v=Number(e.target.value);
+    if(typeof lo==="number"&&v>lo){ v=lo; e.target.value=String(lo); } setApply([[["comp","priority_sector_floor_usd"],v]]); return; }
+  if(e.target.id==="set-minscore"){ setApply([[["scoring","min_score_to_add"],Number(e.target.value)]]); return; }
+  if(e.target.id==="set-digest"){ setApply([[["scoring","digest_max_items"],Number(e.target.value)]]); return; } if(e.target.id==="q"){view.q=e.target.value; saveView(); const pos=e.target.selectionStart; render(); const el=$("#q"); if(el){el.focus(); el.setSelectionRange(pos,pos);} }});
 document.addEventListener("submit",async e=>{
   e.preventDefault(); if(!db) return;
   const sk=e.target.closest("form[data-skipform]");
@@ -1719,7 +2034,7 @@ document.addEventListener("submit",async e=>{
     if(parsed.err){ showErr(parsed.err,`${parsed.line?`Line ${parsed.line} has`:"There's"} a YAML error. Nothing was saved.`); return; }
     const gone=droppedParts(parsed.data,parseSpec((criteria&&criteria.spec)||"").data);
     if(gone.length){ const m=`This would remove: ${gone.join(", ")}. Nothing was saved.`; showErr(m+" Put those sections back, or choose Discard changes.",m); return; }
-    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); if(critFrom){ const id=critFrom.id; critFrom=null; syncSkipFeedback({accepted:[...new Set([...((skipFb&&skipFb.accepted)||[]),id])]}); } toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
+    try{await db.doc("meta/criteria").set({spec,updatedAt:new Date().toISOString(),version:(parsed.data&&parsed.data.version)||null}); critDraft=null; critErr=""; document.activeElement?.blur?.(); if(tab==="criteria") render(); if(critFrom){ const id=critFrom.id; critFrom=null; syncSkipFeedback({accepted:[...new Set([...((skipFb&&skipFb.accepted)||[]),id])]}); } toast(window.__RR_DEMO__?"Criteria saved for this visit. The demo resets when you reload.":"Criteria saved. Next scan uses them.");}
     catch(err){toast("Couldn't save the criteria.");}
   }
 });
@@ -1738,6 +2053,34 @@ document.addEventListener("keydown",e=>{
   if(e.target.id!=="critText"||e.key!=="Tab"||e.shiftKey) return;
   e.preventDefault(); const t=e.target, a=t.selectionStart; t.setRangeText("  ",a,t.selectionEnd,"end"); critDraft=t.value;
 });
+
+// .range2 handles (RR-SET, RR-FA): keys move the focused handle; a drag moves the handle under the pointer, or the
+// nearest one when the track is pressed. Handles that sit on top of each other follow the drag's direction.
+document.addEventListener("keydown",e=>{
+  const h=e.target.closest&&e.target.closest(".range2 .r2h"); if(!h||h.getAttribute("aria-disabled")==="true") return;
+  const v=Number(h.getAttribute("aria-valuenow")), big=5*R2_STEP;
+  const to={ArrowRight:v+R2_STEP,ArrowUp:v+R2_STEP,ArrowLeft:v-R2_STEP,ArrowDown:v-R2_STEP,PageUp:v+big,PageDown:v-big,Home:R2_MIN,End:R2_MAX}[e.key];
+  if(to===undefined) return;
+  e.preventDefault(); r2Move(h.closest(".range2").dataset.r2,h.id.endsWith("-lo")?"lo":"hi",to,true);
+});
+document.addEventListener("pointerdown",e=>{
+  const r=e.target.closest&&e.target.closest(".range2"); if(!r||r.classList.contains("off")||e.button!==0) return;
+  e.preventDefault();
+  const p=r.dataset.r2, box=r.getBoundingClientRect(), at=x=>R2_MIN+(x-box.left)/box.width*(R2_MAX-R2_MIN), [lo,hi]=r2Vals(p);
+  const hit=e.target.closest(".r2h"), v=at(e.clientX), w=hit?(hit.id.endsWith("-lo")?"lo":"hi"):v<=lo?"lo":v>=hi?"hi":(v-lo<=hi-v?"lo":"hi");
+  const close=Math.abs(hi-lo)/(R2_MAX-R2_MIN)*box.width<24;
+  r2Drag={p,w,at,x0:e.clientX,pick:!!hit&&close};
+  $(`#${p}-${w}`)?.focus({preventScroll:true});
+  try{ r.setPointerCapture(e.pointerId); }catch(_){}
+  if(!hit) r2Move(p,w,v,false);
+});
+document.addEventListener("pointermove",e=>{
+  const d=r2Drag; if(!d) return;
+  if(d.pick){ if(Math.abs(e.clientX-d.x0)<3) return; d.w=e.clientX<d.x0?"lo":"hi"; d.pick=false; $(`#${d.p}-${d.w}`)?.focus({preventScroll:true}); }
+  r2Move(d.p,d.w,d.at(e.clientX),false);
+});
+const r2End=()=>{ const d=r2Drag; if(!d) return; r2Drag=null; const [lo,hi]=r2Vals(d.p); R2_ON[d.p]?.(lo,hi,true,d.w); if(renderPending) render(); };
+document.addEventListener("pointerup",r2End); document.addEventListener("pointercancel",r2End);
 
 { const t=$("#toast"); t.addEventListener("mouseenter",toastHold); t.addEventListener("mouseleave",toastLetGo); t.addEventListener("focusin",toastHold); t.addEventListener("focusout",toastLetGo); }
 // Issue #62: the studio demo bar, demo builds only. Collapsed on load; Details opens a push-down drawer, Esc closes it.
@@ -1768,12 +2111,12 @@ render();
   render();
   // A failed read logs only which collection failed, never the error (it can carry data or links).
   const readFailed=name=>()=>console.warn("Role Radar: couldn't read "+name);
-  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender(); if(deepRole){ const r=deepRole; deepRole=null; setTimeout(()=>focusRole(r),0); }},()=>{readFailed("jobs")(); jobsState="error"; render();});
+  db.collection("jobs").onSnapshot(s=>{jobs=s.docs.map(d=>({...d.data(),_id:d.id})); jobsState="ready"; softRender(); warmMemos(); if(deepRole){ const r=deepRole; deepRole=null; setTimeout(()=>focusRole(r),0); }},()=>{readFailed("jobs")(); jobsState="error"; render();});
   db.collection("companies").onSnapshot(s=>{companies=s.docs.map(d=>({...d.data(),_id:d.id})); if(tab==="watch"&&document.activeElement?.closest("form")) {renderTabs(); return;} if(tab==="watch"||tab==="home") softRender(); else renderTabs();},readFailed("companies"));
   db.doc("meta/filters").onSnapshot(s=>{filters=s.exists?s.data():null; if(tab==="filters"&&document.activeElement?.closest("form")) return; softRender();},readFailed("meta/filters"));
   db.doc("meta/config").onSnapshot(s=>{setConfig(s.exists?s.data():null); softRender();},readFailed("meta/config"));
   if(recStore) recStore.subscribe(list=>{recruiters=list; if(tab==="people"||tab==="home") softRender(); else renderTabs();});
-  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; if(tab==="criteria"&&critDraft!==null) return; softRender();},readFailed("meta/criteria"));
+  db.doc("meta/criteria").onSnapshot(s=>{criteria=s.exists?s.data():null; specData=criteria&&criteria.spec?parseSpec(criteria.spec).data||null:null; warmMemos(); if(tab==="criteria"&&critDraft!==null) return; softRender();},readFailed("meta/criteria"));
   db.doc("meta/skipFeedback").onSnapshot(s=>{skipFb=s.exists?s.data():null; if(tab==="ruled") softRender();},readFailed("meta/skipFeedback"));
   db.doc("meta/scan").onSnapshot(s=>{scan=s.exists?s.data():null; renderScan(); if((tab==="watch"||tab==="home")&&!document.activeElement?.closest("form")) render();},readFailed("meta/scan"));
 })();

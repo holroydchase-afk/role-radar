@@ -259,13 +259,15 @@ test("DCL-10 privacy: the public demo's More has no Recruiters row and no due do
 
 // ── No regression on PR #57 (UX-H-AC14) ───────────────────────────────────────────────────────
 
-test("DCL-11 UX-H-AC14 the PR #57 filter bar (search, Sort, Filters, four chips) stays on New, Pipeline and All", async () => {
+// FA-5 (docs/settings.md) adds a fifth quick chip, "Remote (US)"; the PR #57 bar must still be whole on all three tabs.
+test("DCL-11 UX-H-AC14 the PR #57 filter bar (search, Sort, Filters, its four chips plus FA-5's Remote (US)) stays on New, Pipeline and All", async () => {
   const { page, errors } = await openDemo({ ...PHONE, ready: "#tab-inbox .n" });
   for (const id of ["inbox", "pipeline", "all"]) {
     await page.click(`#tab-${id}`);
     await settle(page);
     for (const sel of ["#q", "#fsort", "#ftoggle"]) assert.ok(await page.locator(sel).isVisible(), `${id}: ${sel}`);
-    assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Strong fit", "Good values", "Good culture"], `${id}: chips`);
+    // UX-R1: Remote (US) second, so it is fully on screen at 390px.
+    assert.deepEqual(await page.locator("#fbar [data-chip]").allInnerTexts(), ["Last 24 hrs", "Remote (US)", "Strong fit", "Good values", "Good culture"], `${id}: chips`);
   }
   assert.deepEqual(errors, []);
   await page.close();
