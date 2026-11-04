@@ -4,7 +4,8 @@
  *
  *   score = sector (weight × 15) + fit (strong 35 · maybe 20 · stretch 5)
  *         + culture (+10 any good signal, −10 per red flag, floor −20)
- *         + comp (+10 if the range reaches stretch_target_usd)
+ *         + comp (+10 if the range reaches stretch_target_usd; with comp.pay_weight, pay is its own
+ *                 weighted part: target_points at the target, mid_points from mid_usd, unknown_points when unstated)
  *         − values (15 if the business is on values_penalty)
  *         + dream (dream_roles.bonus, default 15, for a role like one of the dream_roles anchors)
  *         + stage (company_stage.startup_penalty, e.g. −20, when job.companyStage is "startup")
@@ -23,6 +24,8 @@ export type Many<T> = T | T[] | null | undefined;
 type Num = number | string | null | undefined;
 
 export interface Sector { id: string; label?: string; weight?: Num; examples?: Many<string>; keywords?: Many<string> }
+/** Pay as its own weight. The target is comp.stretch_target_usd unless target_usd is set. */
+export interface PayWeight { target_usd?: number; target_points?: number; mid_usd?: number; mid_points?: number; unknown_points?: number }
 export interface DreamAnchor { company?: string; title?: string; check?: string | null }
 export interface CultureCheck { id: string; short?: string; points?: number }
 export interface StoredFit { rating?: string; reason?: string }
@@ -33,7 +36,7 @@ export interface Criteria {
   default_sector_weight?: Num;
   role?: { title_include?: Many<string>; title_exclude?: Many<string> };
   work?: { hybrid_ok_near?: Many<string> };
-  comp?: { base_floor_usd?: number; priority_sector_floor_usd?: number; stretch_target_usd?: number };
+  comp?: { base_floor_usd?: number; priority_sector_floor_usd?: number; stretch_target_usd?: number; pay_weight?: PayWeight };
   hard_exclude?: { companies?: Many<string>; business_models?: Many<string> };
   culture?: { good_signals?: Many<string>; red_flags?: Many<string>; hard_red_flags?: Many<string>; red_flag_effect?: string };
   values_penalty?: Many<string>;
@@ -197,6 +200,20 @@ export function matchJob(job: Job, spec?: Criteria | null): Match {
   return { ok: reasons.length === 0, reasons };
 }
 
+/** Comp points: the pay_weight bands when set, else the +10 stretch bonus. */
+function compPoints(range: CompRange | null, comp?: Criteria["comp"]): number {
+  const c = comp || {}, pw = c.pay_weight;
+  const n = (v: unknown): number => Number(v) || 0;
+  if (pw && typeof pw === "object") {
+    if (!range) return n(pw.unknown_points);
+    const target = n(pw.target_usd) || n(c.stretch_target_usd);
+    if (target && range.max >= target) return n(pw.target_points);
+    if (n(pw.mid_usd) && range.max >= n(pw.mid_usd)) return n(pw.mid_points);
+    return 0;
+  }
+  return range && c.stretch_target_usd && range.max >= c.stretch_target_usd ? COMP_BONUS : 0;
+}
+
 /** Score breakdown for one job. Missing comp or culture data simply adds nothing. */
 export function scoreJob(job: Job, spec?: Criteria | null): ScoreResult {
   spec = spec || {};
@@ -205,14 +222,13 @@ export function scoreJob(job: Job, spec?: Criteria | null): ScoreResult {
   const fitKey = lc(job.fit);
   const culture = cultureOf(job, spec);
   const range = parseComp(job.comp);
-  const target = spec.comp && spec.comp.stretch_target_usd;
   const values = valuesHit(job, spec);
   const dream = dreamOf(job, spec, sector);
   const parts: Parts = {
     sector: weight * SECTOR_POINTS_PER_WEIGHT,
     fit: (FIT_POINTS as Record<string, number | undefined>)[fitKey] || 0,
     culture: culture.points,
-    comp: range && target && range.max >= target ? COMP_BONUS : 0,
+    comp: compPoints(range, spec.comp),
     values: values ? VALUES_PENALTY : 0,
     // A dream match means dream_roles is there: dreamOf found an anchor or keyword in it.
     dream: dream ? Number(spec.dream_roles!.bonus ?? DREAM_BONUS) || 0 : 0,
