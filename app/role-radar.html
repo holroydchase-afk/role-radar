@@ -1162,7 +1162,7 @@ function critSummary(d){
     <div class="ccard"><h2>Scoring</h2><p class="formula">sector = weight × 15 (0–45)
 experience = strong 35 · partial 20 · stretch 5
 culture signals = +10 good, −10 per red flag
-comp = +10 if the range reaches ${money(c.stretch_target_usd)}</p></div>
+${c.pay_weight&&typeof c.pay_weight==="object"?`pay = +${Number(c.pay_weight.target_points)||0} at ${money(c.pay_weight.target_usd||c.stretch_target_usd)}${c.pay_weight.mid_usd?` · +${Number(c.pay_weight.mid_points)||0} from ${money(c.pay_weight.mid_usd)}`:""} · +${Number(c.pay_weight.unknown_points)||0} if not stated · floor ${money(c.base_floor_usd)}`:`comp = +10 if the range reaches ${money(c.stretch_target_usd)}`}</p></div>
     ${fitCard(d)}`;
 }
 

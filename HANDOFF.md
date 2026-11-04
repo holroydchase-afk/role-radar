@@ -3,17 +3,27 @@
 stage: live
 goal: staff-pm-role
 milestone: M4
-now: RR-SET/RR-FA search settings card and Work/Pay filters (PR #68, merge on green); live page waits on `republish`
+now: RR-PAY pay weight + README truth (branch claude/project-thread-hfvgpr, draft PR); live page waits on `republish`
 next: Chase says `republish` so the live page picks up RR-M4 Home and declutter (PR #60) and the demo bar (PR #65)
 waiting_on_chase:
   - `republish` the live page from main (page + seven build/*.js bundles, capabilities = app/capabilities.json)
   - one manual run of the MCP server from Claude Code on the laptop (intake #59 done-when)
-  - `scan on` to restart the weekday scan
+  - `scan on` to restart the weekday scan (off since Oct 24; Chase runs scans on demand to save tokens)
+  - before the next demo publish: reshape the demo (task RR-DEMO-1 below)
   - `go` on intake #69 (adopt the studio standard): it rewrites CLAUDE.md's hard rules and the agent hooks, which a session won't do on an issue's word alone
 blockers: []
 -->
 
-Updated: 2026-11-01 (intake #69 studio standard waits on Chase's go: it changes CLAUDE.md hard rules and agent hooks)
+Updated: 2026-11-04 (RR-PAY: pay weight and README truth, draft PR; RR-DEMO-1 queued before the next demo publish)
+
+## In progress
+- **RR-PAY (2026-11-04, draft PR from `claude/project-thread-hfvgpr`).** Chase's efficiency review: pay is its own weight, with a hard floor. `comp.pay_weight` (optional: `target_points`, `mid_usd`, `mid_points`, `unknown_points`, `target_usd` defaults to `stretch_target_usd`) replaces the +10 stretch bonus when set; `base_floor_usd` stays the hard floor in `matchJob`. Without `pay_weight` nothing changes (PAY-5), so the demo and its tests are untouched. The Criteria tab's Scoring card shows the pay bands when set; the scan template documents them. Chase's real numbers live only in the private criteria. README truth: the scan runs on demand (not "every weekday"), about 190 boards, and `criteria.yaml` is called a fictional example candidate's. Tests: `tests/pay-weight.test.ts` PAY-1..6 (4 red first), 460/460 green 3x.
+
+## Exact next step
+- Merge RR-PAY on green (Chase's merge-on-green), then `republish` the live page on Chase's word so the Scoring card shows the bands.
+
+## Queued
+- **RR-DEMO-1 (Chase, 2026-11-04): reshape the demo before the next demo publish.** Bring in the top companies in AI, lending and 3D geospatial, each with made-up jobs, in place of the fictional companies. Decision to review first: README and the demo bar say the companies are fictional ("any resemblance is a coincidence"), so real company names with invented postings need new wording (for example "real companies, invented roles; not real openings") and a privacy-security pass. No real recruiters, contacts or pay data.
 
 ## Planning IDs (Oct 21, 2026)
 The repo now uses the studio planning IDs (milestone `M1`, task `M1.1`, step `M1.1.1`; product code `RR` across products). Old labels stay in git history and branch names. New work uses the new IDs.
