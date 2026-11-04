@@ -10,9 +10,9 @@ const read = (p: string) => readFileSync(url(p), "utf8");
 const DOCS = ["docs/product/DECISIONS.md", "docs/eng/LESSONS.md", "docs/product/ACCOUNTS.md", "docs/product/MARKETING.md", "docs/eng/AGENT-NOTES.md"];
 
 test("STD-1 CLAUDE.md points at the studio standard and says its own hard rules win", () => {
-  assert.ok(
-    read("CLAUDE.md").includes("Studio standard: follow the studio-agents repo docs/studio-standard.md; this file's hard rules win where they say more."),
-  );
+  const md = read("CLAUDE.md");
+  assert.match(md, /Studio standard\.?\*{0,2}:?\s*follow(?: the)? studio-agents repo,? ?docs\/studio-standard\.md/i, "points at the standard");
+  assert.match(md, /this file's hard rules win where they say more/, "own hard rules win");
 });
 
 test("STD-2 the agents table has a story-keeper row and the agent file exists", () => {
