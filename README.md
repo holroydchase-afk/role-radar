@@ -2,7 +2,7 @@
 
 [![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-**A job search that runs itself every weekday morning.** Role Radar scans job boards, scores each new role against criteria written as code, and keeps every application, follow-up and recruiter in one place. I built it for my own search for a senior product role, and I use it every day.
+**A job search radar that scans on request.** Role Radar scans job boards, scores each new role against criteria written as code, and keeps every application, follow-up and recruiter in one place. I built it for my own search for a senior product role, and I use it every day.
 
 **[Try the live demo](https://chaseholroyd.com/role-radar/)** (sample data, no login) · [More of my work](https://chaseholroyd.com/)
 
@@ -23,7 +23,7 @@ A senior job search is a part-time job made of small chores:
 
 ```mermaid
 flowchart LR
-  subgraph Morning["Every weekday, 7:45 ET"]
+  subgraph Morning["On request (built for a weekday schedule)"]
     S["Scan agent<br/>(scheduled Claude run)"]
   end
   B["Company boards<br/>Greenhouse · Ashby · Lever"] --> S
@@ -39,7 +39,7 @@ flowchart LR
 
 1. **Criteria as code.** Everything I'm looking for lives in one YAML file ([`criteria.yaml`](criteria.yaml)). It sets sector weights, title and location gates, comp floors, culture red flags, hard excludes, and how many roles from each sector can appear in one digest. I edit it on the Criteria tab, and the next scan follows it.
 2. **A transparent score.** Every role gets 0 to 100 from one formula, and each card shows how its score was reached (`45 sector + 35 experience + 10 comp = 90`). The rules live in [`src/scoring.ts`](src/scoring.ts) and are pinned down by tests, so the page, the tests and the scan's instructions agree.
-3. **A scheduled scan agent.** Each weekday morning, a scheduled Claude run reads the criteria, checks the boards and aggregators, reads job-alert and application emails (read-only), adds new matches, moves application statuses forward from confirmations and rejections, and sends me a short digest. Its instructions are in [`scan/scan-prompt.template.md`](scan/scan-prompt.template.md).
+3. **A scan agent.** Built to run on a weekday schedule; today I run it when I ask, to save tokens. Each run is a Claude session that reads the criteria, checks the boards and aggregators, reads job-alert and application emails (read-only), adds new matches, moves application statuses forward from confirmations and rejections, and sends me a short digest. Its instructions are in [`scan/scan-prompt.template.md`](scan/scan-prompt.template.md).
 4. **One tracker.** New roles land in *New*. Saving or applying moves them to *Pipeline*. *Needs action* lists follow-ups that are due, applications with no reply, and resumes that are ready but not sent. *Ruled out* keeps every role I said no to, with the reason. *Recruiters* keeps each contact's last touchpoint and next step, and can be filled from Gmail in one pass (below).
 5. **One-tap intake.** *Apply* copies a prompt for my job-intake agent, which screens the posting, asks only the gap questions that would change a bullet, and builds a tailored resume from my career master doc.
 6. **Read the posting in place.** Click a role and a panel on the right shows the posting's own description, word for word, loaded straight from the company's public Greenhouse, Ashby or Lever board. It costs no AI tokens and nothing is saved; roles from other sources get an *Open posting* link instead. On a phone it opens as a full-screen sheet. The logic lives in [`src/posting.ts`](src/posting.ts).
@@ -80,7 +80,7 @@ The same read-only search keeps the pipeline current. *Check Gmail for status up
 
 ## What it saves
 
-- **The morning search.** I no longer open job boards. The scan covers about 110 company boards plus aggregators and alert emails, and a phone notification tells me if anything is worth a look.
+- **The morning search.** I no longer open job boards. A scan covers about 190 company boards plus aggregators and alert emails, and tells me if anything is worth a look.
 - **Triage time.** Roles arrive ranked by what I care about, each with a one-line reason and its score breakdown. Fintech roles still show up, but they no longer crowd out energy and climate work.
 - **Status bookkeeping.** Confirmation and rejection emails update the tracker on their own, and follow-up dates are set when I mark something applied.
 - **Lost leads.** Past recruiters sit next to the roles, with a next step and a due date.
@@ -146,7 +146,7 @@ Then paste a posting and ask: *"Score this posting for me."*
 | `build/` | `npm run build` output (gitignored): each `src/*.ts` bundled by esbuild into the classic script the page loads, same name and global |
 | `app/capabilities.json` | What the live page may use: its database (with the owner-only recruiter rule) and read-only Gmail |
 | `criteria.yaml` | Example criteria for a demo candidate |
-| `scan/` | The weekday scan prompt, as a template |
+| `scan/` | The scan prompt, as a template (written for a weekday schedule) |
 | `demo/` | Fictional seed data and the in-memory database |
 | `scripts/` | Bundle build, demo build, screenshots, scan-prompt renderer, privacy check |
 | `tests/` | Node test runner: scoring, privacy check, demo build, Playwright UI |
