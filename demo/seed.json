@@ -164,6 +164,7 @@
       "statusAt": "@t-9",
       "viewedAt": "@t-11",
       "appliedAt": "@t-9",
+      "effort": { "startedAt": "@t-10", "readyAt": "@t-9", "gateRuns": 4, "tokensK": 180 },
       "followUpDue": "@d-2",
       "resumeName": "Tailored resume (demo)",
       "emailNote": "Application received (demo email).",
@@ -188,6 +189,7 @@
       "statusAt": "@t-3",
       "viewedAt": "@t-18",
       "appliedAt": "@t-15",
+      "effort": { "startedAt": "@t-16", "readyAt": "@t-15", "gateRuns": 9, "tokensK": 320 },
       "followUpDue": "@d-10",
       "cultureChecks": {
         "fast_paced": "posting: fast-paced, wear many hats",
@@ -234,6 +236,7 @@
       "statusAt": "@t-6",
       "viewedAt": "@t-27",
       "appliedAt": "@t-25",
+      "effort": { "startedAt": "@t-27", "readyAt": "@t-25", "gateRuns": 14, "tokensK": 410 },
       "nextStep": "Panel with the climate science team",
       "followUpDue": "@d-20"
     },
@@ -276,6 +279,7 @@
       "statusAt": "@t-0",
       "viewedAt": "@t-8",
       "appliedAt": "@t-0",
+      "effort": { "startedAt": "@t-1", "readyAt": "@t-0", "gateRuns": 3, "tokensK": 150 },
       "followUpDue": "@d--5"
     },
     "manual-harborline-mutual-dpm-finance-technology": {

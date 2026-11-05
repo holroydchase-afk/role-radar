@@ -12,9 +12,10 @@ waiting_on_chase:
 blockers: []
 -->
 
-Updated: 2026-11-04 (intake #69 studio standard adopted in PR #73; RR-PAY pay weight merged in PR #74 and republished as v29; RR-DEMO-1 queued before the next demo publish)
+Updated: 2026-11-05 (RR-VEL Velocity section on Home, PR open, waits for Chase's go; intake #69 studio standard adopted in PR #73; RR-PAY pay weight merged in PR #74 and republished as v29; RR-DEMO-1 queued before the next demo publish)
 
 ## In progress
+- **RR-VEL (2026-11-05, PR open, NOT merged, live page NOT republished).** Chase: track application velocity and the time/tokens per application, shown as visuals on the Role Radar home page. New `velocity()` in `src/progress.ts` (applications per day over 14 days, median hours to ready, gate runs and tokens per application, recent six) and a Velocity section on Home between Applications and After you apply. Reads an optional per-role `effort: {startedAt, readyAt, gateRuns, tokensK}` field; roles without it are fine. Demo seed has made-up effort on four roles. Tests: `tests/velocity.test.ts` VEL-1..6 (red first), HOME-6 and RR-TS-6/8 updated for the new section and exports; 473/473 in one run. Chase's real numbers are NOT in the repo: the live effort data has to be written to the live database by the private thread (backfill from the applications `rounds.md` files), and the page republished, both on Chase's go. Gate target 5 runs is the proposal from the thread; Chase to confirm.
 - **RR-PAY (2026-11-04, PR #74, merged; live v29).** Chase's efficiency review: pay is its own weight, with a hard floor. `comp.pay_weight` (optional: `target_points`, `mid_usd`, `mid_points`, `unknown_points`, `target_usd` defaults to `stretch_target_usd`) replaces the +10 stretch bonus when set; `base_floor_usd` stays the hard floor in `matchJob`. Without `pay_weight` nothing changes (PAY-5), so the demo and its tests are untouched. The Criteria tab's Scoring card shows the pay bands when set; the scan template documents them. Chase's real numbers live only in the private criteria. README: `criteria.yaml` is called a fictional example candidate's (the scan wording is fixed in PR #71, not here). Tests: `tests/pay-weight.test.ts` PAY-1..6 (4 red first), 460/460 green 3x.
 
 ## Exact next step
