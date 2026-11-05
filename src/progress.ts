@@ -23,6 +23,8 @@ export interface ProgressJob {
   appliedAt?: string; skippedAt?: string; skippedBy?: string; skipReason?: string;
   firstSeen?: string; followUpDue?: string; followUpsSent?: unknown; statusHistory?: unknown;
   sector?: string; score?: unknown;
+  /** Optional effort log for the resume behind this application (RR-VEL). */
+  effort?: { startedAt?: string; readyAt?: string; gateRuns?: number; tokensK?: number } | null;
   [key: string]: unknown;
 }
 /** Jobs as a list, or as the database's id → doc map. */
@@ -291,4 +293,39 @@ export function coverageLine(coverage: unknown, companies?: unknown): { text: st
     failing = cos.filter((c) => c && c.status !== "vetoed" && num(c.failStreak) > 0).length;
   } else failing = num(cv.failed) || (Array.isArray(cv.failedList) ? cv.failedList.length : 0);
   return { text: failing ? `${total - failing} of ${total} boards OK · ${failing} failing` : `${total} boards read · all OK`, failing };
+}
+
+/** Application velocity (RR-VEL): applications a day, plus the effort behind each resume. job.effort is optional. */
+export interface Velocity {
+  perDay: { day: string; applied: number }[];
+  avgPerDay: number;
+  sampled: number;
+  medianHours: number | null; medianGateRuns: number | null; medianTokensK: number | null;
+  gateTarget: number;
+  recent: { id: string; company: string; hours: number | null; gateRuns: number | null; tokensK: number | null }[];
+}
+export const GATE_TARGET = 5;
+const median = (xs: number[]): number | null => {
+  if (!xs.length) return null;
+  const a = [...xs].sort((x, y) => x - y), m = a.length >> 1;
+  return a.length % 2 ? a[m] : Math.round(((a[m - 1] + a[m]) / 2) * 10) / 10;
+};
+const num = (v: unknown): number | null => (typeof v === "number" && isFinite(v) ? v : null);
+
+export function velocity(jobs: Jobs, { now = Date.now(), tz, days = 14 }: { now?: When; tz?: string; days?: number } = {}): Velocity {
+  const js = list(jobs), todayKey = dayKey(toMs(now, tz), tz);
+  const keys = Array.from({ length: days }, (_, i) => addDays(todayKey, i - days + 1));
+  const perDay = keys.map((day) => ({ day, applied: js.filter((j) => dayKey(sentAt(j), tz) === day).length }));
+  const applied = perDay.reduce((k, x) => k + x.applied, 0);
+  const rows = js.filter((j) => j.effort && typeof j.effort === "object").map((j) => {
+    const e = j.effort!, a = toMs(e.startedAt, tz), b = toMs(e.readyAt, tz);
+    const hours = !isNaN(a) && !isNaN(b) && b >= a ? Math.round(((b - a) / 36e5) * 10) / 10 : null;
+    return { id: j._id || "", company: j.company || "", hours, gateRuns: num(e.gateRuns), tokensK: num(e.tokensK), ready: isNaN(b) ? 0 : b };
+  }).filter((r) => r.hours !== null || r.gateRuns !== null || r.tokensK !== null);
+  const col = (k: "hours" | "gateRuns" | "tokensK") => median(rows.map((r) => r[k]).filter((v): v is number => v !== null));
+  return {
+    perDay, avgPerDay: Math.round((applied / days) * 10) / 10, sampled: rows.length,
+    medianHours: col("hours"), medianGateRuns: col("gateRuns"), medianTokensK: col("tokensK"), gateTarget: GATE_TARGET,
+    recent: [...rows].sort((a, b) => b.ready - a.ready).slice(0, 6).map(({ ready, ...r }) => r),
+  };
 }

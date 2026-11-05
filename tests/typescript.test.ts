@@ -23,7 +23,7 @@ const MODULES = {
   "gmail-import": { global: "RoleRadarGmail", keys: ["DEFAULT_QUERY", "candidates", "companyFromEmail", "dateOf", "isAutomated", "needsFullThread", "nextStatus", "parseAddress", "recruiterDoc", "signalOf", "slug", "statusPatch", "statusQuery", "statusUpdates", "threadsFrom", "typeFor"] },
   posting: { global: "RoleRadarPosting", keys: ["ATS", "ATS_LABEL", "apiUrl", "decodeEntities", "extractHtml", "fromUrl", "postingSource", "sanitizeHtml"] },
   alerts: { global: "RoleRadarAlerts", keys: ["CHANNELS", "DEFAULT_RULES", "EVENTS", "LEVELS", "clock", "describe", "evaluate", "inQuietHours", "matches", "normalize"] },
-  progress: { global: "RoleRadarProgress", keys: ["RESPONSE_AFTER_DAYS", "STAGES", "benchmarks", "businessDaysSince", "coverageLine", "dashboard", "dayKey", "dayStart", "emailWindow", "homeStats", "periodReport", "reached", "scanStale", "skippedBy", "snapshot", "toMs", "topNew", "weekStart"] },
+  progress: { global: "RoleRadarProgress", keys: ["GATE_TARGET", "RESPONSE_AFTER_DAYS", "STAGES", "benchmarks", "businessDaysSince", "coverageLine", "dashboard", "dayKey", "dayStart", "emailWindow", "homeStats", "periodReport", "reached", "scanStale", "skippedBy", "snapshot", "toMs", "topNew", "velocity", "weekStart"] },
   "recruiter-store": { global: "RoleRadarRecruiters", keys: ["PATH", "RULES", "create"] },
   "skip-feedback": { global: "RoleRadarSkipFeedback", keys: ["WINDOW_DAYS", "analyze", "applyToYaml", "ownerSkips"] },
 };

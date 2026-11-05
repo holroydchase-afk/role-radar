@@ -79,7 +79,7 @@ const PHONE = { width: 390, height: 844 };
 const SMALL = { width: 360, height: 740 };
 const LAPTOP = { width: 1280, height: 800 };
 const BUILDS: [string, boolean][] = [["private", false], ["public", true]];
-const SECTIONS = [["morning", "This morning"], ["apps", "Applications"], ["after", "After you apply"], ["ready", "Get ready"], ["pipeline", "Pipeline"]] as const;
+const SECTIONS = [["morning", "This morning"], ["apps", "Applications"], ["velocity", "Velocity"], ["after", "After you apply"], ["ready", "Get ready"], ["pipeline", "Pipeline"]] as const;
 const MORE_ROWS = ["people", "ruled", "criteria", "watch", "filters"];
 
 const viewTab = (page: Page) => page.locator("#view").getAttribute("data-tab");
@@ -201,7 +201,7 @@ test("HOME-5 AC3 More keeps Recruiters (owner only), Ruled out, Criteria, Watchl
   }
 });
 
-test("HOME-6 AC4 Home's section headings, in order: This morning, Applications, After you apply, Get ready, Pipeline", async () => {
+test("HOME-6 AC4 Home's section headings, in order: This morning, Applications, Velocity, After you apply, Get ready, Pipeline", async () => {
   for (const [name, publicDemo] of BUILDS) {
     const { page, errors } = await openDemo({ ...LAPTOP, publicDemo });
     await waitHome(page);

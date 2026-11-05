@@ -327,6 +327,19 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 .tile .num,.stepper .num{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
 .tile .num{font-size:1.75rem}.tile .lbl{font-size:.875rem;white-space:nowrap}.tile small{font-size:.8125rem;color:var(--muted)}
 #home-apps .days .col{height:40px}
+.vavg{margin:0 0 6px;font-size:.9375rem}
+.vdays{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(14,1fr);gap:3px;text-align:center}
+.vdays li{display:grid;gap:2px;justify-items:center}.vdays .col{height:40px;width:100%;max-width:22px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line)}
+.vdays .col i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:0}
+.vdays b{font:500 .7rem var(--f-mono);min-height:1.2em}.vdays li{min-width:0}
+.vtiles{margin-top:10px}.vtiles .tile.over .num{color:var(--warn,#b45309)}
+.vrecent{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.vrecent li{display:grid;grid-template-columns:minmax(0,7.5em) minmax(0,1fr) 2em 3em;gap:8px;align-items:center;font-size:.85rem}
+.vrecent .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vrecent .track{position:relative;height:8px;background:var(--bg);border-radius:4px}
+.vrecent .track i{display:block;height:100%;background:var(--good);border-radius:4px}.vrecent .track i.over{background:var(--warn,#b45309)}
+.vrecent .track u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);text-decoration:none;opacity:.6}
+.vrecent b{font:500 .85rem var(--f-mono);text-align:right}.vrecent small{color:var(--muted);font:400 .75rem var(--f-mono)}
 .today{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;font-size:.9375rem}
 .today .meter{height:8px;background:var(--bg)}.today.met .meter i{background:var(--good)}
 .stepper{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -1600,7 +1613,7 @@ const HOME_ROWS=5, HOME_CARDS=3;
 function homeNumbers(){
   const bar=Number(config.dailyBar)||3, t=today();
   if(homeMemo&&homeMemo.jobs===jobs&&homeMemo.bar===bar&&homeMemo.t===t) return homeMemo;
-  return homeMemo={jobs,bar,t,h:PG.homeStats(jobs),d:PG.dashboard(jobs,{bar})};
+  return homeMemo={jobs,bar,t,h:PG.homeStats(jobs),d:PG.dashboard(jobs,{bar}),v:PG.velocity?PG.velocity(jobs):null};
 }
 // What is due, most urgent first, as two lines: the company, then what to do (UX-H2-R5): follow-ups (oldest due first), resumes not sent, missing next steps, roles saved
 // too long, then recruiters (owner's build only). Each row has one verb.
@@ -1636,7 +1649,7 @@ function moreStats(d){
 function homePipeline(){ return sortList(jobs.filter(j=>inTab(j,"pipeline")),"pipeline").slice(0,HOME_CARDS); }
 function renderHome(){
   if(!PG) return `<div class="empty"><strong>Home didn't load</strong><span>Reload the page to try again.</span></div>`;
-  const {h,d}=homeNumbers(), t=d.today, newN=jobs.filter(j=>inTab(j,"inbox")).length;
+  const {h,d,v}=homeNumbers(), t=d.today, newN=jobs.filter(j=>inTab(j,"inbox")).length;
   const sec=(k,title,right,body)=>`<section class="hsec" id="home-${k}" aria-labelledby="hh-${k}"><div class="hh"><h2 id="hh-${k}">${title}</h2>${right||""}</div>${body}</section>`;
   // 1. This morning: the digest's picks (the Criteria preview's ranking) and one board-health line.
   const dg=SC&&specData?digestOf(specData):null, picks=dg?dg.items.slice(0,HOME_ROWS):[];
@@ -1654,6 +1667,21 @@ function renderHome(){
     <ol class="days" aria-label="Applications each day this week">${d.week.days.map(x=>`<li class="${x.future?"future":""}"><span class="col"><i style="height:${x.future?0:Math.round(x.applied/maxDay*100)}%"></i></span><b>${x.future?"":x.applied}</b><small>${esc(wd(x.day))}</small></li>`).join("")}</ol>
     <div class="today${t.met?" met":""}"><span>Today <b class="mono">${t.total}</b> of ${t.bar}</span><div class="meter" role="meter" aria-label="Applications and follow-ups today" aria-valuemin="0" aria-valuemax="${t.bar}" aria-valuenow="${t.total}" aria-valuetext="${plural(t.applied,"application")} and ${plural(t.followUps,"follow-up")} sent today"><i style="width:${pct}%"></i></div></div>
     <p class="hint hline" id="homeWeek">${d.week.ruledOut} ruled out this week${d.week.removedByRules?`, plus ${d.week.removedByRules} removed by screening rules (not counted)`:""} · <button class="linkbtn" type="button" data-tab="ruled">See ruled out</button></p>`;
+  // 2b. Velocity: applications a day (14 days) and the effort behind each application (hours to ready, gate runs, tokens).
+  const velocity=v?(()=>{
+    const mx=Math.max(1,...v.perDay.map(x=>x.applied)), vd=k=>new Date(k+"T12:00:00").toLocaleDateString(undefined,{month:"numeric",day:"numeric"});
+    const fmt=(n,u)=>n===null?"–":`${n}${u||""}`, gOver=v.medianGateRuns!==null&&v.medianGateRuns>v.gateTarget;
+    const gx=Math.max(v.gateTarget,...v.recent.map(r=>r.gateRuns||0),1);
+    const recent=v.recent.length?`<ul class="vrecent" aria-label="Recent applications: gate runs against the target of ${v.gateTarget}">${v.recent.map(r=>`<li><span class="lbl">${esc(r.company)}</span><span class="track"><i class="${(r.gateRuns||0)>v.gateTarget?"over":""}" style="width:${Math.round((r.gateRuns||0)/gx*100)}%"></i><u style="left:${Math.round(v.gateTarget/gx*100)}%"></u></span><b>${fmt(r.gateRuns)}</b><small>${fmt(r.hours,"h")}</small></li>`).join("")}</ul>
+      <p class="hint hline">Bars are gate runs per application; the tick marks the target of ${v.gateTarget}. Hours run from start to ready.</p>`
+      :`<p class="hint hline">No effort logged yet. Add start, ready, gate runs and tokens to a role's effort and they show here.</p>`;
+    return `<p class="vavg"><b class="mono">${v.avgPerDay}</b> applications per day · last 14 days</p>
+    <ol class="vdays" aria-label="Applications each day, last 14 days">${v.perDay.map(x=>`<li><span class="col"><i style="height:${Math.round(x.applied/mx*100)}%"></i></span><b>${x.applied||""}</b></li>`).join("")}</ol>
+    <p class="hint hline">${esc(vd(v.perDay[0].day))} to ${esc(vd(v.perDay[v.perDay.length-1].day))}</p>
+    <div class="tiles vtiles"><div class="tile"><span class="num">${fmt(v.medianHours)}</span><span class="lbl">Hours to ready</span><small>median</small></div>
+      <div class="tile${gOver?" over":""}"><span class="num">${fmt(v.medianGateRuns)}</span><span class="lbl">Gate runs</span><small>target ${v.gateTarget} or fewer</small></div>
+      <div class="tile"><span class="num">${v.medianTokensK===null?"–":v.medianTokensK+"K"}</span><span class="lbl">Tokens</span><small>median, rough</small></div></div>${recent}`;
+  })():"";
   // 3. After you apply: where sent roles stand now. Rejections read as a grey "closed" count, never "Rejected".
   const STEPS=[["applied","Waiting"],["screen","Screen"],["interviewing","Interviews"],["offer","Offer"]];
   const after=`<ol class="stepper">${STEPS.map(([k,l])=>`<li data-stage="${k}"><span class="num">${h.stages[k]}</span><span class="lbl">${l}</span></li>`).join("")}</ol>
@@ -1669,6 +1697,7 @@ function renderHome(){
   return `<div class="home">
     ${sec("morning","This morning",right1,morning+health)}
     ${sec("apps","Applications","",apps)}
+    ${v?sec("velocity","Velocity","",velocity):""}
     ${sec("after","After you apply","",after)}
     ${sec("ready","Get ready","",ready)}
     ${sec("pipeline","Pipeline",`<button class="linkbtn" type="button" data-tab="pipeline">Open Pipeline</button>`,pipe)}
