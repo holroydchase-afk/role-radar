@@ -1,0 +1,220 @@
+# ─────────────────────────────────────────────────────────────
+#  Role Radar · search criteria (EXAMPLE: a demo candidate, not real settings)
+#  The weekday 7:45 ET scan reads this before every run.
+#  Edit it on the Criteria tab in Role Radar. Comments are fine.
+#
+#  How a role is scored (0–100, higher ranks first in the digest):
+#    sector   = weight × 15            (0–45)   ← what the company does
+#    experience (key: fit) = strong 35 · maybe ("partial" on cards) 20 · stretch 5 ← match to your background
+#    culture signals = +10 good signals, −10 per red flag (max −20); a hard red flag means never added
+#    startup  = −20 if the company is early-stage (see company_stage)
+#    comp     = +10 if base top ≥ stretch_target
+#    dream    = +15 if the role is like one of dream_roles (see below)
+#  Roles under `scoring.min_score_to_add` are not added (hard excludes never are).
+# ─────────────────────────────────────────────────────────────
+
+version: 2
+owner: Demo Candidate
+updated: 2026-10-21
+demo: true
+
+# ── The job itself ───────────────────────────────────────────
+role:
+  track: individual_contributor        # no people management
+  levels: [senior, staff, principal, lead]
+  title_include:
+    - Senior Product Manager
+    - Sr. Product Manager
+    - Sr Product Manager
+    - Staff Product Manager
+    - Principal Product Manager
+    - Lead Product Manager
+    - Product Manager            # plain titles only if the posting reads senior (6+ yrs)
+  title_exclude:
+    - Director
+    - VP
+    - Head of
+    - Group Product Manager
+    - Associate
+    - Intern
+    - Marketing
+    - Program Manager
+    - Engineer
+    - Designer
+
+# ── Where and how ────────────────────────────────────────────
+work:
+  remote: fully_remote_us              # remote-first or "Remote, US" with no hub requirement
+  home_state: CO                       # reject state lists that leave out CO
+  planned_move: { state: UT, when: next year }   # optional: flag roles closed to your next state
+  hybrid_ok_near: [Denver, CO]        # the only place hybrid is fine
+  reject: [hybrid, in_office, relocation, non_us_only, travel_over_25pct]
+
+comp:
+  base_floor_usd: 150000               # skip if the stated base range tops out below this
+  priority_sector_floor_usd: 140000    # weight-3 sectors may dip to here (flag it in the note)
+  stretch_target_usd: 185000           # +10 score when the range reaches this
+  missing_comp: keep                   # judge from company and level
+
+culture:
+  want: [calm pace, ~40-hour weeks, async / remote-first, generous PTO, 12+ weeks parental leave]
+  good_signals: [unlimited PTO with a minimum, parental leave, "sustainable pace", 4-day week, B Corp, mission-driven]
+  red_flags: [fast-paced, hustle, scrappy, "wear many hats", "work hard play hard", 50+ hours, high-intensity, on-call, in-office]
+  red_flag_effect: skip_hard           # hard_red_flags = never add; other red_flags = −10 each (score_only = never skip)
+  hard_red_flags: [fast-paced, hustle, high-intensity, "work hard play hard", 50+ hours, on-call, in-office]
+  must_read_posting: true              # open the posting before scoring; a title alone can't show red flags
+
+# ── Company stage ────────────────────────────────────────────
+company_stage:
+  startup_penalty: -20                 # added to the score; the role still shows if it clears min_score_to_add
+  startup_means: "under ~200 employees, or seed / Series A / Series B"
+  established: "public, Series C or later, or 200+ employees, or a large nonprofit"
+  unknown: established                 # if you can't tell, don't penalize
+
+# ── What the company does (0 ignore · 1 allowed · 2 good · 3 priority) ──
+sectors:
+  - id: solar_energy
+    label: Solar, storage & distributed energy
+    weight: 3
+    keywords: [solar, PV, storage, battery, VPP, DER, grid, utility, interconnection, community solar, EV charging, electrification, heat pump]
+    examples: [Enphase, Sunrun, SolarEdge, Generac, EnergyHub, Span]
+
+  - id: climate_tech
+    label: Climate & sustainability software
+    weight: 3
+    keywords: [climate, carbon, emissions, decarbonization, sustainability, ESG, climate risk, circular economy, wildfire, water]
+    examples: [Watershed, Persefoni, Pachama, WattTime]
+
+  - id: climate_nonprofit
+    label: Climate science & mission nonprofits (if comp clears)
+    weight: 3
+    keywords: [nonprofit, foundation, climate science, conservation, environmental]
+    examples: [RMI, Environmental Defense Fund, The Nature Conservancy]
+
+  - id: space_geo
+    label: Space & geospatial
+    weight: 2
+    keywords: [satellite, earth observation, geospatial, remote sensing, GIS, mapping, drone, aerial imagery]
+    examples: [Maxar, Esri, Mapbox, Spire]
+
+  - id: outdoor_brands
+    label: Adventure & outdoor brands
+    weight: 2
+    keywords: [outdoor, adventure, conservation, travel, national parks]
+    examples: [Patagonia, National Geographic, REI, AllTrails, Strava, Outside]
+
+  - id: green_finance
+    label: Climate & solar finance
+    weight: 2
+    keywords: [solar lending, green finance, climate fintech, energy finance, PACE]
+    examples: [Generate Capital, Mosaic]
+
+  - id: big_corp
+    label: Large stable companies
+    weight: 1
+    examples: [large insurers, national retailers, utilities]
+
+  - id: fintech
+    label: General fintech & payments
+    weight: 1                          # still allowed, just lower in the list
+    examples: [Stripe, Plaid, Square]
+
+  - id: ai_tooling
+    label: AI tooling & automation
+    weight: 1
+    examples: [Zapier, Glean]
+
+  - id: home_services
+    label: Home services & insurance
+    weight: 1
+    examples: [Thumbtack, Jobber]
+
+default_sector_weight: 1               # companies that fit none of the above
+
+# ── Never show these ─────────────────────────────────────────
+hard_exclude:
+  companies: []                       # add company names you never want to see
+  business_models:
+    - short-term consumer lending
+    - payday or cash-advance apps
+    - earned wage access
+    - credit-score marketplaces
+
+# Example values penalties. Delete a line to allow it.
+values_penalty:                        # −15 score, still shown if otherwise strong
+  - fossil fuel extraction
+  - weapons or defense prime contractors
+  - gambling or sports betting
+  - crypto trading or speculation
+
+# ── Fit ratings: two badges on every role (Values · Culture) ───
+#  Values: great · good · neutral · no.  Culture: great · good · maybe · no, or "unrated" until checked.
+#  They explain the role; they don't change the 0–100 score above.
+values_fit:                            # does the company's business match what you care about?
+  by_weight: { 3: great, 2: good, 1: neutral, 0: no }   # from the sector weight
+  # anything on hard_exclude or values_penalty is always "no"
+
+culture_fit:                           # would you actually like working there?
+  bands: { great: 6, good: 3, maybe: -3 }   # total points at or above → that rating; below maybe → no
+  checks:                              # the scan fills posting checks; intake adds research checks
+    - { id: calm_pace,           points:  2, short: "calm pace",                  means: "posting or reviews say sustainable pace, ~40-hour weeks, or anti-hustle" }
+    - { id: fast_paced,          points: -2, short: "fast-paced",                 means: "posting says fast-paced, hustle, scrappy, wear many hats, 50+ hours" }
+    - { id: remote_us,           points:  1, short: "remote anywhere in the US",  means: "remote with no hub and home_state is eligible" }
+    - { id: pay_same_everywhere, points:  1, short: "same pay in your state",     means: "one national band, or home_state is in the pay tiers" }
+    - { id: pay_tier_gap,        points: -1, short: "your state not in pay tiers", means: "posting lists pay tiers that leave out home_state" }
+    - { id: planned_move_gap,    points: -1, short: "not open in your next state", means: "state list leaves out work.planned_move.state" }
+    - { id: family_benefits,     points:  1, short: "strong family benefits",     means: "12+ weeks parental leave, or unlimited PTO with a minimum" }
+    - { id: good_reviews,        points:  1, short: "good reviews",               means: "Glassdoor work-life 4.0+ or similar" }
+    - { id: poor_reviews,        points: -1, short: "weak work-life reviews",     means: "Glassdoor work-life under 3.5, or burnout themes" }
+    - { id: recent_layoffs,      points: -2, short: "recent layoffs",             means: "layoffs in the last 12 months" }
+    - { id: crunch_risk,         points: -1, short: "launch crunch risk",         means: "new team, greenfield launch, or reviews mention crunches" }
+
+# ── Dream roles: calibration anchors ─────────────────────────
+#  Roles like these score at the top. A role counts as "like" an anchor when it is at
+#  one of these companies, or its title has a role_keywords word in one of in_sectors.
+dream_roles:
+  bonus: 15                            # added to the 0–100 score (shown as "dream role")
+  like:                                # EXAMPLE anchors for the demo candidate
+    - { company: HelioHome, title: "Senior Product Manager, Home Electrification", why: "consumer energy product at a mission company" }
+    - { company: Gridlark, title: "Staff Product Manager, Virtual Power Plants", why: "grid flexibility", check: "only if the VPP is live, not a pilot" }
+  role_keywords: [processing, payments, billing, lending, financing, underwriting]
+  in_sectors: [solar_energy, climate_tech, green_finance]
+
+# ── Digest shape ─────────────────────────────────────────────
+scoring:
+  min_score_to_add: 45
+  digest_max_items: 8
+  per_sector_cap: { fintech: 2, ai_tooling: 2, home_services: 1 }  # extras still saved, just not listed
+
+# ── Alerts: what pings your phone ────────────────────────────
+#  level: loud = every channel below, right away · quiet = one line in the summary · off
+#  when:  recruiter_email · status_change (to: [...]) · new_role (min_score) · follow_up_due
+#  The first rule that matches wins, so put the specific ones first.
+alerts:
+  channels: [push, thread]             # push = phone notification · thread = message with links · email = backup email
+  quiet_hours: { start: "22:00", end: "07:00", tz: America/Denver, loud_breaks_through: false }
+  rules:
+    - { id: recruiter, when: recruiter_email, level: loud, remind_after_hours: [4, 18] }
+    - { id: interview, when: status_change, to: [screen, interviewing, offer], level: loud }
+    - { id: rejection, when: status_change, to: [rejected], level: quiet }
+    - { id: dream_match, when: new_role, min_score: 85, level: loud }
+    - { id: good_match, when: new_role, min_score: 60, level: quiet }
+    - { id: follow_up, when: follow_up_due, level: quiet }
+
+# ── Where to look ────────────────────────────────────────────
+search:
+  ziprecruiter_queries:                # remote, full-time, senior, salary ≥ floor, posted in the last day
+    - senior product manager solar
+    - senior product manager energy
+    - senior product manager climate
+    - senior product manager sustainability
+    - senior product manager geospatial
+    - staff product manager
+    - senior product manager payments
+  himalayas_queries:
+    - senior product manager
+    - staff product manager
+    - product manager climate
+    - product manager energy
+  climate_boards: [climatebase]        # climatebase.org remote PM search, Mon/Wed/Fri
+  discovery_bias: [solar_energy, climate_tech, climate_nonprofit, space_geo, outdoor_brands]

@@ -1,0 +1,7 @@
+{
+  "name": "role-radar",
+  "version": "0.1.0",
+  "description": "A job-search radar for Claude: guided setup from your own criteria, a private tracker page with velocity tracking, and a weekday scan of company job boards.",
+  "license": "MIT",
+  "keywords": ["job-search", "product-management", "tracker"]
+}

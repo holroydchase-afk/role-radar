@@ -16,7 +16,8 @@
     "screenshots": "node scripts/screenshots.mjs",
     "hooks": "git config core.hooksPath .githooks",
     "build:pages": "node scripts/build-demo.mjs --public",
-    "review:shots": "node scripts/review-shots.mjs"
+    "review:shots": "node scripts/review-shots.mjs",
+    "build:plugin": "node scripts/build-plugin.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

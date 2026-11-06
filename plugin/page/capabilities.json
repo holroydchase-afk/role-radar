@@ -1,0 +1,12 @@
+{
+  "db": {
+    "rules": [
+      { "path": "recruiters", "read": "owner", "write": "owner" }
+    ]
+  },
+  "mcp": {
+    "servers": [
+      { "server": "Gmail", "tools": ["search_threads", "batch_get_threads"] }
+    ]
+  }
+}

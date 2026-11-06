@@ -1,0 +1,11 @@
+{
+  "name": "role-radar",
+  "owner": { "name": "Role Radar" },
+  "plugins": [
+    {
+      "name": "role-radar",
+      "source": "./plugin",
+      "description": "Guided setup, private tracker page with velocity tracking, and a weekday scan of company job boards."
+    }
+  ]
+}
