@@ -35,7 +35,7 @@ jobs:
         run: node --test tests/scoring.test.ts tests/alerts.test.ts tests/gmail-import.test.ts tests/check-private.test.ts tests/demo.test.ts
       - name: Build the public demo
         run: node scripts/build-demo.mjs --public _site/index.html
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
   deploy:
