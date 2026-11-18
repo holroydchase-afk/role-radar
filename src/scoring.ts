@@ -40,6 +40,7 @@ export interface Criteria {
   hard_exclude?: { companies?: Many<string>; business_models?: Many<string> };
   culture?: { good_signals?: Many<string>; red_flags?: Many<string>; hard_red_flags?: Many<string>; red_flag_effect?: string };
   values_penalty?: Many<string>;
+  dream?: DreamSpec;
   dream_roles?: { like?: Many<DreamAnchor>; in_sectors?: Many<string>; role_keywords?: Many<string>; bonus?: Num };
   company_stage?: { startup_penalty?: Num };
   values_fit?: { by_weight?: Record<string, string> };
@@ -74,6 +75,14 @@ export interface CompRange { min: number; max: number }
 export interface Match { ok: boolean; reasons: string[] }
 export interface Culture { points: number; good: string[]; red: string[] }
 export interface Dream { why: string; check: string | null }
+const DREAM_KINDS = ["mission", "health", "ai_lab", "applied_ai"] as const;
+export type DreamKind = (typeof DREAM_KINDS)[number];
+/** The Dream bucket: a label beside the score, never part of it. */
+export interface DreamBucket { kind: DreamKind; why: string }
+export interface DreamRule { id?: string; kind?: string; keywords?: Many<string> }
+export interface DreamSpec { companies?: Many<string>; established_companies?: Many<string>; rules?: Many<DreamRule>;
+  /** Never Dream, whatever else matches: a list of words and company names, or {keywords, companies}. Whole-word, case-insensitive. */
+  exclude?: Many<string> | { keywords?: Many<string>; companies?: Many<string> } }
 export interface Parts { sector: number; fit: number; culture: number; comp: number; values: number; dream: number; stage: number }
 export interface ScoreResult { score: number; raw: number; parts: Parts; sector: Sector; culture: Culture; valuesHit: string | null; dream: Dream | null }
 export interface Fit { rating: string; reason: string; source: "stored" | "computed" }
@@ -173,6 +182,37 @@ function dreamOf(job: Job, spec: Criteria | null | undefined, sector: Sector): D
   const inSector = arr(d.in_sectors).some((id) => lc(id) === lc(sector && sector.id));
   const kw = inSector && arr(d.role_keywords).find((k) => has([job.title, job.team].join(" "), k));
   return kw ? { why: kw + " role in " + (sector.label || sector.id), check: null } : null;
+}
+
+/** The Dream bucket (criteria.yaml `dream:`): a role at a dream company, or one matching a mission, health, ai_lab or
+ *  applied_ai rule. A valid job.dream {kind, why} set by the scan wins. Never touches the score (scoreJob ignores it).
+ *  applied_ai counts only at an established_companies company or with the keyword in the title.
+ *  dream.exclude (e.g. fertility, IVF, in vitro, a company) returns null first, even for a job.dream preset. */
+export function dreamBucketOf(job: Job | null | undefined, spec?: Criteria | null): DreamBucket | null {
+  const j: Job = job && typeof job === "object" ? job : {};
+  const d = spec && typeof spec === "object" ? spec.dream : null;
+  const ex = d && typeof d === "object" ? d.exclude : null;
+  const terms: unknown[] = ex && typeof ex === "object" && !Array.isArray(ex) ? [...arr(ex.keywords), ...arr(ex.companies)] : arr(ex as Many<string>);
+  const text = [j.company, j.title, j.team, j.industry, j.postingText, j.description].map((x) => (typeof x === "string" ? x : "")).join(" \n ");
+  if (terms.some((t) => typeof t === "string" && has(text, t))) return null;
+  const p = j.dream as { kind?: unknown; why?: unknown } | null | undefined;
+  if (p && typeof p === "object" && (DREAM_KINDS as readonly string[]).includes(String(p.kind)) && typeof p.why === "string" && p.why.trim()) {
+    return { kind: p.kind as DreamKind, why: p.why };
+  }
+  if (!d || typeof d !== "object") return null;
+  const co = lc(j.company).trim();
+  const named = arr(d.companies).find((c) => typeof c === "string" && lc(c).trim() && lc(c).trim() === co);
+  if (named) return { kind: "mission", why: named + " is on your dream list" };
+  const established = arr(d.established_companies).some((c) => typeof c === "string" && lc(c).trim() && lc(c).trim() === co);
+  const title = String(j.title ?? "");
+  const all = text;
+  for (const r of arr(d.rules)) {
+    if (!r || typeof r !== "object" || !(DREAM_KINDS as readonly string[]).includes(String(r.kind))) continue;
+    const hay = r.kind === "applied_ai" && !established ? title : all;
+    const kw = arr(r.keywords).find((k) => typeof k === "string" && has(hay, k));
+    if (kw) return { kind: r.kind as DreamKind, why: String(r.kind).replace("_", " ") + ": " + kw };
+  }
+  return null;
 }
 
 function valuesHit(job: Job, spec: Criteria | null | undefined): string | null {

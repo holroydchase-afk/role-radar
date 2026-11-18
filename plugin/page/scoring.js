@@ -25,6 +25,7 @@ var RoleRadarScoring = (() => {
     FIT_POINTS: () => FIT_POINTS,
     buildDigest: () => buildDigest,
     cultureFitOf: () => cultureFitOf,
+    dreamBucketOf: () => dreamBucketOf,
     explain: () => explain,
     matchJob: () => matchJob,
     parseComp: () => parseComp,
@@ -35,6 +36,7 @@ var RoleRadarScoring = (() => {
     valuesFitOf: () => valuesFitOf,
     workplaceOf: () => workplaceOf
   });
+  var DREAM_KINDS = ["mission", "health", "ai_lab", "applied_ai"];
   var FIT_POINTS = { strong: 35, maybe: 20, stretch: 5 };
   var SECTOR_POINTS_PER_WEIGHT = 15;
   var CULTURE_GOOD = 10;
@@ -115,6 +117,32 @@ var RoleRadarScoring = (() => {
     const inSector = arr(d.in_sectors).some((id) => lc(id) === lc(sector && sector.id));
     const kw = inSector && arr(d.role_keywords).find((k) => has([job.title, job.team].join(" "), k));
     return kw ? { why: kw + " role in " + (sector.label || sector.id), check: null } : null;
+  }
+  function dreamBucketOf(job, spec) {
+    const j = job && typeof job === "object" ? job : {};
+    const d = spec && typeof spec === "object" ? spec.dream : null;
+    const ex = d && typeof d === "object" ? d.exclude : null;
+    const terms = ex && typeof ex === "object" && !Array.isArray(ex) ? [...arr(ex.keywords), ...arr(ex.companies)] : arr(ex);
+    const text = [j.company, j.title, j.team, j.industry, j.postingText, j.description].map((x) => typeof x === "string" ? x : "").join(" \n ");
+    if (terms.some((t) => typeof t === "string" && has(text, t))) return null;
+    const p = j.dream;
+    if (p && typeof p === "object" && DREAM_KINDS.includes(String(p.kind)) && typeof p.why === "string" && p.why.trim()) {
+      return { kind: p.kind, why: p.why };
+    }
+    if (!d || typeof d !== "object") return null;
+    const co = lc(j.company).trim();
+    const named = arr(d.companies).find((c) => typeof c === "string" && lc(c).trim() && lc(c).trim() === co);
+    if (named) return { kind: "mission", why: named + " is on your dream list" };
+    const established = arr(d.established_companies).some((c) => typeof c === "string" && lc(c).trim() && lc(c).trim() === co);
+    const title = String(j.title ?? "");
+    const all = text;
+    for (const r of arr(d.rules)) {
+      if (!r || typeof r !== "object" || !DREAM_KINDS.includes(String(r.kind))) continue;
+      const hay = r.kind === "applied_ai" && !established ? title : all;
+      const kw = arr(r.keywords).find((k) => typeof k === "string" && has(hay, k));
+      if (kw) return { kind: r.kind, why: String(r.kind).replace("_", " ") + ": " + kw };
+    }
+    return null;
   }
   function valuesHit(job, spec) {
     const hay = [job.businessModel, job.industry, job.company].join(" ");

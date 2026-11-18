@@ -52,7 +52,7 @@ test("UX-R1 at 390x844 the quick chips read Last 24 hrs, Remote (US), Strong fit
   const { page, errors } = await open(browser, { ...PHONE, file: FILE, ready: "#tab-inbox .n" });
   await openTab(page, "inbox");
   await settle(page);
-  assert.deepEqual(await page.locator("#fbar .chips [data-chip]").allInnerTexts(), ["Last 24 hrs", "Remote (US)", "Strong fit", "Good values", "Good culture"]);
+  assert.deepEqual((await page.locator("#fbar .chips [data-chip]").allInnerTexts()).map((t) => t.replace(/^Dream \d+$/, "Dream")), ["Last 24 hrs", "Remote (US)", "Strong fit", "Good values", "Good culture", "Dream"]);
   const m = await page.evaluate(() => {
     const row = document.querySelector("#fbar .chips") as HTMLElement, chip = row.querySelector('[data-chip="remote"]') as HTMLElement;
     const r = chip.getBoundingClientRect();
