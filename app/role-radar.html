@@ -279,6 +279,7 @@ details.more form{display:grid;gap:10px;padding-top:10px}
 /* Small phones: 12px keeps Fit · Values · Culture with their words on one line for most roles; a long set wraps between parts. */
 @media (max-width:400px){.job .subscores{font-size:.75rem}}
 .job .meta{display:block;margin:0}
+.job .meta .pay{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .job .reason{margin:0;font-size:.9375rem;max-width:65ch;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 @media (min-width:900px){.job .reason{-webkit-line-clamp:1}}
 @media (max-width:600px){.job{padding:12px 14px;gap:6px}.job .reason{line-height:1.4}
@@ -796,6 +797,8 @@ const wpOf=j=>{ let w=wpMemo.get(j); if(!w){ w=SC&&SC.workplaceOf?SC.workplaceOf
 const compOf=j=>{ let c=compMemo.get(j); if(!c){ c={r:SC?SC.parseComp(j.comp):null}; compMemo.set(j,c); } return c.r; };
 // The Pay filter as [low, high] dollars, or null at the full range (no filter).
 const payRange=()=>view.payLo===""&&view.payHi===""?null:[view.payLo===""?0:view.payLo,view.payHi===""?Infinity:view.payHi];
+// The pay on a card: one tidy label (SC.payLabel), nothing when the role has no pay stated.
+const payOf=j=>{ try{ return SC&&SC.payLabel?SC.payLabel(j.comp):null; }catch(_){ return null; } };
 const kUsd=n=>"$"+Math.round(n/1000)+"K";
 const payText=()=>view.payLo!==""&&view.payHi!==""?`${kUsd(view.payLo)}–${kUsd(view.payHi)}`:view.payLo!==""?`${kUsd(view.payLo)} or more`:view.payHi!==""?`up to ${kUsd(view.payHi)}`:"Any";
 
@@ -881,7 +884,7 @@ function jobCard(j){
   const details=`<button class="btn" type="button" data-details="${id}" aria-haspopup="dialog" aria-controls="detailsSheet">Details</button>`;
   const w=wpOf(j), dr=dreamOf(j), loc=String(j.location??"").trim();
   // With a work pill, the location would say it twice (UX-R4); the full location stays in Details.
-  const meta=[!w.label&&loc&&esc(loc),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
+  const meta=[!w.label&&loc&&esc(loc),payOf(j)&&`<span class="pay" data-pay>${esc(payOf(j))}</span>`,statusDate(j)].filter(Boolean).join(" · ");
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
   // only marks the chip; nothing saves until Skip role, and both the reason and a comment are required.
   const skipRow=skipOpen===j._id?`<form class="skipwhy" data-skipform="${id}" aria-label="Why skip this role?" novalidate>

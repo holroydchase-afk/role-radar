@@ -29,6 +29,7 @@ var RoleRadarScoring = (() => {
     explain: () => explain,
     matchJob: () => matchJob,
     parseComp: () => parseComp,
+    payLabel: () => payLabel,
     scoreJob: () => scoreJob,
     scoreSplit: () => scoreSplit,
     sectorFor: () => sectorFor,
@@ -72,6 +73,15 @@ var RoleRadarScoring = (() => {
     });
     if (!nums.length) return null;
     return { min: Math.min(...nums), max: Math.max(...nums) };
+  }
+  function payLabel(comp) {
+    if (typeof comp === "string" && /^\s*(not\b|n\/a|unknown|tbd|none|[-–—]+\s*$)/i.test(comp)) return null;
+    const r = parseComp(comp);
+    if (!r) return null;
+    const k = (n) => "$" + String(Math.round(n / 100) / 10).replace(/\.0$/, "") + "K";
+    if (r.min === r.max) return k(r.min) + (typeof comp === "string" && /\bfrom\b|\+|or more|and up/i.test(comp) ? "+" : "");
+    const many = typeof comp === "string" && (comp.match(/\$?\s*\d[\d,.]*\s*[kK]?\s*(?:-|–|—|to)\s*\$?\s*\d/g) || []).length > 1;
+    return k(r.min) + "\u2013" + k(r.max) + (many ? " (varies)" : "");
   }
   function sectorFor(job, spec) {
     const sectors = arr(spec && spec.sectors);

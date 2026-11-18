@@ -131,6 +131,17 @@ export function parseComp(comp: unknown): CompRange | null {
   return { min: Math.min(...nums), max: Math.max(...nums) };
 }
 
+/** Pay as one tidy card label: "$151K–$189K", "$180K+", "$150K–$304K (varies)"; null when no pay is stated. */
+export function payLabel(comp: unknown): string | null {
+  if (typeof comp === "string" && /^\s*(not\b|n\/a|unknown|tbd|none|[-–—]+\s*$)/i.test(comp)) return null;
+  const r = parseComp(comp);
+  if (!r) return null;
+  const k = (n: number): string => "$" + String(Math.round(n / 100) / 10).replace(/\.0$/, "") + "K";
+  if (r.min === r.max) return k(r.min) + (typeof comp === "string" && /\bfrom\b|\+|or more|and up/i.test(comp) ? "+" : "");
+  const many = typeof comp === "string" && (comp.match(/\$?\s*\d[\d,.]*\s*[kK]?\s*(?:-|–|—|to)\s*\$?\s*\d/g) || []).length > 1;
+  return k(r.min) + "–" + k(r.max) + (many ? " (varies)" : "");
+}
+
 /** Best-matching sector entry for a job: an explicit label/id first, then examples, then keywords. */
 export function sectorFor(job: Job, spec: Criteria | null | undefined): Sector {
   const sectors = arr(spec && spec.sectors);
