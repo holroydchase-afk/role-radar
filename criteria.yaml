@@ -180,6 +180,24 @@ dream_roles:
   role_keywords: [processing, payments, billing, lending, financing, underwriting]
   in_sectors: [solar_energy, climate_tech, green_finance]
 
+# ── Dream bucket: a label, never points ──────────────────────
+#  Roles that fit the Dream filter on the page get a "Dream: <why>" pill. It never changes the 0–100 score
+#  (that is dream_roles above). A role is Dream when it is at a company in `companies`, or when a rule's
+#  keywords (whole words) show up in its title, company or posting. kinds: mission · health · ai_lab · applied_ai.
+#  applied_ai is stricter: the keyword must be in the title, unless the company is in established_companies.
+#  exclude: words or companies (whole-word, in company, title or posting) that are never Dream, even at a dream
+#  company or with a scan-set dream. Here: AI for human health counts, fertility does not.
+#  EXAMPLE lists with made-up names. Put your own in your saved criteria.
+dream:
+  companies: [Sunfield Energy, Example Learning Nonprofit, Example Health AI]
+  established_companies: [Example AI Lab, Example Big Tech]   # applied_ai counts from the posting text here
+  exclude: [fertility, IVF, in vitro]
+  rules:
+    - { id: mission,    kind: mission,    keywords: [decarbonization, climate justice, economic mobility, civic tech] }
+    - { id: health,     kind: health,     keywords: [patient care, clinical, care delivery, chronic condition, digital health, human health] }
+    - { id: ai_lab,     kind: ai_lab,     keywords: [frontier model, foundation model, model training, alignment] }
+    - { id: applied_ai, kind: applied_ai, keywords: [agents, LLM, generative AI, AI assistant] }
+
 # ── Digest shape ─────────────────────────────────────────────
 scoring:
   min_score_to_add: 45
