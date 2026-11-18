@@ -475,7 +475,9 @@ details.adv>summary{cursor:pointer;list-style:none;display:flex;align-items:cent
 .chk .n{margin-left:auto;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
 /* The work label sits beside the company name, so it never adds a line to the card (CARD-5). */
 .job .corow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
-.job .dreampill{white-space:normal}
+.job .dreampill{flex:1 1 4rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job .corow:has(.dreampill){flex-wrap:nowrap}
+.job .corow:has(.dreampill) .co{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .job .wk{font:600 .75rem/1.3 var(--f-body);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;white-space:nowrap}
 </style>
 
