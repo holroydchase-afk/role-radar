@@ -475,6 +475,7 @@ details.adv>summary{cursor:pointer;list-style:none;display:flex;align-items:cent
 .chk .n{margin-left:auto;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
 /* The work label sits beside the company name, so it never adds a line to the card (CARD-5). */
 .job .corow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
+.job .dreampill{white-space:normal}
 .job .wk{font:600 .75rem/1.3 var(--f-body);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:1px 8px;white-space:nowrap}
 </style>
 
@@ -537,7 +538,7 @@ function setConfig(c){config={...DEF_CONFIG,...(c||{})}; LANES=config.lanes; SKI
 const ATS=["greenhouse","ashby","lever"];
 // work: ticked Work boxes (ids below); payLo/payHi: the Pay filter in dollars, "" at either end of the range;
 // noPay: "0" when roles with no pay listed are left out of a Pay filter (RR-FA, docs/settings.md).
-const DEF_VIEW={q:"",status:"",sent:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",work:[],payLo:"",payHi:"",noPay:"",sorts:{}};
+const DEF_VIEW={q:"",status:"",sent:"",lane:"",fit:"",values:"",culture:"",source:"",tag:"",found:"",conflict:"",dream:"",work:[],payLo:"",payHi:"",noPay:"",sorts:{}};
 // Five sorts; each role tab has its own default and remembers its own pick (RR-FS-2, RR-FS-7, RR-FA FA-7).
 const SORTS=[["fit","Best match","Score, then culture and values"],["found","Newest","Most recently found"],["updated","Recently changed","Last status change first"],["followup","Follow-up date","Soonest follow-up first"],["pay","Highest pay","Top of the pay range first; no pay listed last"]];
 // Where the work happens (scoring.js workplaceOf), in the Work filter's order. "unknown" = the posting doesn't say.
@@ -549,7 +550,7 @@ const DEF_SORT={inbox:"fit",pipeline:"updated",all:"fit"};
 // Quick chips: each sets one view key (RR-FS-3). The Filters sheet holds the rest.
 // "Remote (US)" sets the Work filter to just remote_us (RR-FA FA-5), so it reads pressed only while that is the one box ticked.
 // Remote (US) second, so it is fully on screen at 390px (UX-R1).
-const CHIPS=[["day","Last 24 hrs","found","1"],["remote","Remote (US)","work","remote_us"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"]];
+const CHIPS=[["day","Last 24 hrs","found","1"],["remote","Remote (US)","work","remote_us"],["strong","Strong fit","fit","strong"],["values","Good values","values","good+"],["culture","Good culture","culture","good+"],["dream","Dream","dream","1"]];
 const chipOn=([,,k,v])=>k==="work"?view.work.length===1&&view.work[0]===v:view[k]===v;
 const SHEET_KEYS=["lane","found","source","tag","conflict","status","sent"];
 // Gmail import: the viewer's Gmail connector, read-only (search_threads, batch_get_threads).
@@ -595,6 +596,7 @@ function migrateView(v){
   if(o.culture!=="good+") o.culture="";
   if(!["1","7","30"].includes(o.found)) o.found="";
   if(o.sent!=="1") o.sent="";
+  if(o.dream!=="1") o.dream="";
   if(tab!=="all") o.status="";
   for(const k of Object.keys(DEF_VIEW)) if(!["sorts","work","payLo","payHi"].includes(k)&&typeof o[k]!=="string") o[k]="";
   // Work, Pay and Include-no-pay (FA-8): unknown ids and values off the scale are dropped.
@@ -777,6 +779,14 @@ function scoreOf(j){
   let r=scoreMemo.get(j); if(!r){ r=SC.scoreJob(j,specData); scoreMemo.set(j,r); } return r;
 }
 const scoreNum=j=>{const r=scoreOf(j); return r?r.score:typeof j.score==="number"?j.score:null;};
+// The Dream bucket (RR-DREAM): a label beside the score, never part of it. A role's own job.dream (set by the scan) wins,
+// else criteria.yaml `dream:` decides. Worked out once per role per criteria object, like scoreOf.
+let dreamMemo=new WeakMap(), dreamSpecSeen=null;
+function dreamOf(j){
+  if(!SC||!SC.dreamBucketOf) return null;
+  if(dreamSpecSeen!==specData){ dreamMemo=new WeakMap(); dreamSpecSeen=specData; }
+  let d=dreamMemo.get(j); if(d===undefined){ d=SC.dreamBucketOf(j,specData)||null; dreamMemo.set(j,d); } return d;
+}
 // Workplace and pay, worked out once per role object (a snapshot replaces the objects), so filtering and the
 // Highest pay sort over 2,000 roles stay inside the RR-H-21 budget (FA-9).
 const wpMemo=new WeakMap(), compMemo=new WeakMap();
@@ -867,7 +877,7 @@ function jobCard(j){
   // leads so Withdraw is never the first verb (UX-H2-R12). Preview lives in Details as "Preview posting".
   const skip=!DONE.includes(s)?`<button class="btn" type="button" data-quick="skipped" data-job="${id}">${WITHDRAW.includes(s)?"Withdraw":"Skip"}</button>`:"";
   const details=`<button class="btn" type="button" data-details="${id}" aria-haspopup="dialog" aria-controls="detailsSheet">Details</button>`;
-  const w=wpOf(j), loc=String(j.location??"").trim();
+  const w=wpOf(j), dr=dreamOf(j), loc=String(j.location??"").trim();
   // With a work pill, the location would say it twice (UX-R4); the full location stays in Details.
   const meta=[!w.label&&loc&&esc(loc),j.comp&&esc(j.comp),statusDate(j)].filter(Boolean).join(" · ");
   // A form, so a redraw from the database doesn't wipe a note being typed (see softRender). Picking a reason
@@ -880,7 +890,7 @@ function jobCard(j){
       <div class="go"><button class="primary" type="submit">Skip role</button><button class="linkbtn" type="button" data-skipcancel="1">Cancel</button></div></form>`:"";
   return `<article class="job${preview===j._id?" sel":""}" id="${roleAnchor(j._id)}" tabindex="-1">
     <div class="top"><div class="head">
-      <div class="corow"><span class="co">${esc(j.company)}</span>${w.label?`<span class="wk">${esc(w.label)}</span>`:""}</div>
+      <div class="corow"><span class="co">${esc(j.company)}</span>${w.label?`<span class="wk">${esc(w.label)}</span>`:""}${dr?`<span class="wk dreampill">Dream: ${esc(dr.why)}</span>`:""}</div>
       <h2>${desc?`<a href="${url?esc(url):"#preview"}"${url?` target="_blank" rel="noopener"`:` role="button"`} data-preview="${id}">${esc(title)}</a>`:url?`<a href="${esc(url)}" target="_blank" rel="noopener" data-view="${id}">${esc(title)}</a>`:esc(title)}</h2>
     </div>${scoreTile}</div>
     ${subScores(j)}
@@ -956,7 +966,7 @@ function filterBar(base=[]){
   const sources=[...new Set(jobs.map(j=>j.source||j.ats).filter(Boolean))].sort().map(s=>[s,srcName(s)]);
   const tags=[...new Set(jobs.flatMap(tagsOf))].sort().map(t=>[t,t]);
   const set=sheetSet(), any=!!view.q||set.length>0||CHIPS.some(chipOn), cur=sortOf();
-  const chips=CHIPS.map(c=>{const on=chipOn(c); return `<button class="chipbtn" type="button" data-chip="${c[0]}" aria-pressed="${on}">${on?ic('<path d="M5 12l5 5L20 7"/>'):""}${c[1]}</button>`;}).join("")
+  const chips=CHIPS.map(c=>{const on=chipOn(c); return `<button class="chipbtn" type="button" data-chip="${c[0]}" aria-pressed="${on}">${on?ic('<path d="M5 12l5 5L20 7"/>'):""}${c[1]}${c[0]==="dream"?" "+base.filter(j=>dreamOf(j)).length:""}</button>`;}).join("")
     +set.map(([k,label])=>`<button class="chipbtn unset" type="button" data-unset="${k}" aria-label="Remove filter ${esc(label)}">${esc(label)}${ic('<path d="M6 6l12 12M18 6L6 18"/>')}</button>`).join("");
   return `<form class="fbar" id="fbar">
     <div class="frow">
@@ -1027,6 +1037,7 @@ function applyView(list){
     if(view.tag&&!tagsOf(j).includes(view.tag)) return false;
     if(view.found){const d=daysSince(j.firstSeen); if(d===null||d>Number(view.found)) return false;}
     if(view.conflict){const c=!!conflictOf(j); if(view.conflict==="flag"&&!c) return false; if(view.conflict==="clear"&&c) return false;}
+    if(view.dream&&!dreamOf(j)) return false;
     if(work&&!work.has(wpOf(j).id)) return false;
     // Pay (FA-6): the role's range overlaps the filter; a role with no pay listed shows only while Include is on.
     if(pay){ const r=compOf(j); if(!r){ if(view.noPay==="0") return false; } else if(r.max<pay[0]||r.min>pay[1]) return false; }
@@ -2332,6 +2343,24 @@ dream_roles:
     - { company: Gridlark, title: "Staff Product Manager, Virtual Power Plants", why: "grid flexibility", check: "only if the VPP is live, not a pilot" }
   role_keywords: [processing, payments, billing, lending, financing, underwriting]
   in_sectors: [solar_energy, climate_tech, green_finance]
+
+# ── Dream bucket: a label, never points ──────────────────────
+#  Roles that fit the Dream filter on the page get a "Dream: <why>" pill. It never changes the 0–100 score
+#  (that is dream_roles above). A role is Dream when it is at a company in `companies`, or when a rule's
+#  keywords (whole words) show up in its title, company or posting. kinds: mission · health · ai_lab · applied_ai.
+#  applied_ai is stricter: the keyword must be in the title, unless the company is in established_companies.
+#  exclude: words or companies (whole-word, in company, title or posting) that are never Dream, even at a dream
+#  company or with a scan-set dream. Here: AI for human health counts, fertility does not.
+#  EXAMPLE lists with made-up names. Put your own in your saved criteria.
+dream:
+  companies: [Sunfield Energy, Example Learning Nonprofit, Example Health AI]
+  established_companies: [Example AI Lab, Example Big Tech]   # applied_ai counts from the posting text here
+  exclude: [fertility, IVF, in vitro]
+  rules:
+    - { id: mission,    kind: mission,    keywords: [decarbonization, climate justice, economic mobility, civic tech] }
+    - { id: health,     kind: health,     keywords: [patient care, clinical, care delivery, chronic condition, digital health, human health] }
+    - { id: ai_lab,     kind: ai_lab,     keywords: [frontier model, foundation model, model training, alignment] }
+    - { id: applied_ai, kind: applied_ai, keywords: [agents, LLM, generative AI, AI assistant] }
 
 # ── Digest shape ─────────────────────────────────────────────
 scoring:
