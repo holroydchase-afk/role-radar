@@ -11,7 +11,7 @@ permissions:
 jobs:
   agents:
     if: ${{ github.event.pull_request.user.type != 'Bot' && !contains(github.event.pull_request.title, '[skip agents]') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
