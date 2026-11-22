@@ -21,8 +21,8 @@ after(async () => { await browser.close(); });
 const TABS = ["home", "inbox", "pipeline", "all", "criteria", "ruled", "watch"];
 const VIEWPORTS = [{ width: 390, height: 844 }, { width: 1280, height: 800 }];
 
-async function open(vp: { width: number; height: number }, colorScheme: "light" | "dark" = "light") {
-  return openDemo(browser, { html: buildDemo(), file: "dist/test-design-system.html", ready: "#tabs button", colorScheme, ...vp });
+async function open(vp: { width: number; height: number }, colorScheme: "light" | "dark" = "light", publicDemo = false) {
+  return openDemo(browser, { html: buildDemo({ publicDemo }), file: "dist/test-design-system.html", ready: "#tabs button", colorScheme, ...vp });
 }
 
 /** Visible elements that own text, with what the studio system constrains. */
@@ -45,9 +45,15 @@ const AUDIT = () => {
 
 const radiusOk = (v: string) => { const n = parseFloat(v); return v.includes("%") || n === 0 || n === 4 || n === 12 || n >= 99; };
 
-for (const vp of VIEWPORTS) for (const scheme of ["light", "dark"] as const) {
-  test(`RR-DS-1 ${vp.width}px ${scheme}: font, size, weight, targets, corners and shadows follow the studio system on every tab`, async () => {
-    const { page, errors } = await open(vp, scheme);
+// RR-DS-3 (QA gap): the public build is what visitors see; 320px is the narrowest supported width. Same rules, both.
+const CASES = [
+  ...VIEWPORTS.flatMap((vp) => (["light", "dark"] as const).map((scheme) => ({ vp, scheme, publicDemo: false }))),
+  ...[{ width: 390, height: 844 }, { width: 320, height: 640 }, { width: 1280, height: 800 }].flatMap((vp) => (["light", "dark"] as const).map((scheme) => ({ vp, scheme, publicDemo: true }))),
+  { vp: { width: 320, height: 640 }, scheme: "light" as const, publicDemo: false },
+];
+for (const { vp, scheme, publicDemo } of CASES) {
+  test(`RR-DS-1${publicDemo || vp.width === 320 ? "/3" : ""} ${publicDemo ? "public build " : ""}${vp.width}px ${scheme}: font, size, weight, targets, corners and shadows follow the studio system on every tab`, async () => {
+    const { page, errors } = await open(vp, scheme, publicDemo);
     const bad = new Set<string>();
     for (const tab of TABS) {
       await openTab(page, tab);
