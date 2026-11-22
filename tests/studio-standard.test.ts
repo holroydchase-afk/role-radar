@@ -11,7 +11,7 @@ const DOCS = ["docs/product/DECISIONS.md", "docs/eng/LESSONS.md", "docs/product/
 
 test("STD-1 CLAUDE.md points at the studio standard and says its own hard rules win", () => {
   const md = read("CLAUDE.md");
-  assert.match(md, /Studio standard\.?\*{0,2}:?\s*follow(?: the)? studio-agents repo,? ?docs\/studio-standard\.md/i, "points at the standard");
+  assert.match(md, /Studio standard\.?\*{0,2}:?\s*follow(?: the)? (?:holroydchase-afk\/)?studio-agents(?: repo)?,? ?`?docs\/studio-standard\.md/i, "points at the standard");
   assert.match(md, /this file's hard rules win where they say more/, "own hard rules win");
 });
 
