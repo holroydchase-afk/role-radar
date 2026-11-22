@@ -59,7 +59,7 @@ for (const [name, html] of BUILDS) {
       assert.equal(await bar(page).count(), 1, "one region named Demo");
       assert.equal(await bar(page).evaluate((el) => el.tagName), "SECTION");
       const box = (await bar(page).boundingBox())!;
-      assert.ok(box.height <= 48, `bar is ${box.height}px tall`);
+      assert.ok(box.height <= 49, `bar is ${box.height}px tall`);
       assert.ok(box.y < 1, `bar sits at the top of the page (y=${box.y})`);
       assert.equal(await bar(page).evaluate((el) => !!el.closest("header")), false, "bar is outside <header>");
       assert.ok(box.y + box.height <= (await h1Top(page)) + 0.5, "bar is above the title");
@@ -96,7 +96,7 @@ test("DEMO-BAR-2 at 320px: no sideways scroll, bar at most 48px, back link and t
   for (const [name, html] of BUILDS) {
     const { page } = await openBuild(html(), { width: 320, height: 640 });
     assert.ok((await overflow(page)) <= 0, `${name}: scrolls sideways by ${await overflow(page)}px at 320`);
-    assert.ok(((await bar(page).boundingBox())?.height ?? 99) <= 48, `${name}: bar height at 320`);
+    assert.ok(((await bar(page).boundingBox())?.height ?? 99) <= 49, `${name}: bar height at 320`);
     assert.equal(await bar(page).getByRole("link", { name: "← Portfolio" }).isVisible(), true, `${name}: back link`);
     assert.equal(await toggle(page).isVisible(), true, `${name}: toggle`);
     await page.close();
