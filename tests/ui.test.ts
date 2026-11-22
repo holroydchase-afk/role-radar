@@ -46,8 +46,9 @@ test("demo pages say they are demo data", async () => {
 test("the filter bar keeps its styles (stray <style> tag fixed)", async () => {
   const { page } = await openDemo();
   await page.click("#tab-inbox");
-  const bg = await page.evaluate(() => getComputedStyle(document.querySelector(".fbar")!).backgroundColor);
-  assert.notEqual(bg, "rgba(0, 0, 0, 0)");
+  // RR-DS: content sits on the plain page, so the bar's style is its divider line, not a grey box.
+  const line = await page.evaluate(() => getComputedStyle(document.querySelector(".fbar")!).borderBottomWidth);
+  assert.notEqual(line, "0px");
   await page.close();
 });
 

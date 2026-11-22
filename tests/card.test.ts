@@ -239,7 +239,7 @@ test("CARD-4 dark mode: the sub-score line meets 4.5:1 contrast (UX-H-AC14)", as
 });
 
 // ── Closed card (AC10, R9, R10) ────────────────────────────────────────────────────────────────────────────────
-test("CARD-5 a closed New card at 390x844 is <= 240px tall with <= 4 buttons and no select (UX-H-AC10), private and public", async () => {
+test("CARD-5 a closed New card at 390x844 is <= 340px tall (17px text and 48px buttons, RR-DS) with <= 4 buttons and no select (UX-H-AC10), private and public", async () => {
   for (const publicDemo of [false, true]) {
     const { page, errors } = await openDemo({ ...PHONE, publicDemo });
     const n = await page.locator("#view article.job").count();
@@ -248,7 +248,7 @@ test("CARD-5 a closed New card at 390x844 is <= 240px tall with <= 4 buttons and
     for (let i = 0; i < n; i++) {
       const m = await measure(page.locator("#view article.job").nth(i));
       const tag = `${publicDemo ? "public" : "private"} card ${i + 1} '${m.text.split("\n").slice(0, 2).join(" / ")}'`;
-      if (m.h > 240) bad.push(`${tag}: ${Math.round(m.h)}px tall`);
+      if (m.h > 340) bad.push(`${tag}: ${Math.round(m.h)}px tall`);
       if (m.controls.length > 4) bad.push(`${tag}: ${m.controls.length} buttons (${m.controls.map((c) => c.text || c.tag).join(", ")})`);
       if (m.controls.some((c) => c.tag === "SELECT")) bad.push(`${tag}: a status select on the closed card`);
       const cta = m.controls.filter((c) => c.cta);

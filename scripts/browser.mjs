@@ -10,9 +10,7 @@ const nm = (p) => join(root, "node_modules", p);
 const yamlJs = () => readFileSync(nm("js-yaml/dist/js-yaml.min.js"), "utf8");
 
 const FACES = [
-  ["Bricolage Grotesque", "bricolage-grotesque", [500, 700]],
-  ["Instrument Sans", "instrument-sans", [400, 500, 600]],
-  ["IBM Plex Mono", "ibm-plex-mono", [400, 500]],
+  ["Atkinson Hyperlegible Next", "atkinson-hyperlegible-next", [400, 500, 600]],
 ];
 let fontCss;
 function fontsCss() {

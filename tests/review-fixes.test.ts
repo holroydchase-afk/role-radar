@@ -217,7 +217,7 @@ test("FIX-3 UX-H2-R2 Details 'Why this score' starts 'Fit N + Values N + Culture
 });
 
 // ── UX-H2-R3, R12: one button row on a phone; Preview moves into Details ─────────────────────────────────────
-test("FIX-4 UX-H2-R3 at 360x740 every New and Pipeline card has <= 3 buttons in one row, no Preview, and is <= 240px (both builds)", async () => {
+test("FIX-4 UX-H2-R3 at 360x740 every New and Pipeline card has <= 3 buttons in one row, no Preview, and is <= 340px (both builds; 17px text and 48px buttons, RR-DS)", async () => {
   for (const publicDemo of [false, true]) {
     const { page, errors } = await openDemo({ ...SMALL, publicDemo, query: "?tab=inbox", ready: "#view article.job" });
     const bad: string[] = [];
@@ -231,7 +231,7 @@ test("FIX-4 UX-H2-R3 at 360x740 every New and Pipeline card has <= 3 buttons in 
         if (ctl.length > 3) bad.push(`${tag}: ${ctl.length} buttons [${ctl.map((x) => x.text).join(", ")}]`);
         if (ctl.length && Math.max(...ctl.map((x) => x.top)) - Math.min(...ctl.map((x) => x.top)) > 4) bad.push(`${tag}: buttons on ${new Set(ctl.map((x) => x.top)).size} rows`);
         if (ctl.some((x) => x.preview)) bad.push(`${tag}: Preview is still on the card`);
-        if (h > 240) bad.push(`${tag}: ${Math.round(h)}px tall`);
+        if (h > 340) bad.push(`${tag}: ${Math.round(h)}px tall`);
       }
     }
     assert.deepEqual(bad, []);
