@@ -1,6 +1,12 @@
 {
   "logs": {
-    "roots": ["src"],
+    "roots": [
+      "src"
+    ],
     "banned": []
+  },
+  "agents": {
+    "verify": "npm ci --no-audit --no-fund && npx playwright install --with-deps chromium && npm test",
+    "runs": 3
   }
 }

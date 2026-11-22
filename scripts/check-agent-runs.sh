@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Agents: line vs. what really ran (from studio-agents). Every studio agent the PR's
-# Agents: line names must appear in .claude/agent-runs/<branch>.log, written by the log-agent-run.sh hook.
+# Agents: line vs. what really ran (from holroydchase-afk/studio-agents). Every studio agent the PR's
+# Agents: line names must appear in .claude/agent-runs/<branch>.log, written by the log-agent-run.sh hook
+# ("<time> <agent>") or by its --as mode ("<time> <agent> via-general-purpose").
 # "<agent> skipped: why" needs no entry. If qa-tdd ran and studio-checks.json has
 # { "agents": { "verify": "<test command>", "runs": 3 } }, CI reruns that command that many times.
 # Usage: BODY="<PR body>" HEAD_REF=<branch> bash scripts/check-agent-runs.sh   (from the repo root)
@@ -15,7 +16,7 @@ for f in .claude/agents/*.md; do
   printf '%s' "$line" | grep -qE "(^|[^a-z-])$a([^a-z-]|$)" || continue
   printf '%s' "$line" | grep -qiE "(^|[^a-z-])$a skipped" && continue
   claimed+=("$a")
-  grep -qE " $a\$" "$log" 2>/dev/null || { echo "::error::The Agents: line names '$a', but $log has no run of it. Run it with the Agent tool (the hook logs it) and commit the log, or write '$a skipped: <reason>'."; fail=1; }
+  grep -qE " $a( via-general-purpose)?\$" "$log" 2>/dev/null || { echo "::error::The Agents: line names '$a', but $log has no run of it. Run it with the Agent tool (the hook logs it), or in a cloud thread as general-purpose with the prompt from 'bash scripts/agent-prompt.sh $a \"<task>\"' (it logs itself with log-agent-run.sh --as $a), and commit the log, or write '$a skipped: <reason>'."; fail=1; }
 done
 [ $fail -eq 0 ] || exit 1
 if [[ " ${claimed[*]-} " == *" qa-tdd "* ]] && [ -f studio-checks.json ]; then
