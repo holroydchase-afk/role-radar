@@ -145,8 +145,11 @@ export ROLE_RADAR_JOBS=~/radar/jobs.json     # demo/seed.json shows the shape
 node agent/run.ts scan-and-draft   # draft for the best roles; spend cap defaults to $1
 node agent/run.ts metrics          # counts and spend from the tracker and log, no key
 node agent/run.ts approve <roleId> # after you reviewed and sent a draft yourself
+node agent/run.ts status <roleId> <ready|response|interview|rejected>  # you set later statuses; the model cannot
 node agent/run.ts eval             # agent vs one plain prompt on demo/agent/cases.json, graded blind by Opus
 ```
+
+Privacy: your facts and the posting text are sent to the model vendor (Anthropic) on every `scan-and-draft` and `eval` run. Check the vendor's current data-retention terms before a real run. The agent refuses facts, jobs, tracker or log paths inside the repo (only the shipped demo files may be read). The model can set only `found`, `drafted` and `dropped`; `ready`, `response`, `interview` and `rejected` are yours via `status`, and `sent` only via `approve`.
 
 A KILL file next to the log (or `ROLE_RADAR_AGENT_KILL=1`) stops every call.
 

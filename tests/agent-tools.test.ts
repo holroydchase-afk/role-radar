@@ -204,10 +204,10 @@ test("track writes status and draft refs to the tracker with the role's title an
 
 test("AG-8/AG-9 via track: sent is refused even if the input claims approval, and a bad status is rejected", async () => {
   const { tool, tracker, log } = setup();
-  await tool("track").run({ roleId: ID, status: "ready" });
+  await tool("track").run({ roleId: ID, status: "drafted" });
   await assert.rejects(() => tool("track").run({ roleId: ID, status: "sent", approved: true }), /approv|sent/i);
   await assert.rejects(() => tool("track").run({ roleId: ID, status: "emailed" }), /invalid|status/i);
-  assert.equal(tracker.get(ID).status, "ready", "unchanged");
+  assert.equal(tracker.get(ID).status, "drafted", "unchanged");
   assert.ok(lines(log).some((r) => r.event === "refused_sent"));
   assert.equal((tool("track").schema.properties ?? {}).approved, undefined, "the model cannot even see an approval field");
 });

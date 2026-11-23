@@ -50,7 +50,7 @@ test("AG-19 paths outside the repo and the made-up demo folder are allowed", () 
   const out = join(tmpdir(), "somewhere", "facts.json");
   assert.equal(assertOutsideRepo(out, "ROLE_RADAR_FACTS"), resolve(out));
   const demo = join(REPO, "demo", "agent", "facts.json");
-  assert.equal(assertOutsideRepo(demo, "ROLE_RADAR_FACTS"), demo);
+  assert.equal(assertOutsideRepo(demo, "ROLE_RADAR_FACTS", { readOnly: true }), demo); // PS-R1: demo/ is read-only-exact now
 });
 
 test("AG-19 a prefix-sibling of the repo (same name plus suffix) is not mistaken for inside", () => {

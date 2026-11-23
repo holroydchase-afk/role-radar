@@ -155,3 +155,18 @@ test("AG-28 npm run check:private is clean over the tree", () => {
   const r = spawnSync(process.execPath, [join(REPO, "scripts/check-private.mjs")], { cwd: REPO, encoding: "utf8" });
   assert.equal(r.status, 0, r.stdout + r.stderr);
 });
+
+test("status <roleId> <ready|response|interview|rejected> sets the status; sent and unknown statuses are refused", () => {
+  const t = join(dir, "tracker.jsonl");
+  const tr = createTracker(t);
+  tr.upsertRole({ id: "r1", title: "PM", company: "Example Co" });
+  const ok = cli(["status", "r1", "interview"]);
+  assert.equal(ok.code, 0, ok.err);
+  assert.equal(createTracker(t).get("r1").status, "interview");
+  for (const bad of ["sent", "bogus"]) {
+    const r = cli(["status", "r1", bad]);
+    assert.notEqual(r.code, 0);
+    assert.equal(createTracker(t).get("r1").status, "interview");
+  }
+  assert.notEqual(cli(["status", "nope", "ready"]).code, 0);
+});

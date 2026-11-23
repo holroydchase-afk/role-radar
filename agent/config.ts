@@ -37,13 +37,17 @@ function realish(p: string): string {
 
 const within = (child: string, parent: string) => child === parent || child.startsWith(parent + sep);
 
-/** Throws naming envName when path is inside the repo (except demo/). Returns the resolved path. */
-export function assertOutsideRepo(path: string, envName: string): string {
+const SHIPPED_READ_ONLY = ["demo/agent/facts.json", "demo/agent/cases.json", "demo/seed.json"];
+
+/** Throws naming envName when path is inside the repo. Only with readOnly, the three exact shipped demo files are allowed. Returns the resolved path. */
+export function assertOutsideRepo(path: string, envName: string, opts: { readOnly?: boolean } = {}): string {
   const abs = resolve(path);
   const roots = new Set([REPO_ROOT, realish(REPO_ROOT)]);
+  const shipped = new Set<string>();
+  if (opts.readOnly) for (const rel of SHIPPED_READ_ONLY) for (const root of roots) shipped.add(join(root, rel));
   for (const p of [abs, realish(abs)]) {
     for (const root of roots) {
-      if (within(p, root) && !within(p, join(root, "demo"))) {
+      if (within(p, root) && !(opts.readOnly && shipped.has(p))) {
         throw new Error(`${envName} must point outside the repo (real data never lives in a public repo): ${abs}`);
       }
     }

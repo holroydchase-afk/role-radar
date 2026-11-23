@@ -1,9 +1,9 @@
-// RR-AGENT CLI: node agent/run.ts <scan-and-draft | eval | metrics | approve <roleId>>
+// RR-AGENT CLI: node agent/run.ts <scan-and-draft | eval | metrics | approve <roleId> | status <roleId> <status>>
 // The approval flag for "sent" is set here, in `approve`, and nowhere else. The model never gets a path to it.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import yaml from "js-yaml";
-import { PRICES, REPO_ROOT } from "./config.ts";
+import { PRICES, REPO_ROOT, assertOutsideRepo } from "./config.ts";
 import { createHarness } from "./harness.ts";
 import { anthropicLlm } from "./llm.ts";
 import { createTracker } from "./tracker.ts";
@@ -18,6 +18,7 @@ const USAGE = `Usage: node agent/run.ts <command>
   eval              agent vs plain Claude on demo/agent/cases.json, graded blind (needs ANTHROPIC_API_KEY)
   metrics           counts and spend from the tracker and the run log (no key)
   approve <roleId>  mark one role as sent after you reviewed the draft (no key)
+  status <roleId> <ready|response|interview|rejected>  set a later status yourself (no key; "sent" stays with approve)
 
 Env: ROLE_RADAR_FACTS, ROLE_RADAR_TRACKER, ROLE_RADAR_AGENT_LOG, ROLE_RADAR_JOBS, ROLE_RADAR_AGENT_MAX_USD (optional).`;
 
@@ -38,7 +39,7 @@ const capUsd = (fallback: number) => {
 };
 
 async function main(argv: string[]): Promise<number> {
-  const [cmd, arg] = argv;
+  const [cmd, arg, arg2] = argv;
   if (cmd === "--help" || cmd === "-h" || cmd === "help") { console.log(USAGE); return 0; }
 
   if (cmd === "metrics") {
@@ -58,6 +59,16 @@ async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
+  if (cmd === "status") {
+    const allowed = ["ready", "response", "interview", "rejected"];
+    if (!arg || !arg2 || !allowed.includes(arg2)) throw new UserError(`status needs a role id and one of ${allowed.join(", ")}: node agent/run.ts status <roleId> <status> (use approve for sent)`);
+    const tracker = createTracker(env("ROLE_RADAR_TRACKER"));
+    tracker.get(arg); // throws "unknown role" before anything is written
+    tracker.setStatus(arg, arg2);
+    console.log(`${arg} is now ${arg2}.`);
+    return 0;
+  }
+
   if (cmd === "scan-and-draft") {
     needKey();
     const harness = createHarness({ logPath: process.env.ROLE_RADAR_AGENT_LOG, capUsd: capUsd(1), prices: PRICES });
@@ -73,6 +84,9 @@ async function main(argv: string[]): Promise<number> {
 
   if (cmd === "eval") {
     needKey();
+    const envFacts = process.env.ROLE_RADAR_FACTS;
+    const factsUsed = envFacts ? assertOutsideRepo(envFacts, "ROLE_RADAR_FACTS", { readOnly: true }) : join(REPO_ROOT, "demo/agent/facts.json");
+    console.error(envFacts ? `eval: using facts file ${factsUsed}` : `eval: ROLE_RADAR_FACTS not set, using the made-up demo facts demo/agent/facts.json`);
     const harness = createHarness({ logPath: process.env.ROLE_RADAR_AGENT_LOG, capUsd: capUsd(EVAL_DEFAULT_CAP_USD), prices: PRICES });
     const llm = anthropicLlm();
     const cases = JSON.parse(readFileSync(join(REPO_ROOT, "demo/agent/cases.json"), "utf8")).cases;

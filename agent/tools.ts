@@ -2,11 +2,13 @@
 // No network here: model calls go through the injected Llm (agent/llm.ts), jobs come from a local file.
 import { readFileSync } from "node:fs";
 import { scoreJob, matchJob, explain } from "../src/scoring.ts";
-import { SONNET_MODEL } from "./config.ts";
-import { STATUSES } from "./tracker.ts";
+import { SONNET_MODEL, assertOutsideRepo } from "./config.ts";
 import type { Llm } from "./llm.ts";
 import type { Harness } from "./harness.ts";
 import type { Tracker } from "./tracker.ts";
+
+// The model may set only these; ready, response, interview, rejected and sent are human-set via the CLI.
+const MODEL_STATUSES = ["found", "drafted", "dropped"];
 
 export type ToolDef = {
   name: string;
@@ -25,7 +27,9 @@ const asRecord = (v: unknown): Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 
 export function createTools(deps: ToolDeps): ToolDef[] {
-  const { llm, harness, tracker, criteria, jobsPath, factsPath } = deps;
+  const { llm, harness, tracker, criteria } = deps;
+  const jobsPath = assertOutsideRepo(deps.jobsPath, "ROLE_RADAR_JOBS", { readOnly: true });
+  const factsPath = assertOutsideRepo(deps.factsPath, "ROLE_RADAR_FACTS", { readOnly: true });
 
   const jobs = (): Record<string, any> => asRecord(JSON.parse(readFileSync(jobsPath, "utf8")).jobs);
   const facts = (): Fact[] => {
@@ -153,12 +157,12 @@ export function createTools(deps: ToolDeps): ToolDef[] {
 
   const track: ToolDef = {
     name: "track",
-    description: "Record a role's status (never \"sent\") and draft references in the tracker.",
+    description: "Record a role's status (found, drafted or dropped only) and draft references in the tracker.",
     schema: {
       type: "object",
       properties: {
         roleId: roleProp.roleId,
-        status: { type: "string", enum: STATUSES.filter((s) => s !== "sent") },
+        status: { type: "string", enum: MODEL_STATUSES },
         drafts: {
           type: "array",
           items: { type: "object", properties: { kind: { type: "string" }, ref: { type: "string" } }, required: ["kind", "ref"] },
@@ -170,8 +174,9 @@ export function createTools(deps: ToolDeps): ToolDef[] {
       const roleId = roleIdOf(input);
       const rec = asRecord(input);
       const status = rec.status;
-      if (typeof status !== "string" || !(STATUSES as readonly string[]).includes(status)) {
-        throw new Error(`invalid status: ${String(status)}`);
+      if (status === "sent") harness.log({ event: "refused_sent", roleId });
+      if (typeof status !== "string" || !MODEL_STATUSES.includes(status)) {
+        throw new Error(`invalid status: ${String(status)} (the model may set only ${MODEL_STATUSES.join(", ")})`);
       }
       const drafts = rec.drafts === undefined ? [] : rec.drafts;
       if (!Array.isArray(drafts)) throw new Error("drafts must be an array of {kind, ref}");

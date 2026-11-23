@@ -11,7 +11,7 @@ export type Role = RoleInput & { status: Status; drafts: Draft[]; updatedAt: str
 
 export function createTracker(path: string, opts: { harness?: { log(f: Record<string, unknown>): void } } = {}) {
   if (typeof path !== "string" || path === "") throw new Error("ROLE_RADAR_TRACKER is not set: point it at a file outside the repo");
-  const file = assertOutsideRepo(path, "ROLE_RADAR_TRACKER");
+  const file = assertOutsideRepo(path, "ROLE_RADAR_TRACKER"); // write target: demo/ is not exempt
 
   const append = (row: Record<string, unknown>) => {
     mkdirSync(dirname(file), { recursive: true });

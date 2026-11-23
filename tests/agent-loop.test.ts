@@ -195,14 +195,14 @@ test("every loop llm call is logged with the response usage", async () => {
 
 test("drafts only: a model that asks for sent (even claiming approval) is refused, the tracker is unchanged, and refused_sent is logged", async () => {
   const { llm, harness, tools, tracker } = setup([
-    use("track", { roleId: ID, status: "ready" }, "k1"),
+    use("track", { roleId: ID, status: "drafted" }, "k1"),
     use("track", { roleId: ID, status: "sent", approved: true }, "k2"),
     use("track", { roleId: ID, status: "sent", approve_sent: ID }, "k3"),
     { text: "stopped" },
   ]);
   const res = await runAgent({ llm, harness, tools, goal: "g", maxSteps: 12 });
   assert.equal(res.stopReason, "final");
-  assert.equal(tracker.get(ID).status, "ready");
+  assert.equal(tracker.get(ID).status, "drafted");
   assert.equal(resultsOf(llm.calls[2])[0].is_error, true);
   assert.equal(resultsOf(llm.calls[3])[0].is_error, true);
   assert.equal(lines().filter((r) => r.event === "refused_sent").length, 2);
