@@ -9,13 +9,13 @@ export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const SONNET_MODEL = "claude-sonnet-5-5"; // agent
 export const OPUS_MODEL = "claude-opus-5-5"; // grader
 
-// UNVERIFIED ESTIMATES: these prices were not checked against the vendor's
-// price list and may be stale. usd in the log is an estimate; check the
-// vendor's current pricing before trusting a cap. USD per million tokens.
+// USD per million tokens, from the claude-api skill's model table (cached 2026-11-03):
+// Sonnet 5.5 $2 in / $10 out, Opus 5.5 $4 in / $20 out. Standard rates, prompts up to the
+// base context; cache and long-context surcharges are not modelled, so usd is an estimate.
 export const PRICES_AS_OF = "2026-11-23";
 export const PRICES: Record<string, { inputPerMTok: number; outputPerMTok: number }> = {
-  [SONNET_MODEL]: { inputPerMTok: 3, outputPerMTok: 15 },
-  [OPUS_MODEL]: { inputPerMTok: 15, outputPerMTok: 75 },
+  [SONNET_MODEL]: { inputPerMTok: 2, outputPerMTok: 10 },
+  [OPUS_MODEL]: { inputPerMTok: 4, outputPerMTok: 20 },
 };
 
 // Resolve through symlinks, even when the leaf does not exist yet.
