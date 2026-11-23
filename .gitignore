@@ -9,3 +9,5 @@ profile.local.json
 *.local.txt
 _site/
 build/
+*.jsonl
+agent/*.local.*

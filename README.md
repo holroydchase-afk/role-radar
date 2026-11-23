@@ -130,6 +130,40 @@ It runs over stdio only and makes no network calls itself; what the tools return
 
 Then paste a posting and ask: *"Score this posting for me."*
 
+## Job-hunt agent
+
+An experiment in `agent/`: a small tool-using agent (Claude Sonnet) that scans a jobs file, scores each role against `criteria.yaml`, and writes drafts (resume, cover letter, short outreach) grounded in a list of facts about you. It drafts only. It has no send tool, and a role can only reach `sent` when you run `approve` yourself.
+
+Run it (needs Node 22 and `ANTHROPIC_API_KEY`; your facts, tracker and log live outside the repo):
+
+```sh
+export ANTHROPIC_API_KEY=...                 # scan-and-draft and eval only
+export ROLE_RADAR_FACTS=~/radar/facts.json   # demo/agent/facts.json shows the shape
+export ROLE_RADAR_TRACKER=~/radar/tracker.jsonl
+export ROLE_RADAR_AGENT_LOG=~/radar/run.jsonl
+export ROLE_RADAR_JOBS=~/radar/jobs.json     # demo/seed.json shows the shape
+node agent/run.ts scan-and-draft   # draft for the best roles; spend cap defaults to $1
+node agent/run.ts metrics          # counts and spend from the tracker and log, no key
+node agent/run.ts approve <roleId> # after you reviewed and sent a draft yourself
+node agent/run.ts status <roleId> <ready|response|interview|rejected>  # you set later statuses; the model cannot
+node agent/run.ts eval             # agent vs one plain prompt on demo/agent/cases.json, graded blind by Opus
+```
+
+Privacy: your facts and the posting text are sent to the model vendor (Anthropic) on every `scan-and-draft` and `eval` run. Check the vendor's current data-retention terms before a real run. The agent refuses facts, jobs, tracker or log paths inside the repo (only the shipped demo files may be read). The model can set only `found`, `drafted` and `dropped`; `ready`, `response`, `interview` and `rejected` are yours via `status`, and `sent` only via `approve`.
+
+A KILL file next to the log (or `ROLE_RADAR_AGENT_KILL=1`) stops every call.
+
+### What is proven
+
+- Offline tests with fake models pass: the tool loop, the drafts-only rule (the tracker refuses `sent` without approval from the CLI), the spend cap and kill switch, the blind A/B shuffle in the eval, and the metrics counts.
+- Token counts and estimated spend come from the run log, never from a guess.
+
+### What is not proven
+
+- No live run yet. Nothing here has called the real API, so there are no real eval numbers and no claim that the agent beats a single prompt. The eval only runs offline with fakes until Chase runs it with a key.
+- The price table is an unverified estimate, so spend caps are approximate.
+- The demo cases are eight made-up roles; they say nothing about real postings.
+
 ## Project layout
 
 | Path | What it is |

@@ -1,0 +1,45 @@
+{
+  "_label": "DEMO DATA: eight made-up roles for the agent eval. Every company and posting is invented; no real employer, person or opening. Labels say whether the role is a good or bad fit for the made-up candidate in facts.json.",
+  "cases": [
+    {
+      "id": "case-g1", "label": "good", "company": "Brindlewick Payments", "title": "Senior Product Manager, Payments Platform", "location": "Remote, US",
+      "description": "Lead the roadmap for a payments platform used by other product teams. You will manage a team of about eight, work with engineering on reliability, and own the metrics review. Six or more years of product management required.",
+      "reason": "Senior PM scope matching the payments platform and team-lead experience.", "factIds": ["demo-f1", "demo-f6"]
+    },
+    {
+      "id": "case-g2", "label": "good", "company": "Tessellate Learning", "title": "Staff Product Manager, Growth and Onboarding", "location": "Remote, US",
+      "description": "Own self-serve onboarding for a made-up learning product. Cut time to first value, run experiments, and partner with design on a mobile rebuild. Senior or staff level, six or more years.",
+      "reason": "Onboarding, experiments and design partnership all appear in the facts.", "factIds": ["demo-f2", "demo-f5"]
+    },
+    {
+      "id": "case-g3", "label": "good", "company": "Larkspur Data", "title": "Senior Product Manager, Data API", "location": "Remote, US",
+      "description": "Own the roadmap for a developer-facing data API with a few hundred business customers. Talk to customers, set pricing with finance, and decide what ships next.",
+      "reason": "API roadmap ownership plus pricing work, both in the facts.", "factIds": ["demo-f4", "demo-f3"]
+    },
+    {
+      "id": "case-g4", "label": "good", "company": "Quillfeather Labs", "title": "Senior Product Manager, Pricing and Packaging", "location": "Remote, US",
+      "description": "Run pricing experiments across several regional markets for an invented subscription product. Report results to leadership each week and write the decision memos.",
+      "reason": "Pricing experiments across markets and a metrics review habit are in the facts.", "factIds": ["demo-f3", "demo-f6"]
+    },
+    {
+      "id": "case-b1", "label": "bad", "company": "Pebblestone Apps", "title": "Associate Product Manager", "location": "Remote, US",
+      "description": "Entry level role for someone with zero to two years of experience. You will write tickets and support senior managers. Rotational program.",
+      "reason": "Junior title and scope, well below senior or staff.", "factIds": []
+    },
+    {
+      "id": "case-b2", "label": "bad", "company": "Ironmoss Devices", "title": "Principal Firmware Engineer", "location": "Onsite, a made-up industrial park",
+      "description": "Write embedded C for a sensor board. Five or more years of firmware experience, on-call rotation, onsite five days a week. No product management duties.",
+      "reason": "An engineering job, not product management, and onsite only.", "factIds": []
+    },
+    {
+      "id": "case-b3", "label": "bad", "company": "Fernhollow Retail", "title": "Regional Sales Manager", "location": "Onsite, three days a week",
+      "description": "Hit quarterly quota for a territory of invented stores. Travel two weeks a month, cold calling, commission only.",
+      "reason": "A sales quota job with no product work and commission-only pay.", "factIds": []
+    },
+    {
+      "id": "case-b4", "label": "bad", "company": "Cobaltreach Hardware", "title": "Senior Product Manager, Robotics Actuators", "location": "Onsite, a made-up lab town",
+      "description": "Own the roadmap for robotic actuators. Requires a mechanical engineering degree, five years shipping hardware, and supplier negotiation in two languages. Onsite five days.",
+      "reason": "Senior PM title but a hardware specialism and onsite requirement the facts do not support.", "factIds": []
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_label": "DEMO DATA: made up for tests and examples. Not a real person, employer or result.",
+  "facts": [
+    { "id": "demo-f1", "text": "Led a made-up payments platform team of 8 at Example Co (demo).", "tags": ["leadership", "payments"] },
+    { "id": "demo-f2", "text": "Shipped a fictional self-serve onboarding flow that cut setup time by 40 percent (demo figure).", "tags": ["growth", "onboarding"] },
+    { "id": "demo-f3", "text": "Ran a sample pricing experiment across three invented markets at Sample Inc (demo).", "tags": ["pricing", "experiments"] },
+    { "id": "demo-f4", "text": "Owned the roadmap for a pretend data API used by 200 imaginary customers.", "tags": ["api", "roadmap"] },
+    { "id": "demo-f5", "text": "Partnered with a made-up design team to rebuild an invented mobile app.", "tags": ["design", "mobile"] },
+    { "id": "demo-f6", "text": "Introduced a demo weekly metrics review that the fictional exec team adopted.", "tags": ["metrics", "process"] }
+  ]
+}
