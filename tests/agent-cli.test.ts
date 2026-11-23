@@ -1,154 +1,72 @@
-/* RR-AGENT PR 3: CLI (AG-26) and docs/privacy (AG-28). Demo data, no network, no ANTHROPIC_API_KEY. Written BEFORE the code (red).
- *
- * node agent/run.ts <command>
- *   scan-and-draft | eval | metrics | approve <roleId>      --help lists all four, exit 0
- *   - scan-and-draft and eval need ANTHROPIC_API_KEY: without it they exit non-zero with a plain one-line message naming
- *     the variable (no stack trace) and make NO network call (checked by a preloaded stub on fetch and sockets).
- *   - metrics reads ROLE_RADAR_TRACKER and ROLE_RADAR_AGENT_LOG, prints counts, needs no key, prints "no data" when empty.
- *   - approve <roleId> is the ONLY place the approval flag is set: it moves that role to "sent" in the tracker. Needs no key.
- *   - unknown command or missing/unknown roleId: non-zero, plain message.
+/* RR-AGENT v2 CLI (AGV2-3, AGV2-12; AG-28 check:private kept). Demo data, no network. Written BEFORE the code (red).
+ *   node agent/run.ts <scan | score | tailor-submit | outreach-submit | track | status | approve | metrics> [--demo] [--help]
+ * Deleted from v1 (why): scan-and-draft and eval (the Llm loop and the eval runner are gone), the ANTHROPIC_API_KEY cases (no key exists),
+ * the "approval flag" source scan keyed on `approved: true` (the marker is now approvedBy: "cli", pinned in agent-tracker and below),
+ * and the README/DECISIONS/HANDOFF text checks tied to the key and PR 3 (docs, AGV2-20, slice 2).
  */
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { REPO, ID, DEMO_FACTS, sandbox, run, human, begin, goodDraft, goodOutreach, oneLine, noStack, repoSnapshot, agentFiles, type Sandbox } from "./agent-support.ts";
 
-import { createTracker } from "../agent/tracker.ts";
+let sb: Sandbox;
+beforeEach(() => { sb = sandbox(); begin(sb); });
+afterEach(() => rmSync(sb.dir, { recursive: true, force: true }));
 
-const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
-let dir: string;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "rr-agent-c-")); });
-afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+const MODEL_COMMANDS = ["scan", "score", "tailor-submit", "outreach-submit", "track", "metrics"];
 
-const NETLOG = () => join(dir, "net.log");
-function stub() {
-  const p = join(dir, "nonet.mjs");
-  writeFileSync(p, `import { appendFileSync } from "node:fs"; import net from "node:net";
-const note = (w) => appendFileSync(${JSON.stringify(NETLOG())}, w + "\\n");
-globalThis.fetch = async () => { note("fetch"); throw new Error("network blocked by test"); };
-const c = net.Socket.prototype.connect; net.Socket.prototype.connect = function (...a) { note("socket"); return c.apply(this, a); };
-`);
-  return p;
-}
-function cli(args: string[], env: Record<string, string> = {}) {
-  const e: Record<string, string> = { PATH: process.env.PATH ?? "", HOME: dir,
-    ROLE_RADAR_FACTS: join(REPO, "demo/agent/facts.json"), ROLE_RADAR_TRACKER: join(dir, "tracker.jsonl"),
-    ROLE_RADAR_AGENT_LOG: join(dir, "run.jsonl"), ROLE_RADAR_JOBS: join(REPO, "demo/seed.json"), ...env };
-  const r = spawnSync(process.execPath, ["--import", stub(), join(REPO, "agent/run.ts"), ...args], { env: e, encoding: "utf8", cwd: REPO, timeout: 30000 });
-  return { code: r.status, out: r.stdout ?? "", err: r.stderr ?? "" };
-}
-const plain = (s: string) => !/\n\s+at\s|node:internal|TypeError|ReferenceError|SyntaxError|ERR_MODULE_NOT_FOUND/.test(s);
-
-test("AG-26 --help lists scan-and-draft, eval, metrics and approve and exits 0", () => {
-  const r = cli(["--help"]);
+// ---- AGV2-12 ----
+test("AGV2-12 --help exits 0 and lists every command the model may use, with no network", () => {
+  const r = run(sb, ["--help"]);
   assert.equal(r.code, 0, r.err);
-  for (const w of ["scan-and-draft", "eval", "metrics", "approve"]) assert.match(r.out, new RegExp(w));
-  assert.ok(!existsSync(NETLOG()));
+  for (const c of MODEL_COMMANDS) assert.match(r.out, new RegExp(`\\b${c}\\b`), `help lists ${c}`);
+  assert.doesNotMatch(r.out, /scan-and-draft|\beval\b|ANTHROPIC_API_KEY/);
+  assert.equal(r.net, false);
 });
 
-test("AG-26 an unknown command or none exits non-zero with a plain message and usage", () => {
-  for (const args of [["frobnicate"], []]) {
-    const r = cli(args);
-    assert.notEqual(r.code, 0);
-    assert.ok((r.err + r.out).trim().length > 0);
-    assert.ok(plain(r.err), r.err);
-    assert.match(r.err + r.out, /scan-and-draft/);
+test("AGV2-12 an unknown command or none is a one-line error, non-zero, no stack", () => {
+  for (const args of [["frobnicate"], [], ["scan-and-draft"], ["eval"]]) {
+    const r = run(sb, args);
+    assert.notEqual(r.code, 0, args.join(" ") || "(none)");
+    assert.ok(oneLine(r.err), `one line: ${JSON.stringify(r.err)}`);
+    assert.ok(noStack(r.err), r.err);
   }
 });
 
-test("AG-26 scan-and-draft and eval without ANTHROPIC_API_KEY exit non-zero, name the variable, and make no network call", () => {
-  for (const cmd of ["scan-and-draft", "eval"]) {
-    const r = cli([cmd]);
-    assert.notEqual(r.code, 0, cmd);
-    assert.match(r.err, /ANTHROPIC_API_KEY/, cmd);
-    assert.ok(plain(r.err), r.err);
-    assert.ok(r.err.trim().split("\n").length <= 3, "plain short message");
-    assert.ok(!existsSync(NETLOG()), `${cmd} touched the network`);
+test("AGV2-12 bad input on every command is a one-line error, non-zero, never a stack trace", () => {
+  const bad: [string[], string?][] = [
+    [["score"]], [["score", "nope-0"]], [["tailor-submit"], "{}"], [["tailor-submit", ID], "not json"], [["tailor-submit", ID], ""],
+    [["outreach-submit", ID], "[1,2"], [["outreach-submit", "nope-0"], JSON.stringify(goodOutreach())], [["track"]], [["track", ID, "bogus"]],
+    [["status"]], [["status", ID]], [["status", ID, "bogus"]], [["approve"]], [["approve", "nope-0"]],
+  ];
+  for (const [args, input] of bad) {
+    const r = run(sb, args, { input });
+    assert.notEqual(r.code, 0, args.join(" "));
+    assert.ok(oneLine(r.err) && noStack(r.err), `${args.join(" ")}: ${JSON.stringify(r.err)}`);
   }
-  assert.ok(!existsSync(join(dir, "tracker.jsonl")), "nothing written to the tracker");
 });
 
-test("AG-26 metrics works without a key: zeros and 'no data' with no tracker, counts with one, no network", () => {
-  let r = cli(["metrics"]);
-  assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /no data/i);
-  const t = createTracker(join(dir, "tracker.jsonl"));
-  t.upsertRole({ id: "d-1", title: "Demo PM", company: "Demo Co" });
-  t.setStatus("d-1", "ready");
-  t.upsertRole({ id: "d-2", title: "Demo PM 2", company: "Demo Co" });
-  r = cli(["metrics"]);
-  assert.equal(r.code, 0, r.err);
-  assert.ok(!/no data/i.test(r.out));
-  assert.match(r.out, /roles found\D+2/i);
-  assert.match(r.out, /drafts ready\D+1/i);
-  assert.match(r.out, /sent\D+0/i);
-  assert.ok(!existsSync(NETLOG()));
-});
-
-test("AG-26 approve <roleId> sets sent for that role only, needs no key and no network", () => {
-  const f = join(dir, "tracker.jsonl");
-  const t = createTracker(f);
-  for (const id of ["d-1", "d-2"]) { t.upsertRole({ id, title: "Demo PM", company: "Demo Co" }); t.setStatus(id, "ready"); }
-  const r = cli(["approve", "d-1"]);
-  assert.equal(r.code, 0, r.err);
-  const after = createTracker(f);
-  assert.equal(after.get("d-1").status, "sent");
-  assert.equal(after.get("d-2").status, "ready");
-  assert.ok(!existsSync(NETLOG()));
-});
-
-test("AG-26 approve with no roleId or an unknown roleId exits non-zero with a plain message and changes nothing", () => {
-  const f = join(dir, "tracker.jsonl");
-  const t = createTracker(f);
-  t.upsertRole({ id: "d-1", title: "Demo PM", company: "Demo Co" });
-  const before = readFileSync(f, "utf8");
-  for (const args of [["approve"], ["approve", "nope-9"]]) {
-    const r = cli(args);
-    assert.notEqual(r.code, 0);
-    assert.ok(r.err.trim().length > 0 && plain(r.err), r.err);
+test("AGV2-12 status <id> <ready|response|interview|rejected> works; sent and unknown statuses are refused (CLI-only path)", () => {
+  assert.equal(run(sb, ["track", ID, "found"]).code, 0, "setup");
+  assert.equal(human(sb, ["status", ID, "interview"]).code, 0);
+  assert.match(readFileSync(sb.tracker, "utf8"), /"status":"interview"/);
+  for (const s of ["sent", "bogus"]) {
+    const r = human(sb, ["status", ID, s]);
+    assert.notEqual(r.code, 0, s);
+    assert.ok(oneLine(r.err) && noStack(r.err), r.err);
   }
-  assert.equal(readFileSync(f, "utf8"), before);
+  assert.doesNotMatch(readFileSync(sb.tracker, "utf8"), /"status":"sent"/);
 });
 
-test("AG-26 the model cannot set the approval flag: only agent/run.ts passes approved, and no other agent module takes it from the model", () => {
-  const files: string[] = [];
-  const walk = (d: string) => { for (const n of readdirSync(d)) { const p = join(d, n); statSync(p).isDirectory() ? walk(p) : p.endsWith(".ts") && files.push(p); } };
-  walk(join(REPO, "agent"));
-  assert.ok(files.some((f) => f.endsWith("run.ts")), "agent/run.ts exists");
-  for (const f of files) {
-    const src = readFileSync(f, "utf8");
+test("AGV2-12 only run.ts passes approvedBy: 'cli'; no other agent module sets or forwards it from input", () => {
+  for (const f of agentFiles().filter((p) => p.endsWith(".ts"))) {
     const name = f.slice(REPO.length + 1);
     if (name === "agent/run.ts" || name === "agent/tracker.ts") continue;
-    assert.ok(!/approved\s*:\s*true|approved\s*:\s*(input|args?|call|c)\b|approve(d|_sent)?\b.*\binput\b/i.test(src), `${name} sets or forwards an approval flag`);
+    assert.ok(!/approvedBy/.test(readFileSync(f, "utf8")), `${name} mentions approvedBy`);
   }
-  const run = readFileSync(join(REPO, "agent/run.ts"), "utf8");
-  assert.match(run, /approved\s*:\s*true/, "approve command sets the flag");
-});
-
-// ---------- AG-28 ----------
-test("AG-28 README has a 'Job-hunt agent' section saying what is and is not proven, drafts only, no invented numbers", () => {
-  const md = readFileSync(join(REPO, "README.md"), "utf8");
-  const m = md.match(/^(#{2,3}) Job-hunt agent[^\n]*\n([\s\S]*?)(?=^#{1,2} (?!#)|(?![\s\S]))/m);
-  assert.ok(m, "section '## Job-hunt agent' exists");
-  const sec = m![2];
-  assert.match(sec, /what('s| is) proven/i);
-  assert.match(sec, /not proven|isn't proven|what('s| is) not (yet )?proven/i);
-  assert.match(sec, /drafts? only|only drafts/i);
-  assert.match(sec, /ANTHROPIC_API_KEY/);
-  assert.match(sec, /approve/i);
-  assert.ok(!/win rate[^.\n]{0,30}\d/i.test(sec), "no win-rate number without a logged run");
-  assert.ok(!/\b\d+(\.\d+)?\s*%/.test(sec), "no percentages without a logged run");
-});
-
-test("AG-28 DECISIONS records RR-DEC-8 (drafts only, sent needs explicit approval) and HANDOFF names PR 3 of RR-AGENT", () => {
-  const dec = readFileSync(join(REPO, "docs/product/DECISIONS.md"), "utf8");
-  assert.match(dec, /RR-DEC-8/);
-  assert.match(dec, /RR-DEC-8[\s\S]{0,600}(approv)/i);
-  const h = readFileSync(join(REPO, "HANDOFF.md"), "utf8");
-  assert.match(h, /RR-AGENT[\s\S]{0,4000}PR 3[\s\S]{0,300}(eval|metrics|CLI)/i);
+  assert.match(readFileSync(join(REPO, "agent/run.ts"), "utf8"), /approvedBy\s*:\s*["']cli["']/, "approve sets the marker in run.ts");
 });
 
 test("AG-28 npm run check:private is clean over the tree", () => {
@@ -156,17 +74,86 @@ test("AG-28 npm run check:private is clean over the tree", () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
 });
 
-test("status <roleId> <ready|response|interview|rejected> sets the status; sent and unknown statuses are refused", () => {
-  const t = join(dir, "tracker.jsonl");
-  const tr = createTracker(t);
-  tr.upsertRole({ id: "r1", title: "PM", company: "Example Co" });
-  const ok = cli(["status", "r1", "interview"]);
-  assert.equal(ok.code, 0, ok.err);
-  assert.equal(createTracker(t).get("r1").status, "interview");
-  for (const bad of ["sent", "bogus"]) {
-    const r = cli(["status", "r1", bad]);
-    assert.notEqual(r.code, 0);
-    assert.equal(createTracker(t).get("r1").status, "interview");
+// ---- AGV2-3 ----
+const NEEDS: Record<string, { args: () => string[]; input?: string; vars: string[] }> = {
+  scan: { args: () => ["scan"], vars: ["ROLE_RADAR_JOBS"] },
+  score: { args: () => ["score", ID], vars: ["ROLE_RADAR_JOBS"] },
+  "tailor-submit": { args: () => ["tailor-submit", ID], input: JSON.stringify(goodDraft()), vars: ["ROLE_RADAR_FACTS", "ROLE_RADAR_TRACKER", "ROLE_RADAR_JOBS"] },
+  "outreach-submit": { args: () => ["outreach-submit", ID], input: JSON.stringify(goodOutreach()), vars: ["ROLE_RADAR_FACTS", "ROLE_RADAR_TRACKER", "ROLE_RADAR_JOBS"] },
+  track: { args: () => ["track", ID, "found"], vars: ["ROLE_RADAR_TRACKER", "ROLE_RADAR_JOBS"] },
+  status: { args: () => ["status", ID, "ready"], vars: ["ROLE_RADAR_TRACKER"] },
+  approve: { args: () => ["approve", ID], vars: ["ROLE_RADAR_TRACKER"] },
+  metrics: { args: () => ["metrics"], vars: ["ROLE_RADAR_TRACKER"] },
+};
+
+test("AGV2-3 a needed variable unset: non-zero, the variable is named, nothing is written in the repo or the sandbox", () => {
+  const snap = repoSnapshot();
+  for (const [cmd, n] of Object.entries(NEEDS)) {
+    for (const v of n.vars) {
+      const r = (cmd === "status" || cmd === "approve" ? human : run)(sb, n.args(), { input: n.input, env: { [v]: undefined } });
+      assert.notEqual(r.code, 0, `${cmd} without ${v}`);
+      assert.match(r.err, new RegExp(v), `${cmd} without ${v} must name it: ${r.err}`);
+      assert.ok(oneLine(r.err) && noStack(r.err), r.err);
+    }
   }
-  assert.notEqual(cli(["status", "nope", "ready"]).code, 0);
+  assert.equal(repoSnapshot(), snap, "nothing written in the repo");
+  assert.equal(existsSync(sb.tracker), false);
+});
+
+test("AGV2-3 a variable pointing inside the repo is refused naming it, and nothing is written in the repo", () => {
+  const snap = repoSnapshot();
+  const inside: Record<string, string> = {
+    ROLE_RADAR_TRACKER: join(REPO, "demo", "tracker.jsonl"), ROLE_RADAR_FACTS: join(REPO, "README.md"), ROLE_RADAR_JOBS: join(REPO, "package.json"),
+  };
+  for (const [cmd, n] of Object.entries(NEEDS)) {
+    for (const v of n.vars) {
+      const r = (cmd === "status" || cmd === "approve" ? human : run)(sb, n.args(), { input: n.input, env: { [v]: inside[v] } });
+      assert.notEqual(r.code, 0, `${cmd} with ${v} in the repo`);
+      assert.match(r.err, new RegExp(v), `${cmd}: ${r.err}`);
+    }
+  }
+  assert.equal(repoSnapshot(), snap);
+});
+
+test("AGV2-3 a symlink that leads into the repo is refused for the tracker, facts and jobs, naming the variable", () => {
+  const snap = repoSnapshot();
+  symlinkSync(join(REPO, "demo"), join(sb.dir, "linkdir"));
+  writeFileSync(join(sb.dir, "x"), "");
+  symlinkSync(join(REPO, "package.json"), join(sb.dir, "linkfile.json"));
+  const cases: [string, string[], string | undefined, Record<string, string>][] = [
+    ["ROLE_RADAR_TRACKER", ["track", ID, "found"], undefined, { ROLE_RADAR_TRACKER: join(sb.dir, "linkdir", "t.jsonl") }],
+    ["ROLE_RADAR_FACTS", ["tailor-submit", ID], JSON.stringify(goodDraft()), { ROLE_RADAR_FACTS: join(sb.dir, "linkfile.json") }],
+    ["ROLE_RADAR_JOBS", ["score", ID], undefined, { ROLE_RADAR_JOBS: join(sb.dir, "linkfile.json") }],
+  ];
+  for (const [v, args, input, env] of cases) {
+    const r = run(sb, args, { input, env });
+    assert.notEqual(r.code, 0, v);
+    assert.match(r.err, new RegExp(v), r.err);
+    assert.ok(oneLine(r.err) && noStack(r.err), `one-line reason, not the usage text: ${r.err}`);
+  }
+  assert.equal(repoSnapshot(), snap);
+});
+
+test("AGV2-3 scan and score fall back to demo data only with --demo", () => {
+  for (const cmd of [["scan"], ["score", ID]]) {
+    const r = run(sb, cmd, { env: { ROLE_RADAR_JOBS: undefined } });
+    assert.notEqual(r.code, 0, cmd.join(" "));
+    assert.match(r.err, /ROLE_RADAR_JOBS/);
+    const d = run(sb, [...cmd, "--demo"], { env: { ROLE_RADAR_JOBS: undefined } });
+    assert.equal(d.code, 0, `${cmd.join(" ")} --demo: ${d.err}`);
+    assert.ok(JSON.parse(d.out));
+  }
+});
+
+test("AGV2-3 --demo does not rescue the commands that write (tailor-submit still needs the facts variable)", () => {
+  const r = run(sb, ["tailor-submit", ID, "--demo"], { input: JSON.stringify(goodDraft()), env: { ROLE_RADAR_FACTS: undefined } });
+  assert.notEqual(r.code, 0);
+  assert.match(r.err, /ROLE_RADAR_FACTS/);
+  assert.ok(oneLine(r.err), r.err);
+});
+
+test("AGV2-3 the shipped demo facts and jobs files are accepted as read-only inputs", () => {
+  assert.ok(existsSync(DEMO_FACTS));
+  const r = run(sb, ["tailor-submit", ID], { input: JSON.stringify(goodDraft()) });
+  assert.equal(r.code, 0, r.err);
 });

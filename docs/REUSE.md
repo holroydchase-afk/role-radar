@@ -1,8 +1,11 @@
 # Reuse: studio-agents promotion candidates
 
-Not promoted yet. Promote once a second product needs them: copy the file plus a sync script first, no package (reuse rule). Keep these files free of Role Radar imports so they copy cleanly.
+The job-hunt agent reuses the studio-agents harness (kill switch `agent-guard`, run logs `check-agent-run`, `stamp-run`, `agent-scorecard`, `eval-miss-*`) instead of carrying its own. The v1 `agent/harness.ts` and `agent/llm.ts` are deleted.
+
+Not promoted yet. Promote once a second product needs them: copy the file plus a sync script first, no package (reuse rule).
 
 | Candidate | Files | What it is | Note |
 |---|---|---|---|
-| Harness | `agent/harness.ts` | JSONL run log, KILL switch, spend cap, `CapExceeded` / `KilledError` | Imports `assertOutsideRepo` from `agent/config.ts`; split that out when promoting. |
-| Llm | `agent/llm.ts` | `Llm` interface, `anthropicLlm` (fetch only), `fakeLlm` for tests | No Role Radar imports. |
+| Repo-path guard | `agent/config.ts` | `assertOutsideRepo`: refuses real-data paths inside a public repo, symlinks included | No Role Radar imports. |
+| Draft grounding check | `agent/tools.ts` | every claim cites a known fact id; outreach length, link and email checks | Imports `src/scoring.ts` for scoring; split the checks out when promoting. |
+| Eval case generator | `evals/job-hunt/generate.mjs` | writes blind `prompt.md` and `graders/criteria.md` per case; studio `eval-miss-cases` has no job-hunt mode yet | Fold into studio-agents with intake B1. |

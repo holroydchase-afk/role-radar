@@ -6,7 +6,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node --test \"tests/*.test.ts\"",
+    "test": "bash scripts/check-agents.sh && node scripts/check-logs.mjs && node --test \"tests/*.test.ts\" && node --test --test-concurrency=1 \"tests/serial/*.test.ts\"",
     "typecheck": "tsc -p .",
     "build": "node scripts/build.mjs",
     "check:agents": "bash scripts/check-agents.sh",

@@ -1,5 +1,7 @@
 # SPEC-AGENT: RR-AGENT, a job-hunt agent inside Role Radar
 
+> Status: SUPERSEDED by `SPEC-AGENT-V2.md` (no Llm, no API key, no dollar cap). Kept for history.
+
 Status: draft for Chase's go. Scope source of truth for RR-AGENT. Public repo: demo and made-up data only.
 
 ## The bet

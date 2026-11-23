@@ -1,4 +1,4 @@
-// RR-AGENT tracker: append-only JSONL, one line per write. Sending needs a human approval flag.
+// RR-AGENT tracker: append-only JSONL, one line per write. `sent` needs the approval marker, which only the CLI passes.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { assertOutsideRepo } from "./config.ts";
@@ -7,9 +7,12 @@ export const STATUSES = ["found", "drafted", "ready", "sent", "response", "inter
 export type Status = (typeof STATUSES)[number];
 export type RoleInput = { id: string; title: string; company: string; score?: number; url?: string };
 export type Draft = { kind: string; ref: string };
-export type Role = RoleInput & { status: Status; drafts: Draft[]; updatedAt: string };
+export type Role = RoleInput & { status: Status; drafts: Draft[]; updatedAt: string; approvedBy?: "cli" };
 
-export function createTracker(path: string, opts: { harness?: { log(f: Record<string, unknown>): void } } = {}) {
+/** A status row counts as a real "sent" only when the human approve command marked it. */
+export const isHumanSent = (row: Record<string, unknown>): boolean => row.status === "sent" && row.approvedBy === "cli";
+
+export function createTracker(path: string, opts: { log?: (line: string) => void } = {}) {
   if (typeof path !== "string" || path === "") throw new Error("ROLE_RADAR_TRACKER is not set: point it at a file outside the repo");
   const file = assertOutsideRepo(path, "ROLE_RADAR_TRACKER"); // write target: demo/ is not exempt
 
@@ -33,7 +36,7 @@ export function createTracker(path: string, opts: { harness?: { log(f: Record<st
         if (role) { role.drafts.push(r.draft); role.updatedAt = r.ts; }
       } else if (r.type === "status") {
         const role = roles.get(r.roleId);
-        if (role) { role.status = r.status; role.updatedAt = r.ts; }
+        if (role) { role.status = r.status; role.updatedAt = r.ts; if (r.approvedBy === "cli") role.approvedBy = "cli"; }
       }
     }
     return roles;
@@ -54,12 +57,16 @@ export function createTracker(path: string, opts: { harness?: { log(f: Record<st
       need(roleId);
       append({ type: "draft", roleId, draft: { kind: draft.kind, ref: draft.ref } });
     },
-    setStatus(roleId: string, status: string, o?: { approved?: unknown }) {
+    setStatus(roleId: string, status: string, o?: { approvedBy?: unknown }) {
       need(roleId);
       if (!(STATUSES as readonly unknown[]).includes(status)) throw new Error(`invalid status: ${String(status)}`);
-      if (status === "sent" && o?.approved !== true) {
-        opts.harness?.log({ event: "refused_sent", roleId });
-        throw new Error("sent needs human approval (approved: true), set by the CLI, never the model");
+      if (status === "sent") {
+        if (o?.approvedBy !== "cli") {
+          opts.log?.(`refused_status ${roleId} sent`);
+          throw new Error("sent needs human approval, set by the CLI approve command, never the model");
+        }
+        append({ type: "status", roleId, status, approvedBy: "cli" });
+        return;
       }
       append({ type: "status", roleId, status });
     },
