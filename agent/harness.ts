@@ -35,15 +35,16 @@ export function createHarness(opts: { logPath?: string | null; killPath?: string
 
   return {
     runId,
+    logPath,
     get spentUsd() { return spentUsd; },
     log,
-    record(tokens: { input: number; output: number }, model: string): number {
+    record(tokens: { input: number; output: number }, model: string, arm?: string): number {
       const p = opts.prices[model];
       if (!p) throw new Error(`no price for model ${model}: add it to the price table`);
       if (capped) throw new CapExceeded(`spend cap of $${opts.capUsd} already hit`);
       const usd = (tokens.input * p.inputPerMTok) / 1e6 + (tokens.output * p.outputPerMTok) / 1e6;
       spentUsd += usd;
-      log({ event: "llm_call", model, input_tokens: tokens.input, output_tokens: tokens.output, usd, ok: true });
+      log({ event: "llm_call", ...(arm ? { arm } : {}), model, input_tokens: tokens.input, output_tokens: tokens.output, usd, ok: true });
       if (spentUsd > opts.capUsd) {
         capped = true;
         log({ event: "cap_hit", usd: spentUsd, cap_usd: opts.capUsd });
