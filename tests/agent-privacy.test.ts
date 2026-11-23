@@ -1,180 +1,118 @@
-/* RR-AGENT privacy review fixes (docs/reviews/2026-11-23-agent-privacy.md). Written BEFORE the fixes (red). Demo data only, no network.
- *
- * PS-R1  demo/ is NOT exempt for write targets: ROLE_RADAR_TRACKER and ROLE_RADAR_AGENT_LOG inside the repo (demo/ included) throw
- *        naming the variable. Read-only inputs may use ONLY the exact shipped files demo/agent/facts.json, demo/agent/cases.json,
- *        demo/seed.json (no sibling files, no ".." tricks). .gitignore ignores *.jsonl and agent/*.local.*.
- * PS-R2  ROLE_RADAR_FACTS and ROLE_RADAR_JOBS are guarded by the same rule (inside the repo, not an exact demo file: refused, var named,
- *        before any network call). `eval` prints which facts file it used (before it calls the model).
- * PS-R3  the track tool lets the model set only found, drafted, dropped. ready, response, interview, rejected and sent are refused
- *        (nothing written). OPEN: the CLI command that humans use to set ready/response/interview is not specified yet, so no test pins it.
+/* RR-AGENT v2 privacy and no-API (AGV2-1, 2, 14; PS-R1 path rules kept). Written BEFORE the code (red). Demo data, no network.
+ * Deleted from v1 (why): PS-R1 createHarness log-path case and the PS-R2 `scan-and-draft` CLI cases (harness and that command are gone; the
+ * facts/jobs/tracker guards are re-pinned through the new commands in agent-cli AGV2-3), PS-R3 against the createTools `track` tool
+ * (re-pinned through `track` in agent-tracker AGV2-9).
+ * AGV2-14 note: the spec asks for a grep of source for `usd`, but metrics reads the stamp field `cost_usd` (AGV2-13). The one allowed
+ * occurrence is the exact token `cost_usd`; anything else (price tables, usd arithmetic, a `$` in output) fails. See QA-R1.
  */
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import yaml from "js-yaml";
-
+import { existsSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { createTracker } from "../agent/tracker.ts";
-import { createHarness } from "../agent/harness.ts";
-import { createTools } from "../agent/tools.ts";
-import { fakeLlm } from "../agent/llm.ts";
-import { assertOutsideRepo, PRICES } from "../agent/config.ts";
+import { assertOutsideRepo } from "../agent/config.ts";
+import { REPO, ID, DEMO_FACTS, DEMO_JOBS, sandbox, run, human, begin, goodDraft, goodOutreach, agentFiles, type Sandbox } from "./agent-support.ts";
 
-const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DEMO_FACTS = join(REPO, "demo/agent/facts.json");
 const DEMO_CASES = join(REPO, "demo/agent/cases.json");
-const DEMO_JOBS = join(REPO, "demo/seed.json");
-const criteria: any = yaml.load(readFileSync(join(REPO, "criteria.yaml"), "utf8"));
-const ID = "greenhouse-1001";
+let sb: Sandbox;
+beforeEach(() => { sb = sandbox(); begin(sb); });
+afterEach(() => rmSync(sb.dir, { recursive: true, force: true }));
 
-let dir: string;
-const strays: string[] = [];
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "rr-agent-p-")); });
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
-  // If a guard is missing, the code under test may have written into the repo: never leave it behind.
-  for (const p of strays.splice(0)) rmSync(p, { force: true });
-});
-const stray = (rel: string) => { const p = join(REPO, rel); strays.push(p); return p; };
-
-function cli(args: string[], env: Record<string, string> = {}) {
-  const net = join(dir, "nonet.mjs");
-  writeFileSync(net, `import { appendFileSync } from "node:fs";
-globalThis.fetch = async () => { appendFileSync(${JSON.stringify(join(dir, "net.log"))}, "fetch\\n"); throw new Error("network blocked by test"); };
-`);
-  const e: Record<string, string> = { PATH: process.env.PATH ?? "", HOME: dir, ANTHROPIC_API_KEY: "sk-ant-TEST-not-real",
-    ROLE_RADAR_FACTS: DEMO_FACTS, ROLE_RADAR_TRACKER: join(dir, "tracker.jsonl"),
-    ROLE_RADAR_AGENT_LOG: join(dir, "run.jsonl"), ROLE_RADAR_JOBS: DEMO_JOBS, ...env };
-  const r = spawnSync(process.execPath, ["--import", net, join(REPO, "agent/run.ts"), ...args], { env: e, encoding: "utf8", cwd: REPO, timeout: 30000 });
-  return { code: r.status, out: (r.stdout ?? "") + (r.stderr ?? ""), net: existsSync(join(dir, "net.log")) };
+function seedMetricsData() {
+  const t = createTracker(sb.tracker);
+  t.upsertRole({ id: "r1", title: "Demo PM", company: "Demo Co" });
+  t.setStatus("r1", "drafted");
 }
+const sources = () => agentFiles().filter((f) => f.endsWith(".ts")).map((f) => ({ name: f.slice(REPO.length + 1), src: readFileSync(f, "utf8") }));
 
-// ---------- PS-R1 ----------
+// ---- AGV2-1 ----
+test("AGV2-1 agent/ has no fetch, node:net, node:http(s), nodemailer, ANTHROPIC_API_KEY or x-api-key", () => {
+  const banned = /\bfetch\b|node:net\b|node:https?\b|["']https?["']|nodemailer|ANTHROPIC_API_KEY|x-api-key|\bXMLHttpRequest\b|node:dgram|node:tls|undici|WebSocket/i;
+  for (const { name, src } of sources()) assert.ok(!banned.test(src), `${name} matches ${banned.exec(src)?.[0]}`);
+});
+
+test("AGV2-1 no command touches the network at run time (a preloaded stub records any fetch or socket)", () => {
+  for (const args of [["--help"], ["scan", "--demo"], ["score", ID, "--demo"], ["metrics"], ["track", ID, "found"]]) {
+    const r = run(sb, args);
+    assert.equal(r.net, false, args.join(" "));
+  }
+});
+
+// ---- AGV2-2 ----
+test("AGV2-2 no price table, usd arithmetic, model ids or Llm import in agent/", () => {
+  for (const { name, src } of sources()) {
+    assert.ok(!/\bPRICES\b|PRICES_AS_OF|inputPerMTok|outputPerMTok|PerMTok|capUsd|MAX_USD|SONNET_MODEL|OPUS_MODEL|claude-(sonnet|opus|haiku)-\d/.test(src), `${name}: price table or model pin`);
+    assert.ok(!/from\s+["']\.\/(llm|harness|loop|evals)(\.ts)?["']|import\s+type[^;]*\bLlm\b|\bLlm\b|fakeLlm|anthropicLlm|createHarness/.test(src), `${name}: Llm/harness import`);
+  }
+});
+
+test("AGV2-2 no file named harness, llm, loop or evals under agent/", () => {
+  for (const f of agentFiles()) assert.ok(!/(^|\/)(harness|llm|loop|evals)(\.[^/]*)?$/.test(f.slice(REPO.length + 1)), f);
+});
+
+test("AGV2-2 package.json gains no dependency (same two runtime dependencies, no SDK, no HTTP client)", () => {
+  const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"));
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["@modelcontextprotocol/sdk", "js-yaml"]);
+  assert.deepEqual(Object.keys(pkg.devDependencies).sort(),
+    ["@fontsource/atkinson-hyperlegible-next", "@types/node", "esbuild", "playwright", "typescript"]);
+});
+
+test("AGV2-2 config keeps REPO_ROOT and assertOutsideRepo and drops the model ids and price table", async () => {
+  const cfg: any = await import("../agent/config.ts");
+  assert.equal(typeof cfg.assertOutsideRepo, "function");
+  assert.equal(typeof cfg.REPO_ROOT, "string");
+  for (const k of ["PRICES", "PRICES_AS_OF", "SONNET_MODEL", "OPUS_MODEL"]) assert.equal(k in cfg, false, `${k} must be removed`);
+});
+
+// ---- AGV2-14 ----
+test("AGV2-14 no repo code computes or prints dollars: no usd (bar the stamp field cost_usd), no $ amounts, no currency formatting", () => {
+  for (const { name, src } of sources()) {
+    const cleaned = src.replace(/cost_usd/g, "");
+    assert.ok(!/usd|dollar|currency|Intl\.NumberFormat/i.test(cleaned), `${name}: usd/dollar`);
+    assert.ok(!/\$\s?\d|\$\s?\{[^}]*(cost|price)|(["'])\$\1|\\\$|toFixed\(\s*[2-6]\s*\)/i.test(cleaned), `${name}: dollar amount or formatting`);
+  }
+});
+
+test("AGV2-14 help, metrics and error output contain no $, usd, dollar, spend or price", () => {
+  seedMetricsData();
+  const outs = [run(sb, ["--help"]), run(sb, ["metrics"]), run(sb, ["score"]), run(sb, ["frobnicate"]), run(sb, ["track", ID, "sent"]),
+    run(sb, ["tailor-submit", ID], { input: "{" })];
+  for (const r of outs) assert.doesNotMatch(r.out + r.err, /\$|usd|dollar|spend|price/i, r.out + r.err);
+  assert.match(outs[1].out, /roles found/i, "metrics really ran");
+  // scan and score print the job's own pay text from the data (not computed here), so they are not checked for $.
+});
+
+// ---- path rules kept (PS-R1) ----
 test("PS-R1 tracker paths inside the repo are refused, demo/ included", () => {
   for (const rel of ["demo/tracker.jsonl", "demo/agent/tracker.jsonl", "agent/tracker.jsonl", "tracker.jsonl"]) {
-    const p = stray(rel);
-    assert.throws(() => createTracker(p), /ROLE_RADAR_TRACKER/, rel);
+    assert.throws(() => createTracker(join(REPO, rel)), /ROLE_RADAR_TRACKER/, rel);
+    assert.equal(existsSync(join(REPO, rel)), false, rel);
   }
-});
-
-test("PS-R1 log paths inside the repo are refused, demo/ included", () => {
-  for (const rel of ["demo/run.jsonl", "demo/agent/run.jsonl", "agent/run.jsonl"]) {
-    const p = stray(rel);
-    assert.throws(() => createHarness({ logPath: p, capUsd: 1, prices: PRICES }), /ROLE_RADAR_AGENT_LOG/, rel);
-  }
-});
-
-test("PS-R1 the CLI refuses a tracker in demo/ and names the variable (approve writes the tracker)", () => {
-  const p = stray("demo/tracker.jsonl");
-  const r = cli(["approve", ID], { ROLE_RADAR_TRACKER: p });
-  assert.notEqual(r.code, 0);
-  assert.match(r.out, /ROLE_RADAR_TRACKER/);
-  assert.ok(!existsSync(p), "nothing written into demo/");
 });
 
 test("PS-R1 read-only inputs: exactly the three shipped demo files pass, nothing else under demo/ does", () => {
-  for (const ok of [DEMO_FACTS, DEMO_CASES, DEMO_JOBS]) assert.doesNotThrow(() => assertOutsideRepo(ok, "ROLE_RADAR_FACTS", { readOnly: true } as any), ok);
-  for (const bad of [
-    join(REPO, "demo/agent/real-facts.json"), join(REPO, "demo/agent/facts.json.bak"), join(REPO, "demo/facts.json"),
-    join(REPO, "demo/agent/../../agent/facts.json"), join(REPO, "demo/agent"), join(REPO, "demo/profile.json"),
-  ]) assert.throws(() => assertOutsideRepo(bad, "ROLE_RADAR_FACTS", { readOnly: true } as any), /ROLE_RADAR_FACTS/, bad);
-});
-
-test("PS-R1 a path outside the repo is still fine for facts, jobs, tracker and log", () => {
-  assert.doesNotThrow(() => createTracker(join(dir, "t.jsonl")));
-  assert.doesNotThrow(() => createHarness({ logPath: join(dir, "l.jsonl"), capUsd: 1, prices: PRICES }));
-  assert.doesNotThrow(() => assertOutsideRepo(join(dir, "facts.json"), "ROLE_RADAR_FACTS", { readOnly: true } as any));
+  for (const ok of [DEMO_FACTS, DEMO_CASES, DEMO_JOBS]) assert.doesNotThrow(() => assertOutsideRepo(ok, "ROLE_RADAR_FACTS", { readOnly: true }), ok);
+  for (const bad of [join(REPO, "demo/agent/real-facts.json"), join(REPO, "demo/agent/facts.json.bak"), join(REPO, "demo/facts.json"),
+    join(REPO, "demo/agent/../../agent/facts.json"), join(REPO, "demo/agent"), join(REPO, "demo/profile.json")])
+    assert.throws(() => assertOutsideRepo(bad, "ROLE_RADAR_FACTS", { readOnly: true }), /ROLE_RADAR_FACTS/, bad);
 });
 
 test("PS-R1 .gitignore ignores *.jsonl and agent/*.local.*", () => {
   const lines = readFileSync(join(REPO, ".gitignore"), "utf8").split("\n").map((l) => l.trim());
-  assert.ok(lines.includes("*.jsonl"), "*.jsonl missing from .gitignore");
-  assert.ok(lines.includes("agent/*.local.*"), "agent/*.local.* missing from .gitignore");
+  assert.ok(lines.includes("*.jsonl") && lines.includes("agent/*.local.*"));
 });
 
-// ---------- PS-R2 ----------
-test("PS-R2 ROLE_RADAR_FACTS inside the repo is refused before any model call, var named", () => {
-  for (const rel of ["agent/facts.json", "facts.json", "demo/agent/my-real-facts.json"]) {
-    const r = cli(["scan-and-draft"], { ROLE_RADAR_FACTS: join(REPO, rel) });
-    assert.notEqual(r.code, 0, rel);
-    assert.match(r.out, /ROLE_RADAR_FACTS/, rel);
-    assert.ok(!r.net, `${rel}: no network call before the guard`);
+test("AGV2 demo data stays made up: facts and cases hold no emails, links or phone numbers", () => {
+  for (const p of [DEMO_FACTS, DEMO_CASES]) {
+    const raw = readFileSync(p, "utf8");
+    assert.match(raw, /made[- ]up|fictional|demo/i);
+    assert.ok(!raw.includes("@") && !/https?:\/\/|www\./i.test(raw) && !/\(?\b\d{3}\)?[-. ]\d{3}[-. ]\d{4}\b/.test(raw), p);
   }
 });
 
-test("PS-R2 ROLE_RADAR_JOBS inside the repo is refused before any model call, var named", () => {
-  for (const rel of ["agent/jobs.json", "jobs.json", "demo/agent/my-real-jobs.json"]) {
-    const r = cli(["scan-and-draft"], { ROLE_RADAR_JOBS: join(REPO, rel) });
-    assert.notEqual(r.code, 0, rel);
-    assert.match(r.out, /ROLE_RADAR_JOBS/, rel);
-    assert.ok(!r.net, `${rel}: no network call before the guard`);
-  }
-});
-
-test("PS-R2 the exact demo facts and jobs files are accepted (the guard does not name them)", () => {
-  const r = cli(["scan-and-draft"]);
-  assert.doesNotMatch(r.out, /must point outside the repo|ROLE_RADAR_(FACTS|JOBS) must/);
-});
-
-test("PS-R2 createTools guards factsPath and jobsPath too (library level)", () => {
-  const harness = createHarness({ logPath: join(dir, "run.jsonl"), capUsd: 1, prices: PRICES });
-  const tracker = createTracker(join(dir, "t.jsonl"), { harness });
-  const mk = (over: object) => () => createTools({ llm: fakeLlm([]), harness, tracker, criteria, jobsPath: DEMO_JOBS, factsPath: DEMO_FACTS, ...over } as any);
-  assert.throws(mk({ factsPath: join(REPO, "agent/facts.json") }), /ROLE_RADAR_FACTS/);
-  assert.throws(mk({ jobsPath: join(REPO, "agent/jobs.json") }), /ROLE_RADAR_JOBS/);
-  assert.doesNotThrow(mk({}));
-});
-
-test("PS-R2 eval prints which facts file it used, before calling the model (env set)", () => {
-  const facts = join(dir, "my-facts.json");
-  writeFileSync(facts, JSON.stringify({ facts: [] }));
-  const r = cli(["eval"], { ROLE_RADAR_FACTS: facts });
-  assert.ok(r.out.includes(facts), `eval output should name ${facts}:\n${r.out}`);
-});
-
-test("PS-R2 eval says so when it falls back to the demo facts (env unset)", () => {
-  const r = cli(["eval"], { ROLE_RADAR_FACTS: "" });
-  assert.match(r.out, /demo\/agent\/facts\.json/);
-  assert.match(r.out, /demo/i);
-});
-
-// ---------- PS-R3 ----------
-function trackSetup() {
-  const harness = createHarness({ logPath: join(dir, "run.jsonl"), capUsd: 1, prices: PRICES });
-  const tracker = createTracker(join(dir, "tracker.jsonl"), { harness });
-  const tools: any[] = createTools({ llm: fakeLlm([]), harness, tracker, criteria, jobsPath: DEMO_JOBS, factsPath: DEMO_FACTS } as any) as any;
-  return { tracker, track: tools.find((t) => t.name === "track") };
-}
-
-test("PS-R3 the track tool's schema offers the model only found, drafted, dropped", () => {
-  const { track } = trackSetup();
-  assert.deepEqual([...track.schema.properties.status.enum].sort(), ["dropped", "drafted", "found"].sort());
-});
-
-test("PS-R3 the model may set found, drafted and dropped", async () => {
-  for (const status of ["found", "drafted", "dropped"]) {
-    const { tracker, track } = trackSetup();
-    await track.run({ roleId: ID, status });
-    assert.equal(tracker.get(ID).status, status);
-    rmSync(join(dir, "tracker.jsonl"), { force: true });
-  }
-});
-
-test("PS-R3 ready, response, interview, rejected and sent are refused and write nothing", async () => {
-  for (const status of ["ready", "response", "interview", "rejected", "sent"]) {
-    const { tracker, track } = trackSetup();
-    await assert.rejects(() => track.run({ roleId: ID, status, approved: true }), Error, status);
-    assert.equal(tracker.list().length, 0, `${status}: tracker must stay empty`);
-    assert.ok(!existsSync(join(dir, "tracker.jsonl")) || readFileSync(join(dir, "tracker.jsonl"), "utf8") === "", `${status}: no row written`);
-  }
-});
-
-test("PS-R3 a refused status does not change a role already drafted", async () => {
-  const { tracker, track } = trackSetup();
-  await track.run({ roleId: ID, status: "drafted" });
-  await assert.rejects(() => track.run({ roleId: ID, status: "interview" }));
-  assert.equal(tracker.get(ID).status, "drafted");
+test("AGV2-3 drafts are saved beside the tracker, never in the repo (a draft run leaves the repo's drafts path absent)", () => {
+  const r = run(sb, ["outreach-submit", ID], { input: JSON.stringify(goodOutreach()) });
+  assert.equal(r.code, 0, r.err);
+  assert.equal(existsSync(join(REPO, "drafts")), false);
+  assert.equal(existsSync(sb.drafts), true);
 });

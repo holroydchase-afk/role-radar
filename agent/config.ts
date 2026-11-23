@@ -1,22 +1,9 @@
-// RR-AGENT config: pinned model ids, dated price table, repo-path guard (AG-19).
+// RR-AGENT config: the repo root and the repo-path guard (AG-19). Nothing else lives here.
 import { realpathSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-
-// Pinned ids, never aliases like "latest".
-export const SONNET_MODEL = "claude-sonnet-5-5"; // agent
-export const OPUS_MODEL = "claude-opus-5-5"; // grader
-
-// USD per million tokens, from the claude-api skill's model table (cached 2026-11-03):
-// Sonnet 5.5 $2 in / $10 out, Opus 5.5 $4 in / $20 out. Standard rates, prompts up to the
-// base context; cache and long-context surcharges are not modelled, so usd is an estimate.
-export const PRICES_AS_OF = "2026-11-23";
-export const PRICES: Record<string, { inputPerMTok: number; outputPerMTok: number }> = {
-  [SONNET_MODEL]: { inputPerMTok: 2, outputPerMTok: 10 },
-  [OPUS_MODEL]: { inputPerMTok: 4, outputPerMTok: 20 },
-};
 
 // Resolve through symlinks, even when the leaf does not exist yet.
 function realish(p: string): string {

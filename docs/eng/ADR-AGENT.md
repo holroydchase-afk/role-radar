@@ -1,5 +1,7 @@
 # ADR-AGENT: harness and Llm interface for RR-AGENT (before PR 1)
 
+> Status: SUPERSEDED by `docs/product/SPEC-AGENT-V2.md`: the harness and Llm interface are deleted; the studio-agents harness is reused instead. Kept for history.
+
 Status: proposed, architect review 2026-11-23. Scope: docs/product/SPEC-AGENT.md. Repo-only decision (no STU-DEC); promotion is a later studio call.
 
 ## Verdict: OK with changes (rung: "one-off script, Node 22 runs `.ts` directly, `tsc` noEmit")

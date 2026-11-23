@@ -1,95 +1,112 @@
-/* RR-AGENT PR 3: metrics (AG-25). Demo data only, no network. Written BEFORE the code (red).
+/* RR-AGENT v2 metrics (AGV2-13). Demo data only, no network. Written BEFORE the code (red).
  *
- * agent/metrics.ts exports computeMetrics({ trackerPath, logPath }) -> {
- *   rolesFound, draftsReady, applicationsSent, responses, interviews,   // roles that EVER reached found / ready / sent / response / interview
- *   tokens: { input, output }, usd,                                      // sums of llm_call rows in the log
- *   note: string                                                         // "no data" (any case) when the tracker is missing or empty
- * }
- * Counts come only from the tracker file and the log file. It never writes, never calls the network, never guesses.
+ * node agent/run.ts metrics   (ROLE_RADAR_TRACKER required; ROLE_RADAR_RUNS = dir of run logs, default docs/runs in the repo)
+ *   prints "roles found: N", "drafts: N", "sent: N", "responses: N", "interviews: N" counted from the tracker only
+ *   (each = roles that EVER reached found / drafted / sent / response / interview), then "tokens: N" and "cost: ..." read ONLY from
+ *   *-job-hunt.md run logs that carry `stamped: yes` (written by stamp-run), else "tokens: not measured" / "cost: not measured".
+ *   cost is shown only when a stamped log has stamp_prices, as the stamped number with no currency sign; stamp_cost: not measured stays "not measured".
+ *   No tracker file: all zeros and the words "no data". Read-only: writes nothing.
+ * Deleted from v1 (why): token and usd sums from a harness llm_call log (the harness and its log are gone), the log-path argument,
+ * and the hand-computed spend line (no dollar figure is ever computed here, AGV2-14).
  */
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { computeMetrics } from "../agent/metrics.ts";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createTracker } from "../agent/tracker.ts";
+import { sandbox, run, type Sandbox } from "./agent-support.ts";
 
-const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
-let dir: string;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "rr-agent-m-")); });
-afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
-const T = () => join(dir, "tracker.jsonl");
-const L = () => join(dir, "run.jsonl");
+let sb: Sandbox;
+beforeEach(() => { sb = sandbox(); });
+afterEach(() => rmSync(sb.dir, { recursive: true, force: true }));
 
 function seedTracker() {
-  const t = createTracker(T());
+  const t = createTracker(sb.tracker);
   const mk = (id: string, ...steps: string[]) => {
     t.upsertRole({ id, title: "Demo PM " + id, company: "Demo Co" });
-    for (const s of steps) t.setStatus(id, s, { approved: s === "sent" });
+    for (const s of steps) t.setStatus(id, s, s === "sent" ? ({ approvedBy: "cli" } as any) : undefined);
   };
   mk("r1");
-  mk("r2", "drafted", "ready");
-  mk("r3", "ready", "sent");
-  mk("r4", "ready", "sent", "response");
-  mk("r5", "ready", "sent", "response", "interview");
+  mk("r2", "drafted");
+  mk("r3", "drafted", "sent");
+  mk("r4", "drafted", "sent", "response");
+  mk("r5", "drafted", "sent", "response", "interview");
   mk("r6", "dropped");
 }
-function seedLog() {
-  const rows = [
-    { event: "llm_call", model: "m", input_tokens: 120, output_tokens: 30, usd: 0.25, ok: true },
-    { event: "llm_call", model: "m", input_tokens: 80, output_tokens: 20, usd: 0.5, ok: true },
-    { event: "tool_call", tool: "scan", ok: true },
-    { event: "cap_hit", usd: 9 },
-  ];
-  writeFileSync(L(), rows.map((r) => JSON.stringify({ runId: "x", ts: "2026-11-23T00:00:00Z", ...r })).join("\n") + "\n");
-}
 
-test("AG-25 counts roles found, drafts ready, sent, responses and interviews from the tracker only", () => {
-  seedTracker(); seedLog();
-  const m: any = computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.equal(m.rolesFound, 6);
-  assert.equal(m.draftsReady, 4);
-  assert.equal(m.applicationsSent, 3);
-  assert.equal(m.responses, 2);
-  assert.equal(m.interviews, 1);
-  assert.ok(!/no data/i.test(m.note ?? ""));
+const log = (stamp: string[], over: Record<string, string> = {}) => {
+  const base: Record<string, string> = { date: "2026-11-20", agent: "engineer", product: "role-radar", tier: "supervised", model: "claude-sonnet-5-5",
+    tokens: "1000", cost_usd: "0", input: "demo job-hunt run", verdict: "ok", findings: "0", p0: "0", escalated: "no", ...over };
+  return "# Demo job-hunt run (made up)\n\n```agentrun\n" + [...Object.entries(base).map(([k, v]) => `${k}: ${v}`), ...stamp].join("\n") + "\n```\n";
+};
+const STAMPED = (i: number, o: number, extra: string[] = ["stamp_cost: not measured"]) =>
+  ["stamped: yes", `stamp_input: ${i}`, `stamp_output: ${o}`, "stamp_cache_creation: 0", "stamp_cache_read: 0", "stamp_sha: " + "a".repeat(40), ...extra];
+
+test("AGV2-13 counts roles found, drafts, sent, responses and interviews from the tracker only", () => {
+  seedTracker();
+  const r = run(sb, ["metrics"]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /roles found\D+6\b/i);
+  assert.match(r.out, /drafts\D+4\b/i);
+  assert.match(r.out, /sent\D+3\b/i);
+  assert.match(r.out, /responses\D+2\b/i);
+  assert.match(r.out, /interviews\D+1\b/i);
+  assert.doesNotMatch(r.out, /no data/i);
+  assert.equal(r.net, false);
 });
 
-test("AG-25 tokens and usd are summed from llm_call rows in the log, other events ignored", () => {
-  seedTracker(); seedLog();
-  const m: any = computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.deepEqual(m.tokens, { input: 200, output: 50 });
-  assert.ok(Math.abs(m.usd - 0.75) < 1e-12);
+test("AGV2-13 no stamped run log: tokens and cost read 'not measured', never a number", () => {
+  seedTracker();
+  const r = run(sb, ["metrics"]);
+  assert.match(r.out, /tokens\W+not measured/i);
+  assert.match(r.out, /cost\W+not measured/i);
 });
 
-test("AG-25 nothing in the tracker or log: zeros and a 'no data' note, never a guess", () => {
-  const m: any = computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.deepEqual([m.rolesFound, m.draftsReady, m.applicationsSent, m.responses, m.interviews, m.usd], [0, 0, 0, 0, 0, 0]);
-  assert.deepEqual(m.tokens, { input: 0, output: 0 });
-  assert.match(m.note, /no data/i);
+test("AGV2-13 tokens are summed from stamped *-job-hunt.md logs only; unstamped logs and other files are ignored", () => {
+  seedTracker();
+  writeFileSync(join(sb.runs, "2026-11-20-job-hunt.md"), log(STAMPED(700, 300)));
+  writeFileSync(join(sb.runs, "2026-11-21-job-hunt.md"), log(STAMPED(2000, 500), { date: "2026-11-21", tokens: "2500" }));
+  writeFileSync(join(sb.runs, "2026-11-22-job-hunt.md"), log([], { date: "2026-11-22", tokens: "999999" })); // self-reported, not stamped
+  writeFileSync(join(sb.runs, "2026-11-22-qa-tdd.md"), log(STAMPED(50000, 50000), { date: "2026-11-22", agent: "qa-tdd", verdict: "green" }));
+  const r = run(sb, ["metrics"]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /tokens\W+3,?500\b/i, r.out);
+  assert.doesNotMatch(r.out, /999999|100000|100,000/);
+  assert.match(r.out, /cost\W+not measured/i, "stamp_cost: not measured stays not measured");
 });
 
-test("AG-25 an empty tracker file is also 'no data'; a missing log gives zero tokens, not a crash", () => {
-  writeFileSync(T(), "");
-  const m: any = computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.equal(m.rolesFound, 0);
-  assert.match(m.note, /no data/i);
-  assert.deepEqual(m.tokens, { input: 0, output: 0 });
+test("AGV2-13 a priced stamp shows its cost as the stamped number, with no currency sign and no 'usd'", () => {
+  seedTracker();
+  writeFileSync(join(sb.runs, "2026-11-20-job-hunt.md"), log(STAMPED(1000, 0, ["stamp_prices: vendor-table 2026-11-20"]), { cost_usd: "0.0123" }));
+  const r = run(sb, ["metrics"]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /cost\W+0\.0123/i, r.out);
+  assert.doesNotMatch(r.out, /\$|usd|dollar/i);
 });
 
-test("AG-25 metrics only reads: no file is created or changed", () => {
-  computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.deepEqual(readdirSync(dir), []);
-  seedTracker(); seedLog();
-  const before = [readFileSync(T(), "utf8"), readFileSync(L(), "utf8")];
-  computeMetrics({ trackerPath: T(), logPath: L() });
-  assert.deepEqual([readFileSync(T(), "utf8"), readFileSync(L(), "utf8")], before);
+test("AGV2-13 no tracker: zeros and 'no data', exit 0, tokens and cost 'not measured'", () => {
+  const r = run(sb, ["metrics"]);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.out, /no data/i);
+  for (const w of ["roles found", "drafts", "sent", "responses", "interviews"]) assert.match(r.out, new RegExp(`${w}\\D+0\\b`, "i"), w);
+  assert.match(r.out, /tokens\W+not measured/i);
 });
 
-test("AG-25 metrics source has no network, no llm and no invented numbers path", () => {
-  const src = readFileSync(join(REPO, "agent/metrics.ts"), "utf8");
-  assert.ok(!/\bfetch\s*\(|node:https?|node:net|anthropicLlm|ANTHROPIC_API_KEY|Math\.random/.test(src));
+test("AGV2-13 an empty tracker file is also 'no data'", () => {
+  writeFileSync(sb.tracker, "");
+  assert.match(run(sb, ["metrics"]).out, /no data/i);
+});
+
+test("AGV2-13 metrics only reads: no file is created or changed next to the tracker or the run logs", () => {
+  seedTracker();
+  writeFileSync(join(sb.runs, "2026-11-20-job-hunt.md"), log(STAMPED(1, 1)));
+  const snap = () => [...readdirSync(join(sb.dir, "state")), ...readdirSync(sb.runs)].sort().join(",") + readFileSync(sb.tracker, "utf8");
+  const before = snap();
+  run(sb, ["metrics"]);
+  assert.equal(snap(), before);
+});
+
+test("AGV2-13 metrics source has no network, no model call, no random numbers and no harness log", () => {
+  const src = readFileSync(join(import.meta.dirname, "../agent/metrics.ts"), "utf8");
+  assert.ok(!/\bfetch\s*\(|node:https?|node:net|anthropicLlm|ANTHROPIC_API_KEY|Math\.random|llm_call|harness|logPath/.test(src));
 });
