@@ -80,7 +80,7 @@ The same read-only search keeps the pipeline current. *Check Gmail for status up
 
 ## What it saves
 
-- **The morning search.** I no longer open job boards. The scan covers about 110 company boards plus aggregators and alert emails, and a phone notification tells me if anything is worth a look.
+- **The morning search.** I no longer open job boards. The scan covers about 290 company boards plus aggregators and alert emails, and a phone notification tells me if anything is worth a look.
 - **Triage time.** Roles arrive ranked by what I care about, each with a one-line reason and its score breakdown. Fintech roles still show up, but they no longer crowd out energy and climate work.
 - **Status bookkeeping.** Confirmation and rejection emails update the tracker on their own, and follow-up dates are set when I mark something applied.
 - **Lost leads.** Past recruiters sit next to the roles, with a next step and a due date.
@@ -184,7 +184,10 @@ A KILL file next to the log (or `ROLE_RADAR_AGENT_KILL=1`) stops every call.
 | `demo/` | Fictional seed data and the in-memory database |
 | `scripts/` | Bundle build, demo build, screenshots, scan-prompt renderer, privacy check |
 | `tests/` | Node test runner: scoring, privacy check, demo build, Playwright UI |
-| `PLAN.md`, `HANDOFF.md` | The v1 plan and the current state of work |
+| `agent/` | The job-hunt agent: tool loop, run log, evals (drafts only, nothing is sent) |
+| `plugin/` | The Claude Code plugin packaging |
+| `docs/` | Setup, product specs, engineering notes, reviews; `docs/internal/PLAN.md` is the v1 plan |
+| `HANDOFF.md`, `CLAUDE.md` | The current state of work and the rules the Claude sessions follow |
 
 ## What's next
 
