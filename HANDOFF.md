@@ -250,3 +250,6 @@ _Updated 2026-10-31._
 
 ## Blockers
 - Intake #69 (studio standard), labeled needs-chase: it rewrites CLAUDE.md's "never merge" hard rule and installs the agent run-log hook in `.claude/settings.json`. Those are changes to the agents' own rules, so they wait for Chase's own `go` in the Role Radar project (2026-11-01).
+
+## Repo best-practices pass (2026-11-25)
+- Done: SUPPORT.md README-AI-line codeql(actions, javascript-typescript, python). Added from the GitHub, Linux Foundation and Syracuse checklists (studio-agents docs/repo-standards.md). Left for this project to review: CHANGELOG.md, THIRD_PARTY_NOTICES, wording of the README AI-use line against the claims register, repo description and topics.
